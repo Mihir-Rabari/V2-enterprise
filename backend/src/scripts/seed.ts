@@ -25,19 +25,16 @@ async function main() {
         await mongoose.connect(MONGODB_URI);
         console.log('✅ Connected to MongoDB');
 
-        // Drop the database for a completely clean slate (including indexes)
+        // Drop the database for a completely clean slate
         if (mongoose.connection.db) {
             await mongoose.connection.db.dropDatabase();
             console.log('🧹 Dropped database for a clean slate');
-        } else {
-            console.log('⚠️ Warning: Database not found, skipping drop');
         }
 
         // ── Site Settings ─────────────────────────────────────────────────────────
         await SiteSettings.create({
             logoText: 'V2',
             logoSubtext: 'Fashion Hub',
-            logoImage: '/v2_logo.webp', // Default logo path or actual URL
             slogan: 'A Smart Fashion Hub',
             email: 'hello@v2fashion.com',
             phone: '+91 90338 83395',
@@ -52,7 +49,7 @@ async function main() {
             commitment: {
                 tagline: "OUR COMMITMENT",
                 title: "Sustainable\nLuxury.",
-                description: "We believe in creating timeless pieces that respect both the wearer and the environment. Every garment is crafted with longevity in mind.\n\nOur transparent supply chain ensures ethical practices at every step, from raw material sourcing to the final stitch."
+                description: "We believe in creating timeless pieces that respect both the wearer and the environment. Every garment is crafted with longevity in mind.\n\nOur transparent supply chain ensures ethical practices at every step."
             },
             homeSections: {
                 categoriesTitle: "Discover",
@@ -134,7 +131,6 @@ async function main() {
             phone: '9033883395',
             role: 'ADMIN',
         });
-        console.log('✅ Admin user seeded — admin@v2fashion.com / admin@v2');
 
         // ── Demo Customer ─────────────────────────────────────────────────────────
         const custPassword = await bcrypt.hash('password123', 12);
@@ -155,184 +151,176 @@ async function main() {
                 }
             ],
         });
-        console.log(`✅ Admin user seeded — ${customer.email}`);
+        console.log(`✅ Users seeded`);
 
         // ── Categories ────────────────────────────────────────────────────────────
         const menswear = await Category.create({
             name: 'MENSWEAR',
             slug: 'menswear',
             status: 'ACTIVE',
-            description: 'Premium curated selection of contemporary menswear, from tailored suits to elevated essentials.',
             image: 'https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=800'
         });
         const womenswear = await Category.create({
             name: 'WOMENSWEAR',
             slug: 'womenswear',
             status: 'ACTIVE',
-            description: 'Sophisticated womenswear designed for the modern individual who values silhouette and texture.',
             image: 'https://images.pexels.com/photos/4066293/pexels-photo-4066293.jpeg?auto=compress&cs=tinysrgb&w=800'
         });
 
-        // Sub-categories
-        await Category.create({ name: 'Tailoring', slug: 'tailoring', parentId: menswear._id, status: 'ACTIVE', description: 'Exceptional cuts and premium fabrics for the discerning gentleman.' });
-        await Category.create({ name: 'Denim', slug: 'denim', parentId: menswear._id, status: 'ACTIVE', description: 'Selvedge and high-quality denim built to age beautifully.' });
-        await Category.create({ name: 'Essentials', slug: 'essentials', parentId: womenswear._id, status: 'ACTIVE', description: 'Foundation pieces that anchor every sophisticated wardrobe.' });
-        await Category.create({ name: 'Outerwear', slug: 'outerwear', parentId: womenswear._id, status: 'ACTIVE', description: 'Impeccably constructed coats and jackets for every season.' });
+        await Category.create({ name: 'Tailoring', slug: 'tailoring', parentId: menswear._id, status: 'ACTIVE' });
+        await Category.create({ name: 'Denim', slug: 'denim', parentId: menswear._id, status: 'ACTIVE' });
+        await Category.create({ name: 'Essentials', slug: 'essentials', parentId: womenswear._id, status: 'ACTIVE' });
+        await Category.create({ name: 'Outerwear', slug: 'outerwear', parentId: womenswear._id, status: 'ACTIVE' });
         console.log(`✅ Categories seeded (Clothing Only)`);
 
         // ── Products ──────────────────────────────────────────────────────────────
-        const products = [
-            // ── SHIRT-01: Premium Linen Blend Shirt (Mens) ─────────────────
+        const productData = [
             {
                 name: 'Premium Linen Blend Shirt',
                 styleCode: 'SHIRT-01',
-                color: 'Optic White', colorHex: '#FFFFFF',
-                fabric: 'Linen Blend', patternType: 'Plain',
-                collar: 'Spread Collar', sleeve: 'Full Sleeve',
-                neck: 'Collar Neck', pocket: 'Single Pocket',
-                length: '28', chest: '42', waist: '40', shoulder: '18.5', sleeveLength: '25.5',
-                videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+                color: 'White', colorHex: '#FFFFFF',
+                videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
                 price: 2499,
-                originalPrice: 3499,
-                discount: '28% OFF',
                 photo: 'https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=800',
                 hoverImage: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=800',
                 mainCategory: 'MENSWEAR', subCategory: 'Tailoring',
-                description: 'Refined linen blend shirt offering unparalleled breathability. Perfect for warm days and semi-formal occasions.',
+                description: 'Refined linen blend shirt offering unparalleled breathability. Perfect for warm days.',
                 materialCare: '55% Linen, 45% Cotton.\nMachine wash cold on gentle cycle.\nDo not bleach.\nIron on medium heat.',
                 sizes: ['S', 'M', 'L', 'XL'],
                 variants: [
-                    { size: 'S', color: 'Optic White', quantity: 10 },
-                    { size: 'M', color: 'Optic White', quantity: 15 },
-                    { size: 'L', color: 'Optic White', quantity: 8 },
-                    { size: 'XL', color: 'Optic White', quantity: 5 },
+                    { size: 'S', color: 'White', quantity: 10 },
+                    { size: 'M', color: 'White', quantity: 15 },
+                    { size: 'L', color: 'White', quantity: 8 },
                 ],
                 isNewArrival: true, isTrending: true, tags: ['Linen', 'Formal', 'Summer'],
                 status: 'ACTIVE',
             },
             {
-                name: 'Premium Linen Blend Shirt',
-                styleCode: 'SHIRT-01',
-                color: 'Navy Blue', colorHex: '#000080',
-                fabric: 'Linen Blend', patternType: 'Plain',
-                collar: 'Spread Collar', sleeve: 'Full Sleeve',
-                neck: 'Collar Neck', pocket: 'Single Pocket',
-                length: '28', chest: '42', waist: '40', shoulder: '18.5', sleeveLength: '25.5',
-                price: 2499,
-                originalPrice: 3499,
-                photo: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=800',
-                mainCategory: 'MENSWEAR', subCategory: 'Tailoring',
-                description: 'Refined linen blend shirt in a classic navy shade. Impeccable drape and comfort.',
-                materialCare: '55% Linen, 45% Cotton.\nMachine wash cold.\nWash with like colors.',
-                sizes: ['M', 'L', 'XL'],
-                variants: [
-                    { size: 'M', color: 'Navy Blue', quantity: 12 },
-                    { size: 'L', color: 'Navy Blue', quantity: 10 },
-                    { size: 'XL', color: 'Navy Blue', quantity: 7 },
-                ],
-                isTrending: true, tags: ['Linen', 'Navy', 'Classic'],
-                status: 'ACTIVE',
-            },
-
-            // ── DENIM-01: Selvedge Slim Fit Denim (Mens) ──────────────────
-            {
                 name: 'Selvedge Slim Fit Denim',
                 styleCode: 'DENIM-01',
-                color: 'Raw Indigo', colorHex: '#1A237E',
-                fabric: '14oz Selvedge Denim', patternType: 'Solid',
-                length: '32', waist: '32',
+                color: 'Indigo', colorHex: '#4B5563',
                 price: 4999,
-                originalPrice: 6999,
-                discount: '₹2000 OFF',
                 photo: 'https://images.pexels.com/photos/1598507/pexels-photo-1598507.jpeg?auto=compress&cs=tinysrgb&w=800',
                 hoverImage: 'https://images.pexels.com/photos/1598505/pexels-photo-1598505.jpeg?auto=compress&cs=tinysrgb&w=800',
                 mainCategory: 'MENSWEAR', subCategory: 'Denim',
-                description: 'Signature selvedge denim woven on vintage looms. Designed to mold to your body over time.',
+                description: 'Signature selvedge denim woven on vintage looms. Ages beautifully.',
                 materialCare: '100% Cotton Selvedge Denim.\nWash sparingly.\nTurn inside out before washing.\nCold wash only.',
                 sizes: ['30', '32', '34', '36'],
                 variants: [
-                    { size: '30', color: 'Raw Indigo', quantity: 8 },
-                    { size: '32', color: 'Raw Indigo', quantity: 14 },
-                    { size: '34', color: 'Raw Indigo', quantity: 10 },
-                    { size: '36', color: 'Raw Indigo', quantity: 6 },
+                    { size: '32', color: 'Indigo', quantity: 14 },
+                    { size: '34', color: 'Indigo', quantity: 10 },
                 ],
                 isTrending: true, tags: ['Denim', 'Selvedge', 'Classic'],
                 status: 'ACTIVE',
             },
-
-            // ── TEE-01: Organic Cotton Essential Tee (Womens) ───────────────
             {
                 name: 'Organic Cotton Essential Tee',
                 styleCode: 'TEE-01',
-                color: 'Desert Sage', colorHex: '#879F84',
-                fabric: 'Organic Cotton', patternType: 'Plain',
-                neck: 'Round Neck', sleeve: 'Half Sleeve',
-                length: '24', chest: '36',
+                color: 'Sage', colorHex: '#879F84',
                 price: 1299,
                 photo: 'https://images.pexels.com/photos/4066293/pexels-photo-4066293.jpeg?auto=compress&cs=tinysrgb&w=800',
                 mainCategory: 'WOMENSWEAR', subCategory: 'Essentials',
-                description: 'Wardrobe staple from 100% organic cotton. Exceptionally soft and sustainable.',
-                materialCare: '100% Organic Cotton.\nTumble dry low.\nMachine wash cold.',
+                description: 'Wardrobe staple from 100% organic cotton. Soft and breathable.',
+                materialCare: '100% Organic Cotton.\nTumble dry low.\nMachine wash cold with like colors.',
                 sizes: ['XS', 'S', 'M', 'L'],
                 variants: [
-                    { size: 'S', color: 'Desert Sage', quantity: 20 },
-                    { size: 'M', color: 'Desert Sage', quantity: 18 },
+                    { size: 'S', color: 'Sage', quantity: 20 },
+                    { size: 'M', color: 'Sage', quantity: 18 },
                 ],
                 tags: ['Organic', 'Cotton', 'Basic'],
                 status: 'ACTIVE',
             },
             {
-                name: 'Organic Cotton Essential Tee',
-                styleCode: 'TEE-01',
-                color: 'Midnight Black', colorHex: '#121212',
-                fabric: 'Organic Cotton', patternType: 'Plain',
-                neck: 'Round Neck', sleeve: 'Half Sleeve',
-                price: 1299,
-                photo: 'https://images.pexels.com/photos/4066293/pexels-photo-4066293.jpeg?auto=compress&cs=tinysrgb&w=800', // Need replacement for black color
-                mainCategory: 'WOMENSWEAR', subCategory: 'Essentials',
-                description: 'The definitive black tee. Minimalist design with maximum comfort.',
-                materialCare: '100% Organic Cotton.\nMachine wash cold.\nDo not iron on print/labels.',
+                name: 'Merino Wool Oversized Knit',
+                styleCode: 'KNIT-01',
+                color: 'Oatmeal', colorHex: '#E0D6CC',
+                price: 3599,
+                photo: 'https://images.pexels.com/photos/5935754/pexels-photo-5935754.jpeg?auto=compress&cs=tinysrgb&w=800',
+                mainCategory: 'WOMENSWEAR', subCategory: 'Outerwear',
+                description: 'Luxuriously soft merino wool in an oversized silhouette.',
+                materialCare: '100% Extra Fine Merino Wool.\nHand wash cold/Dry clean only.\nReshape while damp.\nDry flat.',
                 sizes: ['S', 'M', 'L'],
                 variants: [
-                    { size: 'S', color: 'Midnight Black', quantity: 25 },
-                    { size: 'M', color: 'Midnight Black', quantity: 30 },
-                    { size: 'L', color: 'Midnight Black', quantity: 15 },
+                    { size: 'S', color: 'Oatmeal', quantity: 7 },
+                    { size: 'M', color: 'Oatmeal', quantity: 12 },
                 ],
-                isTrending: true, tags: ['Essential', 'Black', 'Minimal'],
+                isNewArrival: true, isTrending: true, tags: ['Merino', 'Wool', 'Knitwear'],
                 status: 'ACTIVE',
             },
-
-            // ── TSHIRT-02: Luxury Heavyweight Oversized Tee (Mens) ──────────
             {
-                name: 'Luxury Heavyweight Tee',
-                styleCode: 'TSHIRT-02',
-                color: 'Bone', colorHex: '#E3DAC9',
-                fabric: '240 GSM Cotton', patternType: 'Solid',
-                neck: 'High Neck', sleeve: 'Drop Shoulder Sleeve',
-                length: '29', chest: '46', shoulder: '22',
-                price: 1899,
-                originalPrice: 2499,
-                photo: 'https://images.pexels.com/photos/1018911/pexels-photo-1018911.jpeg?auto=compress&cs=tinysrgb&w=800',
-                hoverImage: 'https://images.pexels.com/photos/1018914/pexels-photo-1018914.jpeg?auto=compress&cs=tinysrgb&w=800',
-                mainCategory: 'MENSWEAR', subCategory: 'Essentials',
-                description: 'Boxy, oversized fit tee crafted from ultra-heavyweight cotton for a structured drape.',
-                materialCare: '100% Premium Heavyweight Cotton.\nWash inside out.\nDo not tumble dry.\nSteam from distance.',
+                name: 'Structured Wool Coat',
+                styleCode: 'COAT-01',
+                color: 'Charcoal', colorHex: '#36454F',
+                price: 8999,
+                photo: 'https://images.pexels.com/photos/837140/pexels-photo-837140.jpeg?auto=compress&cs=tinysrgb&w=800',
+                mainCategory: 'MENSWEAR', subCategory: 'Outerwear',
+                description: 'Tailored coat made from premium Italian wool. Structured fit.',
+                materialCare: 'Outer: 80% Wool, 20% Nylon.\nProfessional dry clean only.',
                 sizes: ['M', 'L', 'XL'],
                 variants: [
-                    { size: 'M', color: 'Bone', quantity: 15 },
-                    { size: 'L', color: 'Bone', quantity: 20 },
-                    { size: 'XL', color: 'Bone', quantity: 12 },
+                    { size: 'M', color: 'Charcoal', quantity: 6 },
+                    { size: 'L', color: 'Charcoal', quantity: 9 },
                 ],
-                isNewArrival: true, tags: ['Oversized', 'Heavyweight', 'Streetwear'],
+                isNewArrival: true, tags: ['Wool', 'Coat', 'Tailoring'],
                 status: 'ACTIVE',
-            }
+            },
+            {
+                name: 'Fluid Midi Dress',
+                styleCode: 'DRESS-01',
+                color: 'Ivory', colorHex: '#FFFFF0',
+                price: 3299,
+                photo: 'https://images.pexels.com/photos/1536619/pexels-photo-1536619.jpeg?auto=compress&cs=tinysrgb&w=800',
+                mainCategory: 'WOMENSWEAR', subCategory: 'Essentials',
+                description: 'Fluid midi dress cut from sustainable TENCEL. Effortless elegance.',
+                materialCare: '100% TENCEL™ Lyocell.\nMachine wash cold in laundry bag.\nDo not tumble dry.',
+                sizes: ['XS', 'S', 'M', 'L'],
+                variants: [
+                    { size: 'S', color: 'Ivory', quantity: 14 },
+                    { size: 'M', color: 'Ivory', quantity: 16 },
+                ],
+                isNewArrival: true, isTrending: true, tags: ['Dress', 'Midi'],
+                status: 'ACTIVE',
+            },
+            {
+                name: 'French Terry Hoodie',
+                styleCode: 'HOODIE-01',
+                color: 'Ash Grey', colorHex: '#B2BEB5',
+                price: 2799,
+                photo: 'https://images.pexels.com/photos/7679720/pexels-photo-7679720.jpeg?auto=compress&cs=tinysrgb&w=800',
+                mainCategory: 'MENSWEAR', subCategory: 'Essentials',
+                description: 'Mid-weight French terry with a relaxed silhouette.',
+                materialCare: '100% Cotton French Terry.\nMachine wash warm with like colors.\nTumble dry medium.',
+                sizes: ['S', 'M', 'L', 'XL'],
+                variants: [
+                    { size: 'M', color: 'Ash Grey', quantity: 20 },
+                    { size: 'L', color: 'Ash Grey', quantity: 16 },
+                ],
+                isNewArrival: true, tags: ['Hoodie', 'Casual'],
+                status: 'ACTIVE',
+            },
+            {
+                name: 'Pleated Trousers',
+                styleCode: 'TROUS-01',
+                color: 'Black', colorHex: '#000000',
+                price: 2999,
+                photo: 'https://images.pexels.com/photos/1536619/pexels-photo-1536619.jpeg?auto=compress&cs=tinysrgb&w=800',
+                mainCategory: 'WOMENSWEAR', subCategory: 'Tailoring',
+                description: 'High-waisted trousers with deep pleats for a relaxed silhouette.',
+                materialCare: '60% Rayon, 35% Nylon, 5% Spandex.\nMachine wash cold on gentle.',
+                sizes: ['XS', 'S', 'M', 'L'],
+                variants: [
+                    { size: 'S', color: 'Black', quantity: 10 },
+                    { size: 'M', color: 'Black', quantity: 8 },
+                ],
+                isTrending: true, tags: ['Trousers', 'Tailoring'],
+                status: 'ACTIVE',
+            },
         ];
 
-        for (const p of products) {
+        for (const p of productData) {
             await Product.create(p);
         }
-        console.log(`✅ ${products.length} product entries seeded with variants and styleCodes`);
-
+        console.log(`✅ ${productData.length} product entries seeded (Clothing Only)`);
 
         // ── Coupon ────────────────────────────────────────────────────────────────
         await Coupon.create({
@@ -341,12 +329,11 @@ async function main() {
             discountValue: 10,
             minOrderValue: 999,
         });
-        console.log('✅ Demo coupon seeded — V2FIRST');
 
         // ── Reviews ──────────────────────────────────────────────────────────────
-        const reviewData = [
+        const reviews = [
             {
-                productId: (await Product.findOne({ name: 'Selvedge Slim Fit Denim' }))?._id,
+                productName: 'Selvedge Slim Fit Denim',
                 customerName: 'Rohit Mehta',
                 customerEmail: 'rohit@example.com',
                 rating: 4,
@@ -356,20 +343,42 @@ async function main() {
                 date: new Date('2026-02-16')
             },
             {
-                productId: (await Product.findOne({ name: 'Premium Linen Blend Shirt' }))?._id,
+                productName: 'Merino Wool Oversized Knit',
+                customerName: 'Sneha Rao',
+                customerEmail: 'sneha@example.com',
+                rating: 5,
+                reviewText: 'So soft and cozy! The oversized fit is exactly what I was looking for.',
+                status: 'ACTIVE',
+                homepageVisible: true,
+                date: new Date('2026-02-18')
+            },
+            {
+                productName: 'Premium Linen Blend Shirt',
                 customerName: 'Aarav Gupta',
                 customerEmail: 'aarav@example.com',
                 rating: 5,
-                reviewText: 'Incredible texture and fits impeccably. I bought two more directly after receiving the first one.',
+                reviewText: 'Incredible texture and fits impeccably.',
                 status: 'ACTIVE',
                 homepageVisible: true,
                 date: new Date('2026-02-20')
+            },
+            {
+                productName: 'Structured Wool Coat',
+                customerName: 'Vikram Singh',
+                customerEmail: 'vikram.singh@example.com',
+                rating: 4,
+                reviewText: 'Great structure and warmth. Highly recommend.',
+                status: 'ACTIVE',
+                homepageVisible: true,
+                date: new Date('2026-02-22')
             }
         ];
 
-        for (const r of reviewData) {
-            if (r.productId) {
-                await Review.create(r);
+        for (const r of reviews) {
+            const product = await Product.findOne({ name: r.productName });
+            if (product) {
+                const { productName, ...reviewData } = r;
+                await Review.create({ ...reviewData, productId: product._id });
             }
         }
         console.log('✅ Reviews seeded');
@@ -380,7 +389,7 @@ async function main() {
                 title: 'The Architecture of Silence',
                 category: 'Design Philosophy',
                 image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1200',
-                excerpt: 'Exploring how minimalism creates space for thought in both fashion and living.',
+                excerpt: 'Exploring how minimalism creates space for thought.',
                 date: new Date('2026-02-14'),
                 status: 'ACTIVE'
             },
@@ -388,12 +397,11 @@ async function main() {
                 title: 'Fabric as Narrative',
                 category: 'Craftsmanship',
                 image: 'https://images.unsplash.com/photo-1574201635302-388dd92a4c3f?auto=format&fit=crop&q=80&w=1200',
-                excerpt: 'Why we choose organic Peruvian cotton and the story it tells through touch.',
+                excerpt: 'Why we choose organic Peruvian cotton.',
                 date: new Date('2026-01-28'),
                 status: 'ACTIVE'
             }
         ]);
-        console.log('✅ Journal posts seeded');
 
         // ── Hero Slides ───────────────────────────────────────────────────────────
         await HeroSlide.create([
@@ -402,7 +410,7 @@ async function main() {
                 url: '/The_Dior_Men_s_Summer_2022_Campaign_Video_720P.mp4',
                 tagline: 'COLLECTION 2026',
                 title: 'THE ART OF\nDISCIPLINE',
-                description: 'Meticulously crafted for the modern individual who values silence over noise. Discover the latest additions to our curated essential series.',
+                description: 'Meticulously crafted for the modern individual who values silence over noise.',
                 ctaText: 'The New Collection',
                 ctaLink: '/new-arrivals',
                 duration: 7000,
@@ -414,17 +422,29 @@ async function main() {
                 url: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&q=80&w=2000',
                 tagline: 'MENSWEAR ZENITH',
                 title: 'TIMELESS\nMODERNISM',
-                description: 'Exploring the intersection of architectural precision and wearable comfort. Our tailoring collection redefines the professional wardrobe.',
+                description: 'Exploring the intersection of architectural precision and wearable comfort.',
                 ctaText: 'Explore Tailoring',
                 ctaLink: '/shop?category=Tailoring',
                 duration: 5000,
                 order: 2,
                 status: 'ACTIVE'
+            },
+            {
+                type: 'image',
+                url: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&q=80&w=2000',
+                tagline: 'ESSENTIALS HUB',
+                title: 'SILENT\nLUXURY',
+                description: 'The pieces you reach for every day, elevated with premium fabrics.',
+                ctaText: 'View Essentials',
+                ctaLink: '/shop?category=Essentials',
+                duration: 6000,
+                order: 3,
+                status: 'ACTIVE'
             }
         ]);
-        console.log('✅ Hero slides seeded (including video)');
+        console.log('✅ Hero slides seeded');
 
-        // ── Sliders (Promotional & Marquee) ───────────────────────────────────────
+        // ── Promotional Sliders ───────────────────────────────────────────────────
         await Slider.create([
             {
                 type: 'PROMOTIONAL',
@@ -434,49 +454,68 @@ async function main() {
                 buttonText: 'Shop Newest',
                 link: '/shop?sort=Newest',
                 status: 'ACTIVE'
+            },
+            {
+                type: 'PROMOTIONAL',
+                image: 'https://images.pexels.com/photos/1926769/pexels-photo-1926769.jpeg?auto=compress&cs=tinysrgb&w=800',
+                title: 'New Arrivals',
+                subtitle: 'CURATED ESSENTIALS',
+                buttonText: 'Explore New',
+                link: '/shop?filter=New Arrivals',
+                status: 'ACTIVE'
             }
         ]);
-        console.log('✅ Promotional and Category sliders seeded');
 
         // ── Dynamic Content ────────────────────────────────────────────────────────
         await Content.insertMany([
             { type: 'TAGLINE', title: 'We redefine modern luxury with minimalistic elegance.', status: 'ACTIVE' },
+            { type: 'TAGLINE', title: 'Crafting the future of fashion for the contemporary mind.', status: 'ACTIVE' },
             { type: 'SOCIAL_POST', image: 'https://images.pexels.com/photos/1926769/pexels-photo-1926769.jpeg?auto=compress&cs=tinysrgb&w=800', caption: 'Morning essentials.', likes: '2.4k', status: 'ACTIVE' },
+            { type: 'SOCIAL_POST', image: 'https://images.pexels.com/photos/1598505/pexels-photo-1598505.jpeg?auto=compress&cs=tinysrgb&w=800', caption: 'Texture and light.', likes: '1.8k', status: 'ACTIVE' },
             { type: 'FEATURE_ITEM', caption: 'Truck', title: 'Free Delivery', text: 'On all orders above ₹999', status: 'ACTIVE' },
             { type: 'FEATURE_ITEM', caption: 'CreditCard', title: 'Secure Payment', text: '100% secure payment processing', status: 'ACTIVE' },
+            { type: 'FEATURE_ITEM', caption: 'RefreshCw', title: '14-Day Returns', text: 'Easy returns and exchanges', status: 'ACTIVE' },
+            { type: 'FEATURE_ITEM', caption: 'Headphones', title: '24/7 Support', text: 'Dedicated customer assistance', status: 'ACTIVE' },
             { type: 'MARQUEE', text: "V2 ENTERPRISE", status: 'ACTIVE' },
             { type: 'MARQUEE', text: "COLLECTION 2026", status: 'ACTIVE' },
             { type: 'MARQUEE', text: "THE ART OF DISCIPLINE", status: 'ACTIVE' },
-            { type: 'MARQUEE', text: "LUXURY REDEFINED", status: 'ACTIVE' }
+            { type: 'MARQUEE', text: "LUXURY REDEFINED", status: 'ACTIVE' },
+            { type: 'MARQUEE', text: "SMART FASHION HUB", status: 'ACTIVE' },
+            { type: 'MARQUEE', text: "BHAVNAGAR STUDIO", status: 'ACTIVE' }
         ]);
-        console.log('✅ Dynamic content seeded');
 
         // ── Contact Messages ──────────────────────────────────────────────────────
         await ContactMessage.create([
             {
                 name: 'Neha Sharma',
                 email: 'neha.sharma@example.com',
-                message: 'I am interested in the premium linen shirts. Do you have bulk discounts for corporate gifting?',
+                message: 'I am interested in bulk discounts.',
                 status: 'UNREAD',
                 date: new Date('2026-02-28')
+            },
+            {
+                name: 'Rahul Verma',
+                email: 'rahul.verma@example.com',
+                message: 'The quality of the denim is outstanding!',
+                status: 'READ',
+                date: new Date('2026-02-25')
             }
         ]);
-        console.log('✅ Contact messages seeded');
 
         // ── Orders ────────────────────────────────────────────────────────────────
-        const linenShirt = await Product.findOne({ name: 'Premium Linen Blend Shirt', colorHex: '#FFFFFF' });
-        const selvedgeDenim = await Product.findOne({ name: 'Selvedge Slim Fit Denim' });
+        const shirt = await Product.findOne({ name: 'Premium Linen Blend Shirt' });
+        const denim = await Product.findOne({ name: 'Selvedge Slim Fit Denim' });
 
-        if (linenShirt && selvedgeDenim) {
+        if (shirt && denim) {
             await Order.create([
                 {
                     orderId: 'ORD-1001',
                     userId: customer._id,
                     items: [
                         {
-                            productId: linenShirt._id,
-                            productName: linenShirt.name,
-                            productPhoto: linenShirt.photo,
+                            productId: shirt._id,
+                            productName: shirt.name,
+                            productPhoto: shirt.photo,
                             quantity: 1,
                             size: 'M',
                             color: 'White',
@@ -486,9 +525,29 @@ async function main() {
                     total: 2499,
                     method: 'Prepaid',
                     status: 'DELIVERED',
-                    address: customer.addresses![0].street + ', ' + customer.addresses![0].city,
-                    phone: customer.phone,
-                    waybill: 'WB123456789',
+                    address: 'Bhavnagar, Gujarat',
+                    phone: '9033883395',
+                    discount: 0
+                },
+                {
+                    orderId: 'ORD-1002',
+                    userId: customer._id,
+                    items: [
+                        {
+                            productId: denim._id,
+                            productName: denim.name,
+                            productPhoto: denim.photo,
+                            quantity: 1,
+                            size: '32',
+                            color: 'Indigo',
+                            priceAtTime: 4999
+                        }
+                    ],
+                    total: 4999,
+                    method: 'COD',
+                    status: 'PENDING',
+                    address: 'Bhavnagar, Gujarat',
+                    phone: '9033883395',
                     discount: 0
                 }
             ]);

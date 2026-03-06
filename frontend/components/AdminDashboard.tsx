@@ -1372,28 +1372,7 @@ const AdminDashboard: React.FC = () => {
                         </div>
                     </div>
                 );
-            case 'page':
-                return (
-                    <div className="space-y-4">
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Page Title</label>
-                            <input
-                                type="text"
-                                className="w-full bg-transparent border-b border-gray-100 py-3 text-[11px] font-bold tracking-widest focus:outline-none focus:border-luxury-black transition-colors"
-                                value={formData.title || ''}
-                                onChange={e => setFormData({ ...formData, title: e.target.value })}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Content</label>
-                            <textarea
-                                className="w-full border border-gray-200 p-3 rounded-xl focus:outline-none focus:border-luxury-gold text-sm h-32"
-                                value={formData.content || ''}
-                                onChange={e => setFormData({ ...formData, content: e.target.value })}
-                            />
-                        </div>
-                    </div>
-                );
+
             case 'main-category':
             case 'sub-category':
                 return (
@@ -2082,8 +2061,7 @@ const AdminDashboard: React.FC = () => {
                 );
 
 
-            case 'taglines':
-                return <DataTable title="Taglines" data={taglines} columns={taglineColumns} onAdd={() => handleAdd('tagline')} addButtonLabel="Add Tagline" breadcrumbsPath={['Taglines']} />;
+
 
             case 'products':
                 return (

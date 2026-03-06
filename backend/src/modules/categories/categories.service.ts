@@ -2,11 +2,11 @@ import { Category } from '../../models/Category';
 import mongoose from 'mongoose';
 
 export const getCategoriesService = async () => {
-    // Fetch main categories and their children
-    // In Mongoose, we'll fetch all and build tree or use population if we set it up.
-    // For now, let's just fetch all categories and the frontend can handle it, 
-    // or we fetch roots and populate children.
-    return Category.find({ parentId: null }).sort({ name: 1 }).lean();
+    const categories = await Category.find({}).sort({ name: 1 }).lean();
+    return categories.map(cat => ({
+        ...cat,
+        id: (cat as any)._id.toString()
+    }));
 };
 
 export const createCategoryService = async (data: {

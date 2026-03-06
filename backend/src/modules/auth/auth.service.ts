@@ -48,10 +48,19 @@ export const getMeService = async (userId: string) => {
     return { ...userObj, id: user._id.toString() };
 };
 
-export const updateMeService = async (userId: string, data: { name?: string; phone?: string }) => {
-    const user = await User.findByIdAndUpdate(userId, data, { new: true }).select('-password');
-    if (!user) throw new Error('User not found.');
-
-    const userObj = user.toObject();
-    return { ...userObj, id: user._id.toString() };
+export const updateMeService = async (userId: string, data: { name?: string; firstName?: string; lastName?: string; phone?: string }) => {
+    console.log('[Auth] Updating user:', userId, 'with data:', JSON.stringify(data, null, 2));
+    try {
+        const user = await User.findByIdAndUpdate(userId, data, { new: true }).select('-password');
+        if (!user) {
+            console.warn('[Auth] User not found for update:', userId);
+            throw new Error('User not found.');
+        }
+        console.log('[Auth] User updated successfully');
+        const userObj = user.toObject();
+        return { ...userObj, id: user._id.toString() };
+    } catch (err: any) {
+        console.error('[Auth] Error in updateMeService:', err.message);
+        throw err;
+    }
 };

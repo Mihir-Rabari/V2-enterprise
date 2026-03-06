@@ -15,7 +15,7 @@ export const getProducts = async (req: Request, res: Response) => {
             isNewArrival: isNew === 'true' ? true : isNew === 'false' ? false : undefined,
             tag: tag as string,
             search: search as string,
-            status: status as 'ACTIVE' | 'INACTIVE',
+            status: status as 'ACTIVE' | 'INACTIVE' | 'ALL',
             page: page ? parseInt(page as string) : 1,
             limit: limit ? parseInt(limit as string) : 12,
         });
@@ -38,8 +38,9 @@ export const createProduct = async (req: Request, res: Response) => {
     try {
         const product = await createProductService(req.body);
         return sendSuccess(res, product, 'Product created', 201);
-    } catch (err: unknown) {
-        return sendError(res, (err as Error).message, 400);
+    } catch (err: any) {
+        console.error('[Products] Failed to create product:', err.message, err.errors || err);
+        return sendError(res, err.message, 400);
     }
 };
 
@@ -47,8 +48,9 @@ export const updateProduct = async (req: Request, res: Response) => {
     try {
         const product = await updateProductService(req.params.id, req.body);
         return sendSuccess(res, product, 'Product updated');
-    } catch (err: unknown) {
-        return sendError(res, (err as Error).message, 400);
+    } catch (err: any) {
+        console.error('[Products] Failed to update product:', err.message, err.errors || err);
+        return sendError(res, err.message, 400);
     }
 };
 

@@ -10,7 +10,7 @@ export interface ProductFilters {
     search?: string;
     page?: number;
     limit?: number;
-    status?: 'ACTIVE' | 'INACTIVE';
+    status?: 'ACTIVE' | 'INACTIVE' | 'ALL';
 }
 
 export const getProductsService = async (filters: ProductFilters) => {
@@ -22,7 +22,7 @@ export const getProductsService = async (filters: ProductFilters) => {
         ...(subCategory && { subCategory }),
         ...(isTrending !== undefined && { isTrending }),
         ...(isNewArrival !== undefined && { isNewArrival }),
-        ...(status ? { status } : { status: 'ACTIVE' }),
+        ...(status === 'ALL' ? {} : status ? { status } : { status: 'ACTIVE' }),
         ...(tag && { tags: tag }),
         ...(search && {
             $or: [
@@ -46,13 +46,44 @@ export const getProductsService = async (filters: ProductFilters) => {
 };
 
 export const getProductByIdService = async (id: string | number) => {
-    const filter: any = mongoose.Types.ObjectId.isValid(id) ? { _id: id } : { id: id };
+    let product;
 
-    const product = await Product.findOne(filter);
+    const idStr = String(id);
+
+    if (mongoose.Types.ObjectId.isValid(idStr)) {
+        product = await Product.findById(idStr);
+    }
+
+    if (!product) {
+        product = await Product.findOne({
+            $or: [
+                { id: id },
+                { _id: mongoose.Types.ObjectId.isValid(idStr) ? idStr : undefined }
+            ].filter(Boolean) as any[]
+        });
+    }
+
     if (!product) throw new Error('Product not found.');
 
     const obj = product.toObject();
-    return { ...obj, id: product._id.toString() };
+    const productWithId = { ...obj, id: product._id.toString() };
+
+    // Fetch siblings — other color variants sharing the same styleCode
+    let siblings: any[] = [];
+    if (product.styleCode) {
+        const siblingDocs = await Product.find({
+            styleCode: product.styleCode,
+            _id: { $ne: product._id },
+            status: 'ACTIVE',
+        }).select('_id name color photo price');
+
+        siblings = siblingDocs.map(s => {
+            const sObj = s.toObject();
+            return { ...sObj, id: s._id.toString() };
+        });
+    }
+
+    return { ...productWithId, siblings };
 };
 
 export const createProductService = async (data: any) => {
@@ -62,7 +93,8 @@ export const createProductService = async (data: any) => {
 };
 
 export const updateProductService = async (id: string | number, data: any) => {
-    const filter: any = mongoose.Types.ObjectId.isValid(id) ? { _id: id } : { id: id };
+    const idStr = String(id);
+    const filter: any = mongoose.Types.ObjectId.isValid(idStr) ? { _id: idStr } : { id: id };
     const product = await Product.findOneAndUpdate(filter, data, { new: true });
     if (!product) throw new Error('Product not found.');
 
@@ -71,7 +103,8 @@ export const updateProductService = async (id: string | number, data: any) => {
 };
 
 export const deleteProductService = async (id: string | number) => {
-    const filter: any = mongoose.Types.ObjectId.isValid(id) ? { _id: id } : { id: id };
+    const idStr = String(id);
+    const filter: any = mongoose.Types.ObjectId.isValid(idStr) ? { _id: idStr } : { id: id };
     const product = await Product.findOneAndDelete(filter);
     if (!product) throw new Error('Product not found.');
     return product;

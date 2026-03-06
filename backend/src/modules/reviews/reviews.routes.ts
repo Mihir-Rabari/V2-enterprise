@@ -51,9 +51,9 @@ router.post('/', protect, async (req: AuthRequest, res: Response) => {
             customerEmail: user!.email,
             rating: parseInt(rating),
             reviewText,
-            status: 'INACTIVE', // awaits admin approval
+            status: 'ACTIVE', // Auto-approved by default
         });
-        return sendSuccess(res, { ...review.toObject(), id: review._id.toString() }, 'Review submitted — awaiting approval', 201);
+        return sendSuccess(res, { ...review.toObject(), id: review._id.toString() }, 'Review submitted successfully', 201);
     } catch (err: unknown) { return sendError(res, (err as Error).message, 400); }
 });
 

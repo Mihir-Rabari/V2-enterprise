@@ -21,7 +21,7 @@ const HeroSlideSchema = new Schema<IHeroSlide>({
     description: { type: String, required: true },
     ctaText: { type: String, required: true },
     ctaLink: { type: String, default: '/shop' },
-    duration: { type: Number },
+    duration: { type: Number, default: 5000 },
     order: { type: Number, default: 0 },
     status: { type: String, enum: ['ACTIVE', 'INACTIVE'], default: 'ACTIVE' },
 });

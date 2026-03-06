@@ -31,11 +31,11 @@ router.get('/', protect, adminOnly, async (req: Request, res: Response) => {
     } catch (err: unknown) { return sendError(res, (err as Error).message); }
 });
 
-// Admin: update order status
+// Admin: update order (status, AWB, etc.)
 router.patch('/:id/status', protect, adminOnly, async (req: Request, res: Response) => {
     try {
-        const order = await updateOrderStatusService(req.params.id, req.body.status);
-        return sendSuccess(res, order, 'Order status updated');
+        const order = await updateOrderStatusService(req.params.id, req.body);
+        return sendSuccess(res, order, 'Order updated successfully');
     } catch (err: unknown) { return sendError(res, (err as Error).message, 400); }
 });
 

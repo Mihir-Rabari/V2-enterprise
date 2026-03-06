@@ -16,12 +16,19 @@ export interface IOrder extends Document {
     items: IOrderItem[];
     total: number;
     method: string;
-    status: 'PENDING' | 'DELIVERED' | 'CANCELLED' | 'REFUNDED';
+    status: 'PENDING' | 'CONFIRMED' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED' | 'REFUNDED';
     address: string;
     phone: string;
+    awbNumber?: string;
+    trackingLink?: string;
     waybill?: string;
     couponCode?: string;
     discount: number;
+    razorpayPaymentId?: string;
+    razorpayOrderId?: string;
+    razorpaySignature?: string;
+    paymentStatus: 'PENDING' | 'PAID' | 'FAILED';
+    failureReason?: string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -43,12 +50,27 @@ const OrderSchema = new Schema<IOrder>(
         items: [OrderItemSchema],
         total: { type: Number, required: true },
         method: { type: String, required: true },
-        status: { type: String, enum: ['PENDING', 'DELIVERED', 'CANCELLED', 'REFUNDED'], default: 'PENDING' },
+        status: {
+            type: String,
+            enum: ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED'],
+            default: 'PENDING'
+        },
         address: { type: String, required: true },
         phone: { type: String, required: true },
+        awbNumber: { type: String },
+        trackingLink: { type: String },
         waybill: { type: String },
         couponCode: { type: String },
         discount: { type: Number, default: 0 },
+        razorpayPaymentId: { type: String },
+        razorpayOrderId: { type: String },
+        razorpaySignature: { type: String },
+        paymentStatus: {
+            type: String,
+            enum: ['PENDING', 'PAID', 'FAILED'],
+            default: 'PENDING'
+        },
+        failureReason: { type: String },
     },
     { timestamps: true }
 );

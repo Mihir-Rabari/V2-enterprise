@@ -1,15 +1,24 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface ISlider extends Document {
-    image: string;
-    title: string;
+    type: 'PROMOTIONAL' | 'CATEGORY' | 'BEST_CATEGORY' | 'NEW_ARRIVAL';
+    image?: string;
+    title?: string;
+    subtitle?: string; // Added
+    buttonText?: string; // Added
+    text?: string;
     link: string;
     status: 'ACTIVE' | 'INACTIVE';
 }
 
 const SliderSchema = new Schema<ISlider>({
-    image: { type: String, required: true },
-    title: { type: String, required: true },
+    type: { type: String, enum: ['PROMOTIONAL', 'CATEGORY', 'BEST_CATEGORY', 'NEW_ARRIVAL'], default: 'PROMOTIONAL' },
+
+    image: { type: String },
+    title: { type: String },
+    subtitle: { type: String },
+    buttonText: { type: String },
+    text: { type: String },
     link: { type: String, default: '/shop' },
     status: { type: String, enum: ['ACTIVE', 'INACTIVE'], default: 'ACTIVE' },
 });

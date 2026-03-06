@@ -1,8 +1,8 @@
 import { Order } from '../../models/Order';
 import { Product } from '../../models/Product';
 import { Coupon } from '../../models/Coupon';
-import { User } from '../../models/User';
 import mongoose from 'mongoose';
+import { verifyRazorpaySignature } from '../payments/payments.service';
 
 interface CreateOrderInput {
     userId: string;
@@ -11,18 +11,46 @@ interface CreateOrderInput {
     address: string;
     phone: string;
     couponCode?: string;
+    razorpayPaymentId?: string;
+    razorpayOrderId?: string;
+    razorpaySignature?: string;
 }
 
 export const createOrderService = async (input: CreateOrderInput) => {
+    console.log('[Orders] Creating order for user:', input.userId);
+    console.log('[Orders] Input items:', JSON.stringify(input.items, null, 2));
+
+    if (!mongoose.Types.ObjectId.isValid(input.userId)) {
+        console.error('[Orders] CRITICAL: Invalid User ID format received:', input.userId);
+        throw new Error(`Invalid User ID format (${input.userId}). Please log out and log in again.`);
+    }
+
     // 1. Fetch all products to get live prices
-    const productIds = input.items.map(i => new mongoose.Types.ObjectId(i.productId));
+    const productIds = input.items.map(i => {
+        if (!mongoose.Types.ObjectId.isValid(i.productId)) {
+            console.error('[Orders] Invalid product ID format:', i.productId);
+            throw new Error(`Invalid product ID format: ${i.productId}`);
+        }
+        return new mongoose.Types.ObjectId(i.productId);
+    });
+
     const products = await Product.find({
         _id: { $in: productIds },
         status: 'ACTIVE'
     });
 
+    console.log('[Orders] Products found in DB:', products.length);
+
     if (products.length !== input.items.length) {
-        throw new Error('One or more products are unavailable or not found.');
+        const foundIds = products.map(p => p._id.toString());
+        const missingIds = input.items
+            .filter(i => !foundIds.includes(i.productId))
+            .map(i => i.productId);
+
+        const foundButInactive = products.filter(p => p.status !== 'ACTIVE').map(p => p._id.toString());
+
+        console.error('[Orders] ERROR: Missing or Inactive products detected:', { missingIds, foundButInactive });
+        throw new Error(`Some items in your cart are no longer available (${[...missingIds, ...foundButInactive].join(', ')}). Please clear your cart and try again.`);
     }
 
     // 2. Calculate total server-side
@@ -41,23 +69,46 @@ export const createOrderService = async (input: CreateOrderInput) => {
         };
     });
 
-    // 3. Apply coupon if provided
+    // 3. Apply coupon discount safely
     let discount = 0;
+
+    // Method-specific discounts have been removed as per user request
+    const method = input.method.toLowerCase();
+
     if (input.couponCode) {
         const coupon = await Coupon.findOne({ code: input.couponCode });
         if (coupon && coupon.isActive && subtotal >= coupon.minOrderValue) {
             if (!coupon.expiresAt || coupon.expiresAt > new Date()) {
-                discount = coupon.discountType === 'percentage'
+                const couponDiscount = coupon.discountType === 'percentage'
                     ? (subtotal * coupon.discountValue) / 100
                     : coupon.discountValue;
+                discount += couponDiscount;
             }
+        }
+    }
+
+    // 4. Razorpay Verification (only for prepaid)
+    if (method === 'prepaid') {
+        if (!input.razorpayOrderId || !input.razorpayPaymentId || !input.razorpaySignature) {
+            throw new Error('Razorpay payment details are missing for prepaid order.');
+        }
+
+        const isVerified = verifyRazorpaySignature(
+            input.razorpayOrderId,
+            input.razorpayPaymentId,
+            input.razorpaySignature
+        );
+
+        if (!isVerified) {
+            console.error('[Orders] Razorpay verification failed for signature:', input.razorpaySignature);
+            throw new Error('Payment verification failed. Please contact support.');
         }
     }
 
     const total = Math.max(0, subtotal - discount);
     const orderIdCode = `#V2-${Date.now()}`;
 
-    // 4. Create order
+    // 5. Create order
     const order = await Order.create({
         orderId: orderIdCode,
         userId: new mongoose.Types.ObjectId(input.userId),
@@ -68,7 +119,26 @@ export const createOrderService = async (input: CreateOrderInput) => {
         couponCode: input.couponCode,
         discount,
         items: orderItems,
+        razorpayOrderId: input.razorpayOrderId,
+        razorpayPaymentId: input.razorpayPaymentId,
+        razorpaySignature: input.razorpaySignature,
+        paymentStatus: method === 'prepaid' ? 'PAID' : 'PENDING',
+        status: method === 'prepaid' ? 'CONFIRMED' : 'PENDING',
     });
+
+    // 6. Deduct stock for confirmed orders (Prepaid is confirmed immediately, COD/Pickup are pending but should still hold stock?)
+    // In most e-commerce, COD also deducts stock to prevent overselling.
+    for (const item of input.items) {
+        if (item.size) {
+            await Product.updateOne(
+                { _id: item.productId, 'variants.size': item.size },
+                { $inc: { 'variants.$.quantity': -item.quantity } }
+            );
+        } else {
+            // Handle products without sizes if any (like accessories)
+            // But based on schema variants always have size
+        }
+    }
 
     return { ...order.toObject(), id: order._id.toString() };
 };
@@ -100,11 +170,18 @@ export const getAllOrdersService = async (page = 1, limit = 20) => {
     return { orders: ordersWithId, total, page, limit };
 };
 
-export const updateOrderStatusService = async (id: string, status: string) => {
+export const updateOrderStatusService = async (id: string, updates: { status?: string; awbNumber?: string; trackingLink?: string }) => {
     const query = mongoose.Types.ObjectId.isValid(id) ? { _id: id } : { id: id };
+
+    // Build update object based on provided fields
+    const updateData: any = {};
+    if (updates.status) updateData.status = updates.status;
+    if (updates.awbNumber !== undefined) updateData.awbNumber = updates.awbNumber;
+    if (updates.trackingLink !== undefined) updateData.trackingLink = updates.trackingLink;
+
     const order = await Order.findOneAndUpdate(
         query,
-        { status: status as 'PENDING' | 'DELIVERED' | 'CANCELLED' | 'REFUNDED' },
+        { $set: updateData },
         { new: true }
     );
     if (!order) throw new Error('Order not found.');

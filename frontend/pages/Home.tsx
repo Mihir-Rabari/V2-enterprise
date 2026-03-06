@@ -1,11 +1,11 @@
 import React, { useRef } from 'react';
 import { motion, useScroll, useTransform, useSpring, useMotionValue } from 'framer-motion';
-import { ArrowRight, Instagram, ArrowUpRight, TrendingUp, Sparkles, Star, ShieldCheck, Zap, Send, Filter, ChevronDown, Search } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, TrendingUp, Sparkles, Star, ShieldCheck, Zap, Send, Filter, ChevronDown, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import { HeroContent, CommitmentContent, Product, HomeSectionContent, MarqueeItem, JournalPost, SocialPost, LookbookItem, Review, HeroSlide, Slider, Category, SiteSettings } from '../types';
-import { initialHeroContent, initialCommitment, initialProducts, initialHomeSections, initialMarquee, initialJournal, initialSocial, initialLookbook, initialReviews, initialHeroSlides, initialSiteSettings } from '../data/initialData';
+import { HeroContent, CommitmentContent, Product, HomeSectionContent, MarqueeItem, JournalPost, LookbookItem, Review, HeroSlide, Slider, Category, SiteSettings } from '../types';
+import { initialHeroContent, initialCommitment, initialProducts, initialHomeSections, initialMarquee, initialJournal, initialLookbook, initialReviews, initialHeroSlides, initialSiteSettings } from '../data/initialData';
 import PromotionalSlider from '../components/PromotionalSlider';
 import { AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useCallback } from 'react';
@@ -201,33 +201,6 @@ const ClientVoicesSection: React.FC<{ reviews: any[] }> = ({ reviews }) => (
     </section>
 );
 
-const SocialGrid: React.FC<{ posts: SocialPost[] }> = ({ posts }) => (
-    <section className="py-24 bg-white border-t border-gray-100">
-        <div className="max-w-[1800px] mx-auto px-6">
-            <div className="flex flex-col items-center mb-16 space-y-4">
-                <Instagram size={24} className="text-luxury-black" />
-                <h2 className="text-[10px] font-bold uppercase tracking-[0.4em]">@V2_Enterprise</h2>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
-                {posts.map((post) => (
-                    <div key={post.id} className="group relative aspect-square overflow-hidden bg-gray-100 cursor-pointer">
-                        <img
-                            src={post.image}
-                            alt={post.caption}
-                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                        />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center p-6 text-center">
-                            <div className="space-y-2 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-                                <p className="text-white text-[10px] font-bold uppercase tracking-widest">{post.likes} Likes</p>
-                                <p className="text-white/80 text-[10px] italic font-serif">"{post.caption}"</p>
-                            </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    </section>
-);
 
 const Home: React.FC = () => {
     // API Hooks
@@ -247,7 +220,7 @@ const Home: React.FC = () => {
     // Configuration States
     const [homeSections, setHomeSections] = useState<HomeSectionContent>(initialHomeSections);
     const [marqueeItems, setMarqueeItems] = useState<MarqueeItem[]>(initialMarquee || []);
-    const [socialPosts, setSocialPosts] = useState<SocialPost[]>([]);
+    const [socialPosts, setSocialPosts] = useState<any[]>([]);
     const [lookbookItems, setLookbookItems] = useState<LookbookItem[]>([]);
     const [commitment, setCommitment] = useState<CommitmentContent>(initialCommitment);
     const [siteSettings, setSiteSettings] = useState<SiteSettings>(initialSiteSettings);
@@ -311,14 +284,6 @@ const Home: React.FC = () => {
             })
             .catch(err => console.error('Error fetching settings:', err));
 
-        // Fetch Content
-        contentAPI.getByType('SOCIAL_POST')
-            .then(res => {
-                if (res.data.success && res.data.data) {
-                    setSocialPosts(res.data.data);
-                }
-            })
-            .catch(err => console.error('Error fetching social posts:', err));
 
         contentAPI.getByType('LOOKBOOK_ITEM')
             .then(res => {
@@ -761,7 +726,7 @@ const Home: React.FC = () => {
                     case 'testimonials':
                         return <ClientVoicesSection key="testimonials" reviews={reviews} />;
                     case 'social':
-                        return <SocialGrid key="social" posts={socialPosts} />;
+                        return null;
                     case 'commitment':
                         return (
                             <section key="commitment" className="py-48 flex flex-col items-center justify-center text-center space-y-12 px-6 bg-luxury-gray">

@@ -59,7 +59,7 @@ async function main() {
                 featuredButtonText: "Explore More",
                 commitmentAboutLinkText: "Learn About Us",
                 commitmentJournalLinkText: "Read Journal",
-                sectionOrder: ['hero', 'marquee', 'new-standard', 'trending', 'categories', 'promotional_slider', 'essentials', 'promotional', 'testimonials', 'social', 'commitment'],
+                sectionOrder: ['hero', 'marquee', 'new-standard', 'trending', 'categories', 'promotional_slider', 'essentials', 'promotional', 'testimonials', 'commitment'],
                 categoryColumns: 4,
                 trendingProductIds: [],
                 categories: [
@@ -470,8 +470,6 @@ async function main() {
         await Content.insertMany([
             { type: 'TAGLINE', title: 'We redefine modern luxury with minimalistic elegance.', status: 'ACTIVE' },
             { type: 'TAGLINE', title: 'Crafting the future of fashion for the contemporary mind.', status: 'ACTIVE' },
-            { type: 'SOCIAL_POST', image: 'https://images.pexels.com/photos/1926769/pexels-photo-1926769.jpeg?auto=compress&cs=tinysrgb&w=800', caption: 'Morning essentials.', likes: '2.4k', status: 'ACTIVE' },
-            { type: 'SOCIAL_POST', image: 'https://images.pexels.com/photos/1598505/pexels-photo-1598505.jpeg?auto=compress&cs=tinysrgb&w=800', caption: 'Texture and light.', likes: '1.8k', status: 'ACTIVE' },
             { type: 'FEATURE_ITEM', caption: 'Truck', title: 'Free Delivery', text: 'On all orders above ₹999', status: 'ACTIVE' },
             { type: 'FEATURE_ITEM', caption: 'CreditCard', title: 'Secure Payment', text: '100% secure payment processing', status: 'ACTIVE' },
             { type: 'FEATURE_ITEM', caption: 'RefreshCw', title: '14-Day Returns', text: 'Easy returns and exchanges', status: 'ACTIVE' },

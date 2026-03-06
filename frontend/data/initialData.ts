@@ -378,7 +378,7 @@ export const initialHomeSections: HomeSectionContent = {
         'essentials',
         'promotional',
         'testimonials',
-        'social',
+        'testimonials',
         'commitment'
     ],
     categoryColumns: 3,
@@ -456,9 +456,7 @@ export const initialJournal: JournalPost[] = [
     }
 ];
 
-export const initialSocial: SocialPost[] = [
-    { id: 4, image: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&q=80&w=800", likes: "4.2k", caption: "Workspace vibes." }
-];
+export const initialSocial: SocialPost[] = [];
 
 export const initialHeroSlides: HeroSlide[] = [
     {

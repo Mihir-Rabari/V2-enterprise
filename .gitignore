@@ -37,3 +37,6 @@ tmp/
 # App data
 .gemini/
 brain/
+# Generated Files
+backend/src/**/*.js
+backend/src/**/*.js.map

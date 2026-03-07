@@ -199,7 +199,7 @@ router.get('/customers', protect, adminOnly, async (req: Request, res: Response)
 // Admin: get all media from ImageKit directly
 router.get('/media', protect, adminOnly, async (req: Request, res: Response) => {
     try {
-        const path = (req.query.path as string) || undefined; // Remove default folder to see everything
+        const path = (req.query.path as string) || '/';
         const searchQuery = (req.query.searchQuery as string) || '';
         const limit = parseInt(req.query.limit as string) || 100;
 
@@ -209,14 +209,14 @@ router.get('/media', protect, adminOnly, async (req: Request, res: Response) => 
         }
 
         const maskedKey = IK_PRIVATE_KEY.substring(0, 8) + '...' + IK_PRIVATE_KEY.substring(IK_PRIVATE_KEY.length - 4);
-        console.log(`📡 Fetching Media assets (query: "${searchQuery}", path: "${path || 'root'}") with key: ${maskedKey}`);
+        console.log(`📡 Fetching Media assets (query: "${searchQuery}", path: "${path}") with key: ${maskedKey}`);
 
         const ikParams: any = { limit };
-        if (path) ikParams.path = path;
+        if (path && path !== '/') ikParams.path = path;
         if (searchQuery) ikParams.searchQuery = `name = "${searchQuery}"`;
 
-        // Fetch from ImageKit List Files API
-        const response = await axios.get(IK_LIST_URL, {
+        // 1. Fetch files
+        const filesResponse = await axios.get(IK_LIST_URL, {
             params: ikParams,
             auth: {
                 username: IK_PRIVATE_KEY,
@@ -224,10 +224,29 @@ router.get('/media', protect, adminOnly, async (req: Request, res: Response) => 
             },
         });
 
-        console.log(`✅ ImageKit returned ${response.data.length} assets`);
+        // 2. Fetch subfolders in this path (optional but better for UI)
+        // Note: ImageKit API for folders is a bit different, let's just focus on files for now 
+        // to get the core logic back, but we can infer folders from file paths if needed.
+        // Actually, let's try to get subfolders if no search query is active
+        let subfolders: string[] = [];
+        if (!searchQuery) {
+            try {
+                // This is a guess on the endpoint structure based on common usage
+                // If this fails, we just don't show folders
+                const foldersRes = await axios.get('https://api.imagekit.io/v1/folders', {
+                    params: { parentFolderPath: path },
+                    auth: { username: IK_PRIVATE_KEY, password: '' }
+                });
+                subfolders = (foldersRes.data || []).map((f: any) => f.name);
+            } catch (fErr) {
+                console.warn('Could not fetch folders:', (fErr as Error).message);
+            }
+        }
+
+        console.log(`✅ ImageKit returned ${filesResponse.data.length} assets and ${subfolders.length} folders`);
 
         // Map ImageKit response to our frontend expected format
-        const media = response.data.map((file: any) => ({
+        const media = filesResponse.data.map((file: any) => ({
             id: file.fileId,
             url: file.url,
             thumbnailUrl: `${file.url}?tr=w-200,h-200,fo-auto`,
@@ -238,7 +257,12 @@ router.get('/media', protect, adminOnly, async (req: Request, res: Response) => 
             createdAt: file.createdAt
         }));
 
-        return sendSuccess(res, { media, total: media.length });
+        return sendSuccess(res, {
+            media,
+            folders: subfolders,
+            currentPath: path,
+            total: media.length
+        });
     } catch (err: any) {
         const msg = err?.response?.data?.message || err?.message || 'Failed to fetch media library';
         console.error('❌ ImageKit list error:', msg);

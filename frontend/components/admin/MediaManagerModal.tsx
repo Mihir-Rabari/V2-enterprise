@@ -12,19 +12,23 @@ interface MediaManagerModalProps {
 
 export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, onClose, onSelect }) => {
     const [media, setMedia] = useState<IMedia[]>([]);
+    const [folders, setFolders] = useState<string[]>([]);
+    const [currentPath, setCurrentPath] = useState('/');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedId, setSelectedId] = useState<string | null>(null);
 
-    const fetchMedia = async (query = '') => {
+    const fetchMedia = async (query = '', path = '/') => {
         setLoading(true);
         setError(null);
         try {
-            const res = await adminAPI.getMedia({ searchQuery: query });
+            const res = await adminAPI.getMedia({ searchQuery: query, path });
             if (res.data.success) {
                 setMedia(res.data.data.media || []);
+                setFolders(res.data.data.folders || []);
+                setCurrentPath(res.data.data.currentPath || path);
             } else {
                 setError(res.data.message || 'Failed to load media');
             }
@@ -39,12 +43,12 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
     useEffect(() => {
         const delayDebounceFn = setTimeout(() => {
             if (isOpen) {
-                fetchMedia(searchTerm);
+                fetchMedia(searchTerm, currentPath);
             }
         }, 500);
 
         return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, isOpen]);
+    }, [searchTerm, currentPath, isOpen]);
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -102,6 +106,27 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
                     </button>
                 </div>
 
+                {/* Breadcrumbs */}
+                <div className="px-6 py-2 bg-gray-50/50 border-b flex items-center gap-2 overflow-x-auto text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                    <button
+                        onClick={() => setCurrentPath('/')}
+                        className={`hover:text-luxury-gold transition-colors ${currentPath === '/' ? 'text-luxury-gold' : ''}`}
+                    >
+                        Root
+                    </button>
+                    {currentPath !== '/' && currentPath.split('/').filter(Boolean).map((part, idx, arr) => (
+                        <React.Fragment key={idx}>
+                            <span>/</span>
+                            <button
+                                onClick={() => setCurrentPath('/' + arr.slice(0, idx + 1).join('/'))}
+                                className={idx === arr.length - 1 ? 'text-luxury-black' : 'hover:text-luxury-gold'}
+                            >
+                                {part}
+                            </button>
+                        </React.Fragment>
+                    ))}
+                </div>
+
                 {/* Toolbar */}
                 <div className="p-4 border-b flex flex-col md:flex-row gap-4 bg-white/50">
                     <div className="relative flex-1">
@@ -147,6 +172,24 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                            {/* Folders */}
+                            {!searchTerm && folders.map((folder) => (
+                                <button
+                                    key={folder}
+                                    onClick={() => setCurrentPath(currentPath === '/' ? `/${folder}` : `${currentPath}/${folder}`)}
+                                    className="group relative aspect-square bg-white rounded-2xl overflow-hidden border border-gray-100 hover:border-luxury-gold transition-all hover:shadow-xl flex flex-col items-center justify-center gap-2 p-4"
+                                >
+                                    <div className="w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center text-luxury-gold transition-transform group-hover:scale-110">
+                                        <svg viewBox="0 0 24 24" size="32" fill="currentColor" className="w-10 h-10">
+                                            <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
+                                        </svg>
+                                    </div>
+                                    <p className="text-[10px] font-bold text-luxury-black truncate w-full text-center">{folder}</p>
+                                    <div className="absolute inset-0 bg-luxury-gold/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </button>
+                            ))}
+
+                            {/* Files */}
                             {filteredMedia.map((m) => (
                                 <button
                                     key={m.id}

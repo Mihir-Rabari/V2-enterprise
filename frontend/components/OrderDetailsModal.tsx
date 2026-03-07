@@ -35,6 +35,29 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ isOpen, onClose, 
             return dateStr;
         }
     };
+    const renderAddress = (address: string) => {
+        try {
+            const parsed = JSON.parse(address);
+            // Handle both uppercase from older/different records and standard field names
+            const street = parsed.street || parsed.STREET || '';
+            const city = parsed.city || parsed.CITY || '';
+            const state = parsed.state || parsed.STATE || '';
+            const zip = parsed.zipCode || parsed.ZIPCODE || parsed.zip || '';
+            const name = parsed.name || parsed.NAME || `${parsed.firstName || ''} ${parsed.lastName || ''}`.trim();
+            const email = parsed.email || parsed.EMAIL || '';
+
+            return (
+                <div className="space-y-1">
+                    {name && <p className="text-luxury-black font-extrabold">{name}</p>}
+                    <p>{street}</p>
+                    <p>{city}{city && state ? ', ' : ''}{state} {zip}</p>
+                    {email && <p className="text-[9px] text-gray-400 lowercase tracking-widest">{email}</p>}
+                </div>
+            );
+        } catch (e) {
+            return address;
+        }
+    };
 
     return (
         <AnimatePresence>
@@ -79,7 +102,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ isOpen, onClose, 
                         </div>
 
                         {/* Scrollable Body */}
-                        <div className="flex-1 overflow-y-auto p-8 sm:p-10 space-y-12">
+                        <div className="flex-1 overflow-y-auto p-8 sm:p-10 space-y-12 no-scrollbar">
                             {/* Items Section */}
                             <section>
                                 <div className="flex items-center gap-3 mb-6">
@@ -131,15 +154,16 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ isOpen, onClose, 
                                                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2"><Phone size={12} /> {order.phone}</p>
                                                 </div>
                                             )}
-                                            <div className="flex gap-4">
-                                                <div className="p-2 bg-gray-50 rounded-full h-fit mt-1"><MapPin size={14} className="text-gray-400" /></div>
-                                                <div>
+                                            <div className="flex gap-3 items-start">
+                                                <div className="p-2.5 bg-gray-50 rounded-full flex-shrink-0">
+                                                    <MapPin size={14} className="text-gray-400" />
+                                                </div>
+                                                <div className="pt-1">
                                                     <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-2">Shipping Address</p>
-                                                    <p className="text-[11px] font-bold text-luxury-black leading-relaxed tracking-luxury uppercase">
-                                                        {order.address}
-                                                        <br />
-                                                        Contact: {order.phone}
-                                                    </p>
+                                                    <div className="text-[11px] font-bold text-luxury-black leading-relaxed tracking-luxury uppercase">
+                                                        {renderAddress(order.address)}
+                                                        <p className="mt-2 text-luxury-gold">CONTACT: {order.phone}</p>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

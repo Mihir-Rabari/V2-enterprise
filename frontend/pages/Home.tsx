@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { motion, useScroll, useTransform, useSpring, useMotionValue } from 'framer-motion';
-import { ArrowRight, ArrowUpRight, TrendingUp, Sparkles, Star, ShieldCheck, Zap, Send, Filter, ChevronDown, Search } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, TrendingUp, Sparkles, Star, ShieldCheck, Zap, Send, Filter, ChevronDown, Search, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import { useLocalStorage } from '../hooks/useLocalStorage';
@@ -202,6 +202,63 @@ const ClientVoicesSection: React.FC<{ reviews: any[] }> = ({ reviews }) => (
 );
 
 
+const FilterAccordion = ({ title, options, selected, onToggle, isPriceRange = false, isSort = false, currentSort, onSortChange }: any) => {
+    const [isOpen, setIsOpen] = useState(true);
+    if (!isSort && !isPriceRange && options.length === 0) return null;
+
+    return (
+        <div className="border-b border-gray-100 py-4 w-full">
+            <button onClick={() => setIsOpen(!isOpen)} className="flex items-center justify-between w-full text-left font-bold text-[11px] uppercase tracking-widest text-luxury-black bg-transparent outline-none">
+                {title}
+                <ChevronDown size={14} className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden mt-4 space-y-3">
+                        {isSort ? (
+                            ['Relevance', 'Price: Low to High', 'Price: High to Low'].map(option => (
+                                <label key={option} className="flex items-center gap-3 cursor-pointer group pb-1">
+                                    <input
+                                        type="radio"
+                                        checked={currentSort === option}
+                                        onChange={() => onSortChange(option)}
+                                        className="w-4 h-4 rounded-full border-gray-300 text-luxury-black focus:ring-luxury-black accent-black"
+                                    />
+                                    <span className={`text-[10px] font-bold uppercase tracking-widest transition-colors ${currentSort === option ? 'text-luxury-black' : 'text-gray-400 group-hover:text-luxury-black'}`}>{option}</span>
+                                </label>
+                            ))
+                        ) : isPriceRange ? (
+                            ['Under ₹1000', '₹1000 - ₹2000', 'Over ₹2000'].map(range => (
+                                <label key={range} className="flex items-center gap-3 cursor-pointer group pb-1">
+                                    <input
+                                        type="checkbox"
+                                        checked={selected.includes(range)}
+                                        onChange={() => onToggle(range)}
+                                        className="w-4 h-4 rounded border-gray-300 text-luxury-black focus:ring-luxury-black accent-black"
+                                    />
+                                    <span className={`text-[10px] font-bold uppercase tracking-widest transition-colors ${selected.includes(range) ? 'text-luxury-black' : 'text-gray-400 group-hover:text-luxury-black'}`}>{range}</span>
+                                </label>
+                            ))
+                        ) : (
+                            options.map((opt: string) => (
+                                <label key={opt} className="flex items-center gap-3 cursor-pointer group pb-1">
+                                    <input
+                                        type="checkbox"
+                                        checked={selected.includes(opt)}
+                                        onChange={() => onToggle(opt)}
+                                        className="w-4 h-4 rounded border-gray-300 text-luxury-black focus:ring-luxury-black accent-black"
+                                    />
+                                    <span className={`text-[10px] font-bold uppercase tracking-widest transition-colors ${selected.includes(opt) ? 'text-luxury-black' : 'text-gray-400 group-hover:text-luxury-black'}`}>{opt}</span>
+                                </label>
+                            ))
+                        )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
+
 const Home: React.FC = () => {
     // API Hooks
     const { products, loading: productsLoading } = useProducts({ limit: 300 });
@@ -213,9 +270,53 @@ const Home: React.FC = () => {
     const [essentialsSortBy, setEssentialsSortBy] = useState('Relevance');
     const [selectedEssentialsCategories, setSelectedEssentialsCategories] = useState<string[]>([]);
     const [selectedEssentialsPriceList, setSelectedEssentialsPriceList] = useState<string[]>([]);
+    const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({});
     const [isEssentialsSortOpen, setIsEssentialsSortOpen] = useState(false);
     const [isEssentialsCategoryOpen, setIsEssentialsCategoryOpen] = useState(true);
     const [isHovered, setIsHovered] = useState(false);
+    const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+
+    const dynamicFiltersList = [
+        { key: 'color', label: 'Color' },
+        { key: 'size', label: 'Size' },
+        { key: 'fabric', label: 'Fabric' },
+        { key: 'collar', label: 'Collar' },
+        { key: 'sleeve', label: 'Sleeve' },
+        { key: 'neck', label: 'Neck' },
+    ];
+
+    const getOptionsFor = (key: string) => {
+        if (key === 'color') {
+            const colors = new Set<string>();
+            products.forEach(p => {
+                if (p.color) colors.add(p.color);
+                p.variants?.forEach(v => { if (v.color) colors.add(v.color) });
+            });
+            return Array.from(colors).sort();
+        }
+        if (key === 'size') {
+            const sizes = new Set<string>();
+            products.forEach(p => {
+                p.sizes?.forEach(s => sizes.add(s));
+                p.variants?.forEach(v => { if (v.size) sizes.add(v.size) });
+            });
+            return Array.from(sizes).sort();
+        }
+        return Array.from(new Set(products.map(p => (p as any)[key]).filter(Boolean))).sort();
+    };
+
+    const toggleFilter = (key: string, value: string) => {
+        setSelectedFilters(prev => {
+            const current = prev[key] || [];
+            const next = current.includes(value) ? current.filter(v => v !== value) : [...current, value];
+            if (next.length === 0) {
+                const copy = { ...prev };
+                delete copy[key];
+                return copy;
+            }
+            return { ...prev, [key]: next };
+        });
+    };
 
     // Configuration States
     const [homeSections, setHomeSections] = useState<HomeSectionContent>(initialHomeSections);
@@ -321,7 +422,7 @@ const Home: React.FC = () => {
 
     return (
         <div className="bg-white">
-            {homeSections.sectionOrder.map((sectionId) => {
+            {Array.from(new Set(homeSections.sectionOrder || [])).map((sectionId) => {
                 switch (sectionId) {
                     case 'hero':
                         return <Hero key="hero" slides={heroSlides} />;
@@ -514,6 +615,21 @@ const Home: React.FC = () => {
                             });
                         }
 
+                        // Apply Advanced Filters (from Shop page)
+                        Object.entries(selectedFilters).forEach(([key, values]: [string, string[]]) => {
+                            if (values.length > 0) {
+                                displayFeatured = displayFeatured.filter(p => {
+                                    if (key === 'color') {
+                                        return values.includes(p.color || '') || p.variants?.some(v => values.includes(v.color || ''));
+                                    }
+                                    if (key === 'size') {
+                                        return values.some(val => p.sizes?.includes(val) || p.variants?.some(v => v.size === val));
+                                    }
+                                    return values.includes((p as any)[key]);
+                                });
+                            }
+                        });
+
                         // Apply sorting
                         displayFeatured = [...displayFeatured].sort((a, b) => {
                             const priceA = Number(a.price) || 0;
@@ -521,164 +637,225 @@ const Home: React.FC = () => {
 
                             if (essentialsSortBy === 'Price: Low to High') return priceA - priceB;
                             if (essentialsSortBy === 'Price: High to Low') return priceB - priceA;
-                            return String(b.id).localeCompare(String(a.id)); // Relevance/Default
+                            return String(b.id || b._id).localeCompare(String(a.id || a._id)); // Relevance/Default
                         });
 
                         // Max 8 products
                         displayFeatured = displayFeatured.slice(0, 8);
 
+                        const activeEssentialsFilterCount = selectedEssentialsCategories.length + selectedEssentialsPriceList.length + Object.values(selectedFilters).reduce((acc: number, curr: string[]) => acc + curr.length, 0);
+
+                        const renderEssentialsSidebarContent = () => (
+                            <div className="w-full">
+                                <FilterAccordion
+                                    title="Sort By"
+                                    isSort
+                                    currentSort={essentialsSortBy}
+                                    onSortChange={setEssentialsSortBy}
+                                />
+                                <FilterAccordion
+                                    title="Product Category"
+                                    options={essentialsCategories}
+                                    selected={selectedEssentialsCategories}
+                                    onToggle={(cat: string) => {
+                                        if (selectedEssentialsCategories.includes(cat)) setSelectedEssentialsCategories(prev => prev.filter(c => c !== cat));
+                                        else setSelectedEssentialsCategories(prev => [...prev, cat]);
+                                    }}
+                                />
+                                <FilterAccordion
+                                    title="Price"
+                                    isPriceRange
+                                    selected={selectedEssentialsPriceList}
+                                    onToggle={(range: string) => {
+                                        if (selectedEssentialsPriceList.includes(range)) setSelectedEssentialsPriceList(prev => prev.filter(r => r !== range));
+                                        else setSelectedEssentialsPriceList(prev => [...prev, range]);
+                                    }}
+                                />
+                                {dynamicFiltersList.map(filter => (
+                                    <FilterAccordion
+                                        key={filter.key}
+                                        title={filter.label}
+                                        options={getOptionsFor(filter.key)}
+                                        selected={selectedFilters[filter.key] || []}
+                                        onToggle={(val: string) => toggleFilter(filter.key, val)}
+                                    />
+                                ))}
+                            </div>
+                        );
+
                         return (
                             <section key="essentials" className="bg-white text-luxury-black py-24 md:py-32 overflow-hidden relative border-t border-gray-100">
                                 <div className="max-w-[1800px] mx-auto px-6 lg:px-12 relative z-10">
-                                    <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
+                                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
                                         <h2 className="font-serif text-3xl md:text-5xl italic tracking-tighter text-luxury-black">Curated Essentials</h2>
-                                        <div className="relative w-full md:w-80">
-                                            <input
-                                                type="text"
-                                                placeholder="SEARCH FOR STYLES..."
-                                                value={essentialsSearchQuery}
-                                                onChange={(e) => setEssentialsSearchQuery(e.target.value)}
-                                                className="w-full bg-zinc-50 rounded-full px-12 py-3 text-[10px] font-bold tracking-[0.2em] focus:outline-none focus:ring-1 focus:ring-luxury-gold transition-all uppercase"
-                                            />
-                                            <Search size={14} className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" />
-                                        </div>
                                     </div>
 
-                                    {/* Horizontal Filter Bar */}
-                                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-16 py-6 border-y border-gray-50">
-                                        <div className="flex-1 flex flex-col sm:flex-row items-start sm:items-center gap-6 overflow-hidden">
-                                            {/* Categories */}
-                                            <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1 sm:pb-0 w-full lg:w-auto">
-                                                <button
-                                                    onClick={() => setSelectedEssentialsCategories([])}
-                                                    className={`whitespace-nowrap px-5 py-2 text-[10px] font-bold uppercase tracking-widest border rounded-full transition-all flex-shrink-0
-                                                        ${selectedEssentialsCategories.length === 0 ? 'border-luxury-black bg-luxury-black text-white shadow-lg' : 'border-gray-100 text-gray-400 hover:border-gray-300'}`}
-                                                >
-                                                    All Styles
-                                                </button>
-                                                {essentialsCategories.map(cat => (
-                                                    <button
-                                                        key={cat}
-                                                        onClick={() => {
-                                                            if (selectedEssentialsCategories.includes(cat)) setSelectedEssentialsCategories(prev => prev.filter(c => c !== cat));
-                                                            else setSelectedEssentialsCategories(prev => [...prev, cat]);
-                                                        }}
-                                                        className={`whitespace-nowrap px-5 py-2 text-[10px] font-bold uppercase tracking-widest border rounded-full transition-all flex-shrink-0
-                                                            ${selectedEssentialsCategories.includes(cat) ? 'border-luxury-black bg-luxury-black text-white shadow-lg' : 'border-gray-100 text-gray-400 hover:border-gray-300'}`}
-                                                    >
-                                                        {cat}
-                                                    </button>
-                                                ))}
-                                            </div>
-
-                                            <div className="hidden sm:block w-px h-4 bg-gray-200" />
-
-                                            {/* Price Ranges */}
-                                            <div className="flex items-center gap-3 overflow-x-auto no-scrollbar w-full lg:w-auto">
-                                                {['Under ₹1000', '₹1000 - ₹2000', 'Over ₹2000'].map((range) => (
-                                                    <button
-                                                        key={range}
-                                                        onClick={() => {
-                                                            if (selectedEssentialsPriceList.includes(range)) {
-                                                                setSelectedEssentialsPriceList(prev => prev.filter(r => r !== range));
-                                                            } else {
-                                                                setSelectedEssentialsPriceList(prev => [...prev, range]);
-                                                            }
-                                                        }}
-                                                        className={`whitespace-nowrap px-5 py-2 text-[10px] font-bold uppercase tracking-widest border rounded-full transition-all flex-shrink-0
-                                                            ${selectedEssentialsPriceList.includes(range) ? 'border-luxury-black bg-luxury-black text-white shadow-lg' : 'border-gray-100 text-gray-400 hover:border-gray-300'}`}
-                                                    >
-                                                        {range}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center justify-between sm:justify-end gap-8">
-                                            <span className="text-[9px] font-bold uppercase tracking-luxury text-gray-300">{displayFeatured.length} DESIGNS FOUND</span>
-                                            <div className="flex items-center gap-2 relative">
-                                                <span className="text-gray-400 text-[9px] font-bold uppercase tracking-widest">Sort:</span>
-                                                <div
-                                                    onClick={() => setIsEssentialsSortOpen(!isEssentialsSortOpen)}
-                                                    className="flex items-center gap-1 cursor-pointer hover:text-luxury-gold transition-colors text-luxury-black text-[10px] font-bold uppercase tracking-widest min-w-[100px] justify-end"
-                                                >
-                                                    {essentialsSortBy} <ChevronDown size={10} className={`transition-transform duration-300 ${isEssentialsSortOpen ? 'rotate-180' : ''}`} />
-                                                </div>
-
-                                                <AnimatePresence>
-                                                    {isEssentialsSortOpen && (
-                                                        <>
-                                                            <div className="fixed inset-0 z-40" onClick={() => setIsEssentialsSortOpen(false)} />
-                                                            <motion.div
-                                                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                                exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                                className="absolute top-full right-0 mt-3 w-48 bg-white border border-gray-100 shadow-2xl z-50 p-2 rounded-lg origin-top-right"
-                                                            >
-                                                                {['Relevance', 'Price: Low to High', 'Price: High to Low'].map(option => (
-                                                                    <button
-                                                                        key={option}
-                                                                        onClick={() => {
-                                                                            setEssentialsSortBy(option);
-                                                                            setIsEssentialsSortOpen(false);
-                                                                        }}
-                                                                        className={`w-full text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest transition-colors rounded-md ${essentialsSortBy === option ? 'text-luxury-gold bg-luxury-gray' : 'text-gray-400 hover:text-luxury-black hover:bg-luxury-gray'}`}
-                                                                    >
-                                                                        {option}
-                                                                    </button>
-                                                                ))}
-                                                            </motion.div>
-                                                        </>
-                                                    )}
-                                                </AnimatePresence>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Grid */}
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8 lg:gap-12 pl-0">
-                                        {displayFeatured.map((product, i) => (
-                                            <motion.div
-                                                key={product.id}
-                                                initial={{ opacity: 0, y: 30 }}
-                                                whileInView={{ opacity: 1, y: 0 }}
-                                                viewport={{ once: true }}
-                                                transition={{ delay: i * 0.05, duration: 0.8 }}
-                                                className="group flex flex-col space-y-4"
-                                            >
-                                                <ProductCard
-                                                    {...product}
-                                                    image={product.photo}
-                                                    hoverImage={product.hoverImage || product.photos?.[1]}
-                                                    isTrending={product.isTrending}
-                                                    isNewArrival={product.isNewArrival}
-                                                />
-                                            </motion.div>
-                                        ))}
-                                    </div>
-
-                                    {displayFeatured.length === 0 && (
-                                        <div className="text-center py-24 space-y-4">
-                                            <h3 className="font-serif text-2xl italic text-gray-300">No items match your selection</h3>
+                                    {/* Mobile Filter Toggle Overlay Bar */}
+                                    <div className="lg:hidden z-30 bg-white/90 backdrop-blur-md border border-gray-100 py-3 shadow-sm rounded-lg mb-8">
+                                        <div className="px-6 flex items-center justify-between w-full">
                                             <button
-                                                onClick={() => { setSelectedEssentialsCategories([]); setEssentialsSearchQuery(''); }}
-                                                className="text-[10px] font-bold uppercase tracking-[0.3em] text-luxury-gold"
+                                                onClick={() => setIsMobileFiltersOpen(true)}
+                                                className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-luxury-black bg-gray-50 px-5 py-2.5 rounded border border-gray-200"
                                             >
-                                                Reset Filters
+                                                <Filter size={14} /> Filters
+                                                {activeEssentialsFilterCount > 0 && (
+                                                    <span className="bg-luxury-black text-white w-4 h-4 rounded-full flex items-center justify-center text-[8px] ml-1">
+                                                        {activeEssentialsFilterCount}
+                                                    </span>
+                                                )}
                                             </button>
+                                            <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                                                {displayFeatured.length} DESIGNS FOUND
+                                            </div>
                                         </div>
-                                    )}
+                                    </div>
 
-                                    {displayFeatured.length > 0 && (
-                                        <div className="mt-16 flex justify-center">
-                                            <Link
-                                                to="/shop"
-                                                className="group flex items-center gap-3 bg-luxury-black text-white px-10 py-5 text-[10px] font-bold uppercase tracking-[0.4em] rounded-full hover:bg-luxury-gold transition-all transform hover:scale-105 active:scale-95 shadow-xl"
-                                            >
-                                                View More <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                                            </Link>
+                                    {/* Mobile Sidebar */}
+                                    <AnimatePresence>
+                                        {isMobileFiltersOpen && (
+                                            <>
+                                                <motion.div
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
+                                                    exit={{ opacity: 0 }}
+                                                    className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 lg:hidden"
+                                                    onClick={() => setIsMobileFiltersOpen(false)}
+                                                />
+                                                <motion.div
+                                                    initial={{ x: '-100%' }}
+                                                    animate={{ x: 0 }}
+                                                    exit={{ x: '-100%' }}
+                                                    transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                                                    className="fixed inset-y-0 left-0 w-[85vw] max-w-sm bg-white shadow-2xl z-50 flex flex-col lg:hidden"
+                                                >
+                                                    <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gray-50/50">
+                                                        <h3 className="font-serif text-2xl italic tracking-tight">Filters</h3>
+                                                        <button onClick={() => setIsMobileFiltersOpen(false)} className="p-2 bg-white rounded-full text-gray-500 shadow-sm border border-gray-100 hover:bg-gray-100">
+                                                            <X size={16} />
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="flex-1 overflow-y-auto px-6 pt-2 pb-6">
+                                                        {renderEssentialsSidebarContent()}
+                                                    </div>
+
+                                                    <div className="p-5 border-t border-gray-100 bg-white space-y-3">
+                                                        <div className="text-center text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
+                                                            {displayFeatured.length} Results
+                                                        </div>
+                                                        <div className="flex gap-3">
+                                                            <button
+                                                                onClick={() => { setSelectedEssentialsCategories([]); setSelectedEssentialsPriceList([]); setSelectedFilters({}); }}
+                                                                className="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-500 border border-gray-200 rounded hover:bg-gray-50"
+                                                            >
+                                                                Clear
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setIsMobileFiltersOpen(false)}
+                                                                className="flex-[2] py-3 text-[10px] font-bold uppercase tracking-widest bg-luxury-black text-white rounded hover:bg-luxury-gold transition-colors"
+                                                            >
+                                                                Apply Filters
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </motion.div>
+                                            </>
+                                        )}
+                                    </AnimatePresence>
+
+                                    <div className="flex flex-col lg:flex-row items-start gap-10">
+                                        {/* Left Sidebar (Desktop) */}
+                                        <div className="hidden lg:flex flex-col w-[260px] flex-shrink-0 sticky top-[100px] max-h-[calc(100vh-120px)] overflow-hidden">
+                                            <div className="flex items-center justify-between mb-4 flex-shrink-0">
+                                                <span className="font-bold text-sm uppercase tracking-widest">Filters</span>
+                                                {activeEssentialsFilterCount > 0 && (
+                                                    <button
+                                                        onClick={() => { setSelectedEssentialsCategories([]); setSelectedEssentialsPriceList([]); setSelectedFilters({}); }}
+                                                        className="text-[10px] font-bold uppercase tracking-widest text-luxury-gold hover:text-luxury-black transition-colors"
+                                                    >
+                                                        Clear All
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <div className="text-[10px] font-medium text-gray-400 mb-6 uppercase tracking-widest flex-shrink-0 border-b border-gray-100 pb-4">
+                                                {displayFeatured.length} DESIGNS FOUND
+                                            </div>
+
+                                            {/* Scrollable Accords Array */}
+                                            <div className="flex-1 overflow-y-auto w-full no-scrollbar pr-2 pb-8">
+                                                {renderEssentialsSidebarContent()}
+                                            </div>
                                         </div>
-                                    )}
+
+                                        {/* Right Product Grid */}
+                                        <div className="flex-1 min-w-0 w-full">
+                                            {displayFeatured.length > 0 ? (
+                                                <div className="relative">
+                                                    <style>{`
+                                                        .home-grid-dynamic {
+                                                            display: grid;
+                                                            grid-template-columns: repeat(${siteSettings.gridSettings?.mobile || 2}, minmax(0, 1fr));
+                                                            gap: 2.5rem 1rem;
+                                                        }
+                                                        @media (min-width: 640px) {
+                                                            .home-grid-dynamic {
+                                                                grid-template-columns: repeat(${siteSettings.gridSettings?.tablet || 2}, minmax(0, 1fr));
+                                                                gap: 4rem 2rem;
+                                                            }
+                                                        }
+                                                        @media (min-width: 1024px) {
+                                                            .home-grid-dynamic {
+                                                                grid-template-columns: repeat(${siteSettings.gridSettings?.desktop || 4}, minmax(0, 1fr));
+                                                                gap: 5rem 2rem;
+                                                            }
+                                                        }
+                                                    `}</style>
+                                                    <div className="home-grid-dynamic w-full">
+                                                        {displayFeatured.map((product, i) => (
+                                                            <motion.div
+                                                                key={product.id}
+                                                                initial={{ opacity: 0, y: 30 }}
+                                                                whileInView={{ opacity: 1, y: 0 }}
+                                                                viewport={{ once: true }}
+                                                                transition={{ delay: i * 0.05, duration: 0.8 }}
+                                                                className="group flex flex-col space-y-4"
+                                                            >
+                                                                <ProductCard
+                                                                    {...product}
+                                                                    image={product.photo}
+                                                                    hoverImage={product.hoverImage || product.photos?.[1]}
+                                                                    isTrending={product.isTrending}
+                                                                    isNewArrival={product.isNewArrival}
+                                                                />
+                                                            </motion.div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="py-32 flex flex-col items-center justify-center text-center space-y-6 bg-gray-50 rounded-2xl border border-gray-100">
+                                                    <h3 className="font-serif text-3xl italic text-gray-300">No matches found.</h3>
+                                                    <p className="text-sm text-gray-400">Try adjusting your filters or search query.</p>
+                                                    <button
+                                                        onClick={() => { setSelectedEssentialsCategories([]); setSelectedEssentialsPriceList([]); setSelectedFilters({}); setEssentialsSearchQuery(''); }}
+                                                        className="px-8 py-4 bg-white border border-gray-200 uppercase text-xs font-bold tracking-widest rounded transition-colors hover:border-black"
+                                                    >
+                                                        Clear All Filters
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {displayFeatured.length > 0 && (
+                                                <div className="mt-16 flex justify-center">
+                                                    <Link
+                                                        to="/shop"
+                                                        className="group flex items-center gap-3 bg-luxury-black text-white px-10 py-5 text-[10px] font-bold uppercase tracking-[0.4em] rounded-full hover:bg-luxury-gold transition-all transform hover:scale-105 active:scale-95 shadow-xl"
+                                                    >
+                                                        View More <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                                                    </Link>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             </section>
                         );

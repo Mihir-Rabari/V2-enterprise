@@ -10,7 +10,7 @@ export interface AuthUser {
     phone?: string;
     role: 'CUSTOMER' | 'ADMIN';
     addresses?: {
-        id: number; label: string; street: string;
+        _id: string; label: string; street: string;
         city: string; state: string; zipCode: string; isDefault: boolean;
     }[];
     wishlist?: string[]; // Array of product IDs
@@ -72,10 +72,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             localStorage.setItem('v2_user', JSON.stringify(loggedIn));
             setUser(loggedIn);
             return true;
-        } catch (err: unknown) {
-            const msg =
-                (err as { response?: { data?: { message?: string } } })?.response?.data?.message
-                || 'Invalid credentials. Please try again.';
+        } catch (err: any) {
+            const data = err.response?.data;
+            let msg = data?.message || 'Invalid credentials. Please try again.';
+            if (data?.errors) {
+                const details = Object.entries(data.errors)
+                    .map(([field, msgs]) => `${field}: ${(msgs as string[]).join(', ')}`)
+                    .join(' | ');
+                msg = `${msg} (${details})`;
+            }
             setAuthError(msg);
             return false;
         }
@@ -92,10 +97,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             localStorage.setItem('v2_user', JSON.stringify(registered));
             setUser(registered);
             return true;
-        } catch (err: unknown) {
-            const msg =
-                (err as { response?: { data?: { message?: string } } })?.response?.data?.message
-                || 'Registration failed. Please try again.';
+        } catch (err: any) {
+            const data = err.response?.data;
+            let msg = data?.message || 'Registration failed. Please try again.';
+            if (data?.errors) {
+                const details = Object.entries(data.errors)
+                    .map(([field, msgs]) => `${field}: ${(msgs as string[]).join(', ')}`)
+                    .join(' | ');
+                msg = `${msg} (${details})`;
+            }
             setAuthError(msg);
             return false;
         }

@@ -36,14 +36,20 @@ const Navbar: React.FC<NavbarProps> = ({ onSwitchToAdmin }) => {
     return (
         <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-gray-50 transition-all duration-300">
             <div className="max-w-[1600px] mx-auto px-4 lg:px-12 h-20 flex items-center justify-between">
-                {/* Logo - Left */}
-                <Link to="/" className="flex items-center group">
-                    {siteSettings.logoImage ? (
-                        <img src={siteSettings.logoImage} alt={siteSettings.logoText} className="h-8 w-auto object-contain" />
-                    ) : (
-                        <img src="/v2_logo.webp" alt="V2 Logo" className="h-8 w-auto object-contain" />
-                    )}
-                </Link>
+                <div className="flex items-center gap-4">
+                    {/* Mobile Menu Toggle - Left */}
+                    <button className="lg:hidden p-1 text-luxury-black -ml-1" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+                        <Menu size={20} strokeWidth={1.5} />
+                    </button>
+                    {/* Logo - Left */}
+                    <Link to="/" className="flex items-center group">
+                        {siteSettings.logoImage ? (
+                            <img src={siteSettings.logoImage} alt={siteSettings.logoText} className="h-8 w-auto object-contain" />
+                        ) : (
+                            <img src="/v2_logo.webp" alt="V2 Logo" className="h-8 w-auto object-contain" />
+                        )}
+                    </Link>
+                </div>
 
                 {/* Navigation - Center */}
                 <div className="hidden lg:flex items-center gap-8 xl:gap-10 text-[11px] font-bold uppercase tracking-luxury text-luxury-charcoal">
@@ -56,7 +62,7 @@ const Navbar: React.FC<NavbarProps> = ({ onSwitchToAdmin }) => {
 
                 {/* Icons - Right */}
                 <div className="flex items-center gap-3 sm:gap-6 text-luxury-black">
-                    <div className="hidden md:flex items-center relative">
+                    <div className="flex items-center relative">
                         <SearchBar />
                     </div>
                     <Link to="/liked" className="hidden sm:block hover:text-luxury-gold transition-colors">
@@ -80,9 +86,6 @@ const Navbar: React.FC<NavbarProps> = ({ onSwitchToAdmin }) => {
                     <Link to="/account" className="hover:text-luxury-gold transition-colors">
                         <User size={18} strokeWidth={1.5} />
                     </Link>
-                    <button className="lg:hidden p-1" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-                        <Menu size={20} strokeWidth={1.5} />
-                    </button>
                 </div>
             </div>
 

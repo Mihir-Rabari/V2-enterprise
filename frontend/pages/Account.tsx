@@ -286,12 +286,12 @@ const Addresses = () => {
     React.useEffect(() => {
         if (editingAddress) {
             setFormData({
-                label: editingAddress.label,
-                street: editingAddress.street,
-                city: editingAddress.city,
-                state: editingAddress.state,
-                zipCode: editingAddress.zipCode,
-                isDefault: editingAddress.isDefault
+                label: editingAddress.label || '',
+                street: editingAddress.street || '',
+                city: editingAddress.city || '',
+                state: editingAddress.state || '',
+                zipCode: editingAddress.zipCode || '',
+                isDefault: editingAddress.isDefault || false
             });
             setIsAdding(true);
         } else {
@@ -306,11 +306,12 @@ const Addresses = () => {
         }
     }, [editingAddress]);
 
+    if (!user) return null;
+
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         try {
-            console.log('[Addresses] Saving address, editingAddress:', !!editingAddress);
             if (editingAddress) {
                 await addressesAPI.update(editingAddress._id, formData);
                 showToast('Address updated successfully', 'success');
@@ -318,9 +319,7 @@ const Addresses = () => {
                 await addressesAPI.add(formData);
                 showToast('Address added successfully', 'success');
             }
-            console.log('[Addresses] Refreshing user data...');
             await refreshUser();
-            console.log('[Addresses] User data refreshed');
             setIsAdding(false);
             setEditingAddress(null);
         } catch (error: any) {
@@ -465,7 +464,7 @@ const Addresses = () => {
                     </motion.form>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {user?.addresses && user.addresses.length > 0 ? (
+                        {user.addresses && user.addresses.length > 0 ? (
                             user.addresses.map((addr: any) => (
                                 <motion.div
                                     key={addr._id}

@@ -37,10 +37,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         // Sanitize cart: Ensure all items use string IDs (ObjectIds) and remove numeric ones if they can't be resolved
         // This is important after reseeding the database
-        const sanitized = cart.filter(item => {
-            const idStr = String(item.id || item._id || '');
-            return idStr.length > 10; // Simple check for ObjectId length vs small numeric IDs
-        }).map(item => ({
+        const sanitized = cart.map(item => ({
             ...item,
             id: String(item._id || item.id) // Ensure ID is a string
         }));

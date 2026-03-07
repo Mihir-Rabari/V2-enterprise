@@ -97,7 +97,14 @@ const Checkout: React.FC = () => {
 
     const handleNext = async () => {
         if (step === 'summary') setStep('shipping');
-        else if (step === 'shipping') setStep('payment');
+        else if (step === 'shipping') {
+            if (!shippingData.phone || shippingData.phone.trim().length < 10) {
+                setOrderError('Please provide a valid phone number for delivery updates.');
+                // Scroll to error if needed, or just stay on step
+                return;
+            }
+            setStep('payment');
+        }
         else if (step === 'payment') {
             if (!isAuthenticated) {
                 // Save current step to restore after login

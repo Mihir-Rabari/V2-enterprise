@@ -18,6 +18,7 @@ interface DataTableProps<T> {
   limit?: number;
   // Bulk operations
   bulkActions?: { label: string; onClick: (selectedIds: (string | number)[]) => void; variant?: 'danger' | 'default' }[];
+  onRowClick?: (row: T) => void;
 }
 
 const DataTable = <T extends { id: number | string;[key: string]: any }>({
@@ -34,6 +35,7 @@ const DataTable = <T extends { id: number | string;[key: string]: any }>({
   onPageChange,
   limit = 10,
   bulkActions = [],
+  onRowClick,
 }: DataTableProps<T>) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<(string | number)[]>([]);
@@ -174,19 +176,36 @@ const DataTable = <T extends { id: number | string;[key: string]: any }>({
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {displayData.map((row, idx) => (
-                  <tr key={(row as any)._id || row.id || idx} className={`hover:bg-gray-50/50 transition-colors group ${selectedIds.includes(row.id) ? 'bg-blue-50/30' : ''}`}>
+                  <tr
+                    key={(row as any)._id || row.id || idx}
+                    onClick={(e) => {
+                      // Don't trigger row click if clicking on buttons, inputs, links, etc.
+                      const target = e.target as HTMLElement;
+                      if (onRowClick && !target.closest('button, input, select, a, textarea')) {
+                        onRowClick(row);
+                      }
+                    }}
+                    className={`
+                      hover:bg-gray-50/80 transition-all duration-200 group relative
+                      ${onRowClick ? 'cursor-pointer' : ''}
+                      ${selectedIds.includes(row.id) ? 'bg-luxury-gold/5' : ''}
+                    `}
+                  >
                     {hasBulkActions && (
                       <td className="px-3 sm:px-4 py-4 align-middle">
                         <input
                           type="checkbox"
                           checked={selectedIds.includes(row.id)}
-                          onChange={() => toggleSelectRow(row.id)}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            toggleSelectRow(row.id);
+                          }}
                           className="rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold cursor-pointer"
                         />
                       </td>
                     )}
                     <td className="px-3 sm:px-4 py-4 align-middle">
-                      <div className="flex items-center font-bold text-gray-400">
+                      <div className="flex items-center font-bold text-gray-300 group-hover:text-luxury-gold transition-colors">
                         {idx + 1}
                       </div>
                     </td>
@@ -196,7 +215,10 @@ const DataTable = <T extends { id: number | string;[key: string]: any }>({
                       </td>
                     ))}
                     <td className="px-3 sm:px-4 py-4 text-right">
-                      <button className="text-gray-300 hover:text-luxury-black hover:bg-gray-100 p-2 rounded-xl transition-all">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); }}
+                        className="text-gray-300 hover:text-luxury-black hover:bg-gray-100 p-2 rounded-xl transition-all"
+                      >
                         <MoreHorizontal size={18} />
                       </button>
                     </td>

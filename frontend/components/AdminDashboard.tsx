@@ -655,10 +655,22 @@ const AdminDashboard: React.FC = () => {
     ];
 
     const orderColumns: TableColumn<any>[] = [
-        { header: 'Order Id', accessor: (row: any) => <span className="font-mono text-[11px] font-bold text-slate-800 bg-gray-50 px-2 py-1 rounded border border-gray-100">{row.id || row.orderId}</span> },
+        {
+            header: 'Order Id',
+            accessor: (row: any) => (
+                <div className="flex flex-col">
+                    <span className="font-mono text-[11px] font-bold text-slate-800 bg-gray-50 px-2 py-1 rounded border border-gray-100 w-fit">
+                        {row.id || row.orderId}
+                    </span>
+                    <span className="text-[9px] text-gray-400 mt-1 uppercase tracking-tighter">
+                        {new Date(row.createdAt).toLocaleDateString()}
+                    </span>
+                </div>
+            )
+        },
         {
             header: 'Shipping / Waybill', accessor: (row: any) => (
-                <div className="flex flex-col gap-1.5 min-w-[140px]">
+                <div className="flex flex-col gap-1.5 min-w-[140px]" onClick={e => e.stopPropagation()}>
                     <input
                         placeholder="AWB Number"
                         className="w-full border border-gray-100 px-2 py-1.5 text-[10px] font-bold rounded-lg focus:outline-none focus:border-luxury-gold transition-colors bg-white shadow-sm"
@@ -679,7 +691,8 @@ const AdminDashboard: React.FC = () => {
                             })}
                         />
                         <button
-                            onClick={async () => {
+                            onClick={async (e) => {
+                                e.stopPropagation();
                                 try {
                                     await updateOrderStatus(row.id || row._id, {
                                         awbNumber: waybillData[row.id || row._id]?.awbNumber,
@@ -699,13 +712,35 @@ const AdminDashboard: React.FC = () => {
                 </div>
             )
         },
-        { header: 'Customer', accessor: (row: any) => <div><p className="font-black text-slate-800 text-[13px] tracking-tight">{row.user?.name || row.customer || '—'}</p><p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{row.user?.email || row.email || '—'}</p></div> },
-        { header: 'Method', accessor: (row: any) => <span className="text-[10px] font-black tracking-[0.2em] text-gray-500 bg-gray-50 px-2 py-1 rounded-full border border-gray-100 uppercase">{row.paymentMethod || row.method || '—'}</span> },
-        { header: 'Total', accessor: (row: any) => <span className="font-serif italic font-bold text-slate-800 text-sm">₹{Number(row.total || 0).toLocaleString()}</span> },
+        {
+            header: 'Customer',
+            accessor: (row: any) => (
+                <div>
+                    <p className="font-black text-slate-800 text-[13px] tracking-tight">{row.user?.name || row.customer || '—'}</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{row.user?.email || row.email || '—'}</p>
+                </div>
+            )
+        },
+        {
+            header: 'Method',
+            accessor: (row: any) => (
+                <span className="text-[10px] font-black tracking-[0.2em] text-gray-500 bg-gray-50 px-2 py-1 rounded-full border border-gray-100 uppercase">
+                    {row.paymentMethod || row.method || '—'}
+                </span>
+            )
+        },
+        {
+            header: 'Total',
+            accessor: (row: any) => (
+                <span className="font-serif italic font-bold text-slate-800 text-sm">
+                    ₹{Number(row.total || 0).toLocaleString()}
+                </span>
+            )
+        },
         { header: 'Status', accessor: (row: any) => <StatusBadge status={row.status} /> },
         {
             header: 'Update', accessor: (row: any) => (
-                <div className="relative group">
+                <div className="relative group" onClick={e => e.stopPropagation()}>
                     <select
                         className="appearance-none border border-gray-100 text-[10px] font-black uppercase tracking-widest px-3 py-2 pr-8 rounded-xl bg-white focus:outline-none focus:border-luxury-gold cursor-pointer transition-all shadow-sm hover:border-gray-300"
                         value={row.status}
@@ -724,7 +759,8 @@ const AdminDashboard: React.FC = () => {
         {
             header: 'View', accessor: (row: any) => (
                 <button
-                    onClick={() => {
+                    onClick={(e) => {
+                        e.stopPropagation();
                         setSelectedOrderDetails(row);
                         setOrderDetailOpen(true);
                     }}
@@ -1999,6 +2035,7 @@ const AdminDashboard: React.FC = () => {
                         totalEntries={customerPagination.total}
                         onPageChange={(page) => fetchCustomers(page, 15)}
                         limit={15}
+                        onRowClick={(row) => handleEdit('customer', row)}
                     />
                 );
 
@@ -2101,6 +2138,7 @@ const AdminDashboard: React.FC = () => {
                         totalEntries={productPagination.total}
                         onPageChange={(page) => fetchProducts(page, 15)}
                         limit={15}
+                        onRowClick={(row) => handleEdit('product', row)}
                     />
                 );
 
@@ -2116,6 +2154,10 @@ const AdminDashboard: React.FC = () => {
                         totalEntries={orderPagination.total}
                         onPageChange={(page) => fetchOrders(page, 15)}
                         limit={15}
+                        onRowClick={(row) => {
+                            setSelectedOrderDetails(row);
+                            setOrderDetailOpen(true);
+                        }}
                     />
                 );
 

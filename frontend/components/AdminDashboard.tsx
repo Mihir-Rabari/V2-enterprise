@@ -656,19 +656,6 @@ const AdminDashboard: React.FC = () => {
 
     const orderColumns: TableColumn<any>[] = [
         {
-            header: 'Order Id',
-            accessor: (row: any) => (
-                <div className="flex flex-col">
-                    <span className="font-mono text-[11px] font-bold text-slate-800 bg-gray-50 px-2 py-1 rounded border border-gray-100 w-fit">
-                        {row.id || row.orderId}
-                    </span>
-                    <span className="text-[9px] text-gray-400 mt-1 uppercase tracking-tighter">
-                        {new Date(row.createdAt).toLocaleDateString()}
-                    </span>
-                </div>
-            )
-        },
-        {
             header: 'Shipping / Waybill', accessor: (row: any) => (
                 <div className="flex flex-col gap-1.5 min-w-[140px]" onClick={e => e.stopPropagation()}>
                     <input
@@ -717,7 +704,10 @@ const AdminDashboard: React.FC = () => {
             accessor: (row: any) => (
                 <div>
                     <p className="font-black text-slate-800 text-[13px] tracking-tight">{row.user?.name || row.customer || '—'}</p>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{row.user?.email || row.email || '—'}</p>
+                    <div className="flex flex-col text-[9px] font-bold text-gray-400 uppercase tracking-widest">
+                        <span>{row.user?.email || row.email || '—'}</span>
+                        <span className="text-luxury-gold/60 mt-0.5">{new Date(row.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                    </div>
                 </div>
             )
         },

@@ -62,6 +62,7 @@ import DashboardPage from './admin/DashboardPage';
 import { SocialSettingsPage, ContactDetailsPage, AboutSettingsPage } from './admin/SettingsPages';
 import { StatusBadge, ActionButtons } from './admin/AdminHelpers';
 import { ImageUploader } from './admin/ImageUploader';
+import OrderDetailsModal from './OrderDetailsModal';
 
 import {
     Product,
@@ -256,6 +257,10 @@ const AdminDashboard: React.FC = () => {
     const [modalType, setModalType] = useState<string | null>(null);
     const [formData, setFormData] = useState<any>({});
     const [tempVariant, setTempVariant] = useState({ color: '', size: '', quantity: 0 });
+
+    // Order Detail Modal State
+    const [orderDetailOpen, setOrderDetailOpen] = useState(false);
+    const [selectedOrderDetails, setSelectedOrderDetails] = useState<Order | null>(null);
 
     const dashboardStats = [
         { label: 'Total Products', value: apiStats?.totalProducts ?? products.length, icon: Package },
@@ -707,6 +712,20 @@ const AdminDashboard: React.FC = () => {
                         <ChevronDown size={12} />
                     </div>
                 </div>
+            )
+        },
+        {
+            header: 'View', accessor: (row: any) => (
+                <button
+                    onClick={() => {
+                        setSelectedOrderDetails(row);
+                        setOrderDetailOpen(true);
+                    }}
+                    className="p-2 bg-gray-50 text-gray-400 hover:text-luxury-gold hover:bg-luxury-gold/5 rounded-xl transition-all"
+                    title="View Full Details"
+                >
+                    <Eye size={16} />
+                </button>
             )
         },
     ];
@@ -2618,11 +2637,18 @@ const AdminDashboard: React.FC = () => {
             <Modal
                 isOpen={modalOpen}
                 onClose={() => setModalOpen(false)}
-                title={modalType ? `Add/Edit ${modalType.charAt(0).toUpperCase() + modalType.slice(1)}` : 'Edit Item'}
                 onSubmit={handleSubmit}
+                title={`Manage ${modalType?.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')}`}
             >
                 {renderModalContent()}
             </Modal>
+
+            <OrderDetailsModal
+                isOpen={orderDetailOpen}
+                onClose={() => setOrderDetailOpen(false)}
+                order={selectedOrderDetails}
+                isAdmin={true}
+            />
         </div>
     );
 }

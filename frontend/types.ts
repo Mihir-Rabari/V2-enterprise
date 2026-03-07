@@ -74,16 +74,41 @@ export interface CartItem extends Product {
   selectedColor?: string;
 }
 
+export interface OrderItem {
+  productId: string | number;
+  productName: string;
+  productPhoto: string;
+  quantity: number;
+  size?: string;
+  color?: string;
+  priceAtTime: number;
+}
+
 export interface Order {
-  id: string | number;
+  id: string;
+  _id?: string;
   orderId: string;
-  waybill: string;
-  customer: string;
-  email: string;
-  phone: string;
+  userId: any;
+  items: OrderItem[];
+  total: number;
   method: string;
-  total: string;
-  status: 'Cancelled' | 'Pending' | 'Delivered' | 'Refunded';
+  status: 'PENDING' | 'CONFIRMED' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED' | 'REFUNDED';
+  address: string;
+  phone: string;
+  awbNumber?: string;
+  trackingLink?: string;
+  waybill?: string;
+  couponCode?: string;
+  discount: number;
+  razorpayPaymentId?: string;
+  razorpayOrderId?: string;
+  paymentStatus: 'PENDING' | 'PAID' | 'FAILED';
+  createdAt: string;
+  updatedAt: string;
+  user?: {
+    name: string;
+    email: string;
+  };
 }
 
 export interface Color {

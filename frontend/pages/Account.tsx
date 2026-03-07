@@ -8,6 +8,8 @@ import { authAPI, wishlistAPI, addressesAPI } from '../lib/apiClient';
 import ProductCard from '../components/ProductCard';
 import { Product } from '../types';
 import { useCart } from '../context/CartContext';
+import OrderDetailsModal from '../components/OrderDetailsModal';
+import { Order } from '../types';
 
 const Profile = () => {
     const { user, refreshUser } = useAuth();
@@ -157,6 +159,8 @@ const Profile = () => {
 
 const Orders = () => {
     const { orders, loading: ordersLoading } = useMyOrders();
+    const [selectedOrder, setSelectedOrder] = React.useState<Order | null>(null);
+    const [modalOpen, setModalOpen] = React.useState(false);
 
     const containerVariants = {
         hidden: { opacity: 0 },
@@ -209,7 +213,11 @@ const Orders = () => {
                         <motion.div
                             key={i}
                             variants={itemVariants}
-                            className="group border border-gray-100 p-8 sm:p-10 hover:border-luxury-gold hover:shadow-2xl hover:shadow-black/[0.03] transition-all duration-700 bg-white relative"
+                            onClick={() => {
+                                setSelectedOrder(order as any);
+                                setModalOpen(true);
+                            }}
+                            className="group border border-gray-100 p-8 sm:p-10 hover:border-luxury-gold hover:shadow-2xl hover:shadow-black/[0.03] transition-all duration-700 bg-white relative cursor-pointer"
                         >
                             <div className="absolute top-6 right-8">
                                 <span className={`text-[9px] font-bold uppercase tracking-[0.2em] px-3 py-1.5 rounded-full ${getStatusColor(order.status)}`}>
@@ -248,6 +256,13 @@ const Orders = () => {
                     ))}
                 </div>
             )}
+
+            <OrderDetailsModal
+                isOpen={modalOpen}
+                onClose={() => setModalOpen(false)}
+                order={selectedOrder}
+                isAdmin={false}
+            />
         </motion.div>
     );
 };

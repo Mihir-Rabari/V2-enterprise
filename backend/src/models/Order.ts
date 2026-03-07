@@ -56,7 +56,7 @@ const OrderSchema = new Schema<IOrder>(
             default: 'PENDING'
         },
         address: { type: String, required: true },
-        phone: { type: String, required: true },
+        phone: { type: String },
         awbNumber: { type: String },
         trackingLink: { type: String },
         waybill: { type: String },

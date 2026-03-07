@@ -202,6 +202,7 @@ router.get('/media', protect, adminOnly, async (req: Request, res: Response) => 
         const path = (req.query.path as string) || '/';
         const searchQuery = (req.query.searchQuery as string) || '';
         const limit = parseInt(req.query.limit as string) || 100;
+        const skip = parseInt(req.query.skip as string) || 0;
 
         if (!IK_PRIVATE_KEY) {
             console.warn('⚠️ IMAGEKIT_PRIVATE_KEY is missing in backend env');
@@ -211,7 +212,7 @@ router.get('/media', protect, adminOnly, async (req: Request, res: Response) => 
         const maskedKey = IK_PRIVATE_KEY.substring(0, 8) + '...' + IK_PRIVATE_KEY.substring(IK_PRIVATE_KEY.length - 4);
         console.log(`📡 Fetching Media assets (query: "${searchQuery}", path: "${path}") with key: ${maskedKey}`);
 
-        const ikParams: any = { limit };
+        const ikParams: any = { limit, skip };
         if (path && path !== '/') ikParams.path = path;
         if (searchQuery) ikParams.searchQuery = `name = "${searchQuery}"`;
 

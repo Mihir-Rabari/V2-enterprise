@@ -248,9 +248,24 @@ const ProductDetails: React.FC = () => {
                                 <div className="absolute inset-0 z-20 bg-black">
                                     <iframe
                                         className="w-full h-full"
-                                        src={product.videoUrl.includes('youtube.com/embed')
-                                            ? product.videoUrl
-                                            : product.videoUrl.replace('watch?v=', 'embed/')}
+                                        src={(() => {
+                                            const url = product.videoUrl;
+                                            if (url.includes('youtube.com/embed/')) return url;
+
+                                            // Handle youtu.be/ID
+                                            if (url.includes('youtu.be/')) {
+                                                const id = url.split('/').pop()?.split('?')[0];
+                                                return `https://www.youtube.com/embed/${id}`;
+                                            }
+
+                                            // Handle youtube.com/watch?v=ID
+                                            if (url.includes('v=')) {
+                                                const id = new URLSearchParams(new URL(url).search).get('v');
+                                                return `https://www.youtube.com/embed/${id}`;
+                                            }
+
+                                            return url;
+                                        })()}
                                         title="Product Video"
                                         frameBorder="0"
                                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

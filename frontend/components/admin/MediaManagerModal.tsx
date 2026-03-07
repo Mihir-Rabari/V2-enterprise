@@ -19,16 +19,21 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
     const [uploading, setUploading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [skip, setSkip] = useState(0);
+    const [hasMore, setHasMore] = useState(true);
+    const LIMIT = 100;
 
-    const fetchMedia = async (query = '', path = '/') => {
+    const fetchMedia = async (query = '', path = '/', currentSkip = 0, isLoadMore = false) => {
         setLoading(true);
         setError(null);
         try {
-            const res = await adminAPI.getMedia({ searchQuery: query, path });
+            const res = await adminAPI.getMedia({ searchQuery: query, path, skip: currentSkip, limit: LIMIT });
             if (res.data.success) {
-                setMedia(res.data.data.media || []);
+                const newFiles = res.data.data.media || [];
+                setMedia(prev => isLoadMore ? [...prev, ...newFiles] : newFiles);
                 setFolders(res.data.data.folders || []);
                 setCurrentPath(res.data.data.currentPath || path);
+                setHasMore(newFiles.length === LIMIT);
             } else {
                 setError(res.data.message || 'Failed to load media');
             }
@@ -43,12 +48,19 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
     useEffect(() => {
         const delayDebounceFn = setTimeout(() => {
             if (isOpen) {
-                fetchMedia(searchTerm, currentPath);
+                setSkip(0);
+                fetchMedia(searchTerm, currentPath, 0, false);
             }
         }, 500);
 
         return () => clearTimeout(delayDebounceFn);
     }, [searchTerm, currentPath, isOpen]);
+
+    const handleLoadMore = () => {
+        const nextSkip = skip + LIMIT;
+        setSkip(nextSkip);
+        fetchMedia(searchTerm, currentPath, nextSkip, true);
+    };
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -215,6 +227,17 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
                                     </div>
                                 </button>
                             ))}
+                        </div>
+                    )}
+
+                    {hasMore && !loading && !error && filteredMedia.length > 0 && (
+                        <div className="mt-8 flex justify-center">
+                            <button
+                                onClick={handleLoadMore}
+                                className="px-8 py-3 bg-luxury-black text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-luxury-gold transition-all shadow-lg active:scale-95"
+                            >
+                                Load More Assets
+                            </button>
                         </div>
                     )}
                 </div>

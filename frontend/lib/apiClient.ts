@@ -126,6 +126,11 @@ export const ordersAPI = {
         IS_MOCK
             ? mockResponse({ id, ...data })
             : api.patch(`/orders/${id}/status`, data),
+
+    delete: (id: string | number) =>
+        IS_MOCK
+            ? mockResponse(null)
+            : api.delete(`/orders/${id}`),
 };
 
 export const reviewsAPI = {

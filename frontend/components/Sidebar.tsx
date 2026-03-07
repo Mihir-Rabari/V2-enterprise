@@ -16,7 +16,8 @@ import {
   ChevronDown,
   ChevronRight,
   FileText,
-  Settings
+  Settings,
+  Home
 } from 'lucide-react';
 import { MenuItem } from '../types';
 
@@ -69,6 +70,7 @@ const menuItems: any[] = [
     label: 'SITE CONTENT',
     type: 'section',
     items: [
+      { id: 'settings-home', label: 'Home Sections', icon: Home },
       { id: 'hero-slider', label: 'Hero Slider', icon: Monitor },
       { id: 'hero-features', label: 'Features', icon: FileText },
       {
@@ -76,7 +78,6 @@ const menuItems: any[] = [
         label: 'Dynamic Pages',
         icon: Globe,
         subItems: [
-          { id: 'settings-home', label: 'Homepage Details' },
           { id: 'settings-about', label: 'About Page' },
           { id: 'settings-contact', label: 'Contact Details' },
           { id: 'settings-social', label: 'Social Settings' }

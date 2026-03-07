@@ -166,6 +166,11 @@ export function useAdminData() {
         setOrders(prev => prev.map(o => (o.id === id || (o as any)._id === id) ? { ...o, ...updates } : o));
     }, []);
 
+    const deleteOrder = useCallback(async (id: string | number) => {
+        await ordersAPI.delete(id as any);
+        setOrders(prev => prev.filter(o => o.id !== id && (o as any)._id !== id));
+    }, []);
+
     const updateReview = useCallback(async (id: string | number, data: Record<string, unknown>) => {
         await reviewsAPI.update(id as any, data);
         setReviews(prev => prev.map(r => (r.id === id || r._id === id) ? { ...r, ...data } : r));
@@ -202,7 +207,7 @@ export function useAdminData() {
         loading, error,
         fetchStats, fetchProducts, fetchOrders, fetchCustomers, fetchAllBase,
         productPagination, orderPagination, customerPagination,
-        deleteProduct, toggleProductField, updateOrderStatus,
+        deleteProduct, toggleProductField, updateOrderStatus, deleteOrder,
         updateReview, deleteReview, markContactRead,
         createHero, updateHero, deleteHero,
         createPromo, updatePromo, deletePromo,

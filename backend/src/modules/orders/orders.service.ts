@@ -187,3 +187,10 @@ export const updateOrderStatusService = async (id: string, updates: { status?: s
     if (!order) throw new Error('Order not found.');
     return { ...order.toObject(), id: order._id.toString() };
 };
+
+export const deleteOrderService = async (id: string) => {
+    const query = mongoose.Types.ObjectId.isValid(id) ? { _id: id } : { id: id };
+    const order = await Order.findOneAndDelete(query);
+    if (!order) throw new Error('Order not found.');
+    return order;
+};

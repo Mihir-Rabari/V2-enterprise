@@ -23,13 +23,14 @@ import {
     Settings,
     Globe,
     Monitor,
+    Sparkles,
+    LayoutGrid,
+    Image as ImageIcon,
     Type,
     ChevronRight,
     Mail,
-    LayoutGrid,
     Tag,
     Star,
-    Sparkles,
     PlusCircle,
     Copy,
     Save,
@@ -60,6 +61,7 @@ import Modal from './Modal';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import DashboardPage from './admin/DashboardPage';
 import { SocialSettingsPage, ContactDetailsPage, AboutSettingsPage } from './admin/SettingsPages';
+import { AdminHomeSectionsTab } from './admin/AdminHomeSectionsTab';
 import { StatusBadge, ActionButtons } from './admin/AdminHelpers';
 import { ImageUploader } from './admin/ImageUploader';
 import OrderDetailsModal from './OrderDetailsModal';
@@ -128,7 +130,7 @@ const AdminDashboard: React.FC = () => {
         loading, error,
         fetchStats, fetchProducts, fetchOrders, fetchCustomers, fetchAllBase,
         productPagination, orderPagination, customerPagination,
-        deleteProduct: apiDeleteProduct, toggleProductField, updateOrderStatus,
+        deleteProduct: apiDeleteProduct, toggleProductField, updateOrderStatus, deleteOrder,
         updateReview, deleteReview: apiDeleteReview, markContactRead,
         createHero, updateHero, deleteHero,
         createPromo, updatePromo, deletePromo,
@@ -339,6 +341,9 @@ const AdminDashboard: React.FC = () => {
                 case 'feature':
                     await deleteContent(id);
                     setFeatures(prev => prev.filter(f => String(f.id) !== String(id) && String((f as any)._id) !== String(id)));
+                    break;
+                case 'order':
+                    await deleteOrder(id);
                     break;
                 case 'main-category':
                     await categoriesAPI.delete(id);
@@ -747,18 +752,30 @@ const AdminDashboard: React.FC = () => {
             )
         },
         {
-            header: 'View', accessor: (row: any) => (
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedOrderDetails(row);
-                        setOrderDetailOpen(true);
-                    }}
-                    className="p-2 bg-gray-50 text-gray-400 hover:text-luxury-gold hover:bg-luxury-gold/5 rounded-xl transition-all"
-                    title="View Full Details"
-                >
-                    <Eye size={16} />
-                </button>
+            header: 'Actions', accessor: (row: any) => (
+                <div className="flex gap-2">
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedOrderDetails(row);
+                            setOrderDetailOpen(true);
+                        }}
+                        className="p-2 bg-gray-50 text-gray-400 hover:text-luxury-gold hover:bg-luxury-gold/5 rounded-xl transition-all"
+                        title="View Full Details"
+                    >
+                        <Eye size={16} />
+                    </button>
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete('order', row.id || row._id);
+                        }}
+                        className="p-2 bg-gray-50 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                        title="Delete Order"
+                    >
+                        <Trash2 size={16} />
+                    </button>
+                </div>
             )
         },
     ];
@@ -1682,237 +1699,7 @@ const AdminDashboard: React.FC = () => {
                     </div>
                 );
             case 'home-sections':
-                return (
-                    <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
-                        <div className="space-y-4">
-                            <h4 className="text-[10px] font-bold uppercase tracking-widest text-luxury-gold border-b pb-1">General Headings</h4>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-400 mb-1">Categories Section Title</label>
-                                <input type="text" className="w-full border p-2.5 rounded text-sm" value={formData.categoriesTitle || ''} onChange={e => setFormData({ ...formData, categoriesTitle: e.target.value })} />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-400 mb-1">Featured Tagline</label>
-                                    <input type="text" className="w-full border p-2.5 rounded text-sm" value={formData.featuredTagline || ''} onChange={e => setFormData({ ...formData, featuredTagline: e.target.value })} />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-400 mb-1">Featured Title</label>
-                                    <input type="text" className="w-full border p-2.5 rounded text-sm" value={formData.featuredTitle || ''} onChange={e => setFormData({ ...formData, featuredTitle: e.target.value })} />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            <h4 className="text-[10px] font-bold uppercase tracking-widest text-luxury-gold border-b pb-1">The New Standard ("Elevate Your Everyday")</h4>
-                            <div className="flex items-center gap-4 mb-4">
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={formData.newStandard?.isVisible ?? true}
-                                        onChange={e => setFormData({
-                                            ...formData,
-                                            newStandard: {
-                                                ...(formData.newStandard || {}),
-                                                isVisible: e.target.checked
-                                            }
-                                        })}
-                                    />
-                                    <span className="text-sm font-bold text-slate-700">Display Section</span>
-                                </label>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-400 mb-1">Tagline</label>
-                                    <input type="text" className="w-full border p-2.5 rounded text-sm" value={formData.newStandard?.tagline || ''} onChange={e => setFormData({ ...formData, newStandard: { ...(formData.newStandard || {}), tagline: e.target.value } })} placeholder="The New Standard" />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-400 mb-1">Title (use \n for line break)</label>
-                                    <input type="text" className="w-full border p-2.5 rounded text-sm" value={formData.newStandard?.title || ''} onChange={e => setFormData({ ...formData, newStandard: { ...(formData.newStandard || {}), title: e.target.value } })} placeholder="Elevate Your \n Everyday." />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-400 mb-1">Description</label>
-                                <textarea className="w-full border p-2.5 rounded text-sm h-24" value={formData.newStandard?.description || ''} onChange={e => setFormData({ ...formData, newStandard: { ...(formData.newStandard || {}), description: e.target.value } })} placeholder="Discover the latest additions..." />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-400 mb-1">Image Override (Leave blank to show auto-picked new arrival product)</label>
-                                <ImageUploader
-                                    value={formData.newStandard?.image || ''}
-                                    onChange={url => setFormData({ ...formData, newStandard: { ...(formData.newStandard || {}), image: url } })}
-                                    folder="v2-banners"
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-400 mb-1">Button Text</label>
-                                    <input type="text" className="w-full border p-2.5 rounded text-sm" value={formData.newStandard?.buttonText || ''} onChange={e => setFormData({ ...formData, newStandard: { ...(formData.newStandard || {}), buttonText: e.target.value } })} placeholder="The New Collection" />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-400 mb-1">Target Link</label>
-                                    <input type="text" className="w-full border p-2.5 rounded text-sm" value={formData.newStandard?.link || ''} onChange={e => setFormData({ ...formData, newStandard: { ...(formData.newStandard || {}), link: e.target.value } })} placeholder="/new-arrivals" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            <h4 className="text-[10px] font-bold uppercase tracking-widest text-luxury-gold border-b pb-1">Promotional Banner</h4>
-                            <div className="flex items-center gap-4 mb-4">
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={formData.promotionalBanner?.isVisible}
-                                        onChange={e => setFormData({
-                                            ...formData,
-                                            promotionalBanner: {
-                                                ...(formData.promotionalBanner || {}),
-                                                isVisible: e.target.checked
-                                            }
-                                        })}
-                                    />
-                                    <span className="text-sm font-bold text-slate-700">Display Live Banner</span>
-                                </label>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-400 mb-1">Banner Title</label>
-                                    <input type="text" className="w-full border p-2.5 rounded text-sm" value={formData.promotionalBanner?.title || ''} onChange={e => setFormData({ ...formData, promotionalBanner: { ...(formData.promotionalBanner || {}), title: e.target.value } })} />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-400 mb-1">Banner Subtitle</label>
-                                    <input type="text" className="w-full border p-2.5 rounded text-sm" value={formData.promotionalBanner?.subtitle || ''} onChange={e => setFormData({ ...formData, promotionalBanner: { ...(formData.promotionalBanner || {}), subtitle: e.target.value } })} />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-400 mb-1">Banner Image</label>
-                                <ImageUploader
-                                    value={formData.promotionalBanner?.image || ''}
-                                    onChange={url => setFormData({ ...formData, promotionalBanner: { ...(formData.promotionalBanner || {}), image: url } })}
-                                    folder="v2-banners"
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-400 mb-1">Button Text</label>
-                                    <input type="text" className="w-full border p-2.5 rounded text-sm" value={formData.promotionalBanner?.buttonText || ''} onChange={e => setFormData({ ...formData, promotionalBanner: { ...(formData.promotionalBanner || {}), buttonText: e.target.value } })} />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-400 mb-1">Target Link</label>
-                                    <input type="text" className="w-full border p-2.5 rounded text-sm" value={formData.promotionalBanner?.link || ''} onChange={e => setFormData({ ...formData, promotionalBanner: { ...(formData.promotionalBanner || {}), link: e.target.value } })} />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            <h4 className="text-[10px] font-bold uppercase tracking-widest text-luxury-gold border-b pb-1">Featured Categories</h4>
-                            {formData.categories?.map((cat: any, idx: number) => (
-                                <div key={idx} className="p-4 bg-gray-50 rounded-xl space-y-3">
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase">Category {idx + 1}</p>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <input
-                                            type="text"
-                                            placeholder="Title"
-                                            className="w-full bg-transparent border-b border-gray-100 py-3 text-[11px] font-bold tracking-widest focus:outline-none focus:border-luxury-black transition-colors"
-                                            value={cat.title}
-                                            onChange={e => {
-                                                const newCats = [...formData.categories];
-                                                newCats[idx] = { ...newCats[idx], title: e.target.value };
-                                                setFormData({ ...formData, categories: newCats });
-                                            }}
-                                        />
-                                        <input
-                                            type="text"
-                                            placeholder="Link"
-                                            className="w-full bg-transparent border-b border-gray-100 py-3 text-[11px] font-bold tracking-widest focus:outline-none focus:border-luxury-black transition-colors"
-                                            value={cat.link}
-                                            onChange={e => {
-                                                const newCats = [...formData.categories];
-                                                newCats[idx] = { ...newCats[idx], link: e.target.value };
-                                                setFormData({ ...formData, categories: newCats });
-                                            }}
-                                        />
-                                    </div>
-                                    <input
-                                        type="text"
-                                        placeholder="Image URL"
-                                        className="w-full bg-transparent border-b border-gray-100 py-3 text-[11px] font-bold tracking-widest focus:outline-none focus:border-luxury-black transition-colors"
-                                        value={cat.image}
-                                        onChange={e => {
-                                            const newCats = [...formData.categories];
-                                            newCats[idx] = { ...newCats[idx], image: e.target.value };
-                                            setFormData({ ...formData, categories: newCats });
-                                        }}
-                                    />
-                                </div>
-                            ))}
-                        </div>
-
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center border-b pb-1">
-                                <h4 className="text-[10px] font-bold uppercase tracking-widest text-luxury-gold">Promotional Sliders</h4>
-                                <button
-                                    onClick={() => {
-                                        const newSlides = [...(formData.promotionalSliders || []), {
-                                            id: Date.now(),
-                                            image: '',
-                                            title: 'New Slider',
-                                            subtitle: 'SUBTITLE',
-                                            link: '/shop',
-                                            buttonText: 'Discover'
-                                        }];
-                                        setFormData({ ...formData, promotionalSliders: newSlides });
-                                    }}
-                                    className="text-[9px] font-bold text-luxury-black hover:text-luxury-gold uppercase tracking-widest"
-                                >
-                                    + Add Slide
-                                </button>
-                            </div>
-                            <div className="space-y-4">
-                                {formData.promotionalSliders?.map((slide: any, idx: number) => (
-                                    <div key={idx} className="p-4 bg-gray-50 rounded-xl space-y-3 relative group">
-                                        <button
-                                            onClick={() => {
-                                                const newSlides = formData.promotionalSliders.filter((_: any, i: number) => i !== idx);
-                                                setFormData({ ...formData, promotionalSliders: newSlides });
-                                            }}
-                                            className="absolute top-2 right-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                        >
-                                            <Trash2 size={12} />
-                                        </button>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <input type="text" placeholder="Title" className="w-full border p-2 rounded text-[10px] font-bold" value={slide.title} onChange={e => {
-                                                const newSlides = [...formData.promotionalSliders];
-                                                newSlides[idx] = { ...newSlides[idx], title: e.target.value };
-                                                setFormData({ ...formData, promotionalSliders: newSlides });
-                                            }} />
-                                            <input type="text" placeholder="Subtitle" className="w-full border p-2 rounded text-[10px] font-bold" value={slide.subtitle} onChange={e => {
-                                                const newSlides = [...formData.promotionalSliders];
-                                                newSlides[idx] = { ...newSlides[idx], subtitle: e.target.value };
-                                                setFormData({ ...formData, promotionalSliders: newSlides });
-                                            }} />
-                                        </div>
-                                        <input type="text" placeholder="Image URL" className="w-full border p-2 rounded text-[10px] font-bold" value={slide.image} onChange={e => {
-                                            const newSlides = [...formData.promotionalSliders];
-                                            newSlides[idx] = { ...newSlides[idx], image: e.target.value };
-                                            setFormData({ ...formData, promotionalSliders: newSlides });
-                                        }} />
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <input type="text" placeholder="Btn Text" className="w-full border p-2 rounded text-[10px] font-bold" value={slide.buttonText} onChange={e => {
-                                                const newSlides = [...formData.promotionalSliders];
-                                                newSlides[idx] = { ...newSlides[idx], buttonText: e.target.value };
-                                                setFormData({ ...formData, promotionalSliders: newSlides });
-                                            }} />
-                                            <input type="text" placeholder="Link" className="w-full border p-2 rounded text-[10px] font-bold" value={slide.link} onChange={e => {
-                                                const newSlides = [...formData.promotionalSliders];
-                                                newSlides[idx] = { ...newSlides[idx], link: e.target.value };
-                                                setFormData({ ...formData, promotionalSliders: newSlides });
-                                            }} />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                );
+                return null; // Migrated to dedicated sidebar tab
             case 'about-content':
                 return (
                     <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
@@ -2099,7 +1886,6 @@ const AdminDashboard: React.FC = () => {
                             title="Site Features"
                             data={features}
                             columns={[
-                                { header: 'Icon', accessor: (row: FeatureItem) => <div className="p-2 bg-gray-50 rounded-lg inline-block"><div className="text-luxury-gold">{row.icon}</div></div> },
                                 { header: 'Title', accessor: 'title' },
                                 { header: 'Description', accessor: 'description' },
                                 { header: 'Action', accessor: (row) => <ActionButtons onClickEdit={() => handleEdit('feature', row)} onClickDelete={() => handleDelete('feature', (row as any).id || (row as any)._id)} /> },
@@ -2419,152 +2205,7 @@ const AdminDashboard: React.FC = () => {
                 return <SocialSettingsPage siteSettings={siteSettings} setSiteSettings={setSiteSettings} />;
 
             case 'settings-home':
-                return (
-                    <div className="space-y-12 animate-fade-in pb-12">
-                        <div className="flex justify-between items-end">
-                            <div>
-                                <h2 className="text-4xl font-serif italic text-slate-800 mb-2">Homepage Control</h2>
-                                <p className="text-gray-500">Configure sections and global homepage behavior.</p>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                            {/* Section Reordering */}
-                            <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-xl lg:col-span-1">
-                                <div className="flex items-center gap-3 mb-8">
-                                    <div className="p-3 bg-indigo-50 text-indigo-500 rounded-xl"><LayoutDashboard size={20} /></div>
-                                    <h3 className="text-xl font-bold text-slate-800">Section Hierarchy</h3>
-                                </div>
-                                <div className="space-y-3">
-                                    {homeSections.sectionOrder.map((sectionId, index) => (
-                                        <div
-                                            key={sectionId}
-                                            className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 group hover:border-luxury-gold transition-colors"
-                                        >
-                                            <div className="flex items-center gap-4">
-                                                <span className="text-[10px] font-bold text-gray-300 w-4">0{index + 1}</span>
-                                                <span className="text-[11px] font-bold uppercase tracking-widest text-slate-700">{sectionId.replace('-', ' ')}</span>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => handleMoveHomeSection(index, 'up')}
-                                                    disabled={index === 0}
-                                                    className="p-2 text-gray-400 hover:text-luxury-black disabled:opacity-30 disabled:hover:text-gray-400"
-                                                >
-                                                    <ChevronUp size={16} />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleMoveHomeSection(index, 'down')}
-                                                    disabled={index === homeSections.sectionOrder.length - 1}
-                                                    className="p-2 text-gray-400 hover:text-luxury-black disabled:opacity-30 disabled:hover:text-gray-400"
-                                                >
-                                                    <ChevronDown size={16} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                                <p className="mt-6 text-[10px] text-gray-400 font-bold uppercase tracking-widest italic text-center">Drag and drop reordering coming soon</p>
-                            </div>
-
-                            <div className="lg:col-span-2 space-y-8">
-                                {/* Promotional Hero Config */}
-                                <div className="bg-luxury-black p-8 rounded-3xl shadow-2xl relative overflow-hidden">
-                                    <div className="relative z-10 flex flex-col md:flex-row justify-between gap-8 items-center">
-                                        <div className="flex-1 space-y-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-3 bg-white/10 text-luxury-gold rounded-xl"><Sparkles size={20} /></div>
-                                                <h3 className="text-2xl font-serif italic text-white">Promotional Hero</h3>
-                                            </div>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
-                                                    <p className="text-[9px] font-bold text-luxury-gold uppercase tracking-widest mb-1">Banner Title</p>
-                                                    <p className="text-sm font-bold text-white line-clamp-1">{homeSections.promotionalBanner.title}</p>
-                                                </div>
-                                                <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
-                                                    <p className="text-[9px] font-bold text-luxury-gold uppercase tracking-widest mb-1">Status</p>
-                                                    <p className={`text-sm font-bold ${homeSections.promotionalBanner.isVisible ? 'text-green-400' : 'text-red-400'}`}>
-                                                        {homeSections.promotionalBanner.isVisible ? 'Live' : 'Hidden'}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={() => handleEdit('home-sections', homeSections)}
-                                            className="px-8 py-4 bg-white text-luxury-black rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-luxury-gold hover:text-white transition-all"
-                                        >
-                                            Configure Banner
-                                        </button>
-                                    </div>
-                                    {/* Glassy Background Image Preview */}
-                                    <div className="absolute top-0 right-0 w-1/3 h-full opacity-20 transition-opacity">
-                                        <img src={homeSections.promotionalBanner.image} className="w-full h-full object-cover blur-sm" />
-                                    </div>
-                                </div>
-
-                                {/* Category & Featured Grid Config */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-xl flex flex-col justify-between">
-                                        <div className="space-y-6">
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-3 bg-gold-50 text-luxury-gold rounded-xl"><LayoutGrid size={20} /></div>
-                                                <h3 className="text-xl font-bold text-slate-800">Category Grid</h3>
-                                            </div>
-                                            <div className="p-6 bg-gray-50 rounded-2xl border border-gray-100">
-                                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Desktop Columns: {homeSections.categoryColumns || 3}</label>
-                                                <input
-                                                    type="range"
-                                                    min="2"
-                                                    max="4"
-                                                    step="1"
-                                                    value={homeSections.categoryColumns || 3}
-                                                    onChange={(e) => setHomeSections({ ...homeSections, categoryColumns: Number(e.target.value) })}
-                                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-luxury-black"
-                                                />
-                                                <div className="flex justify-between mt-2 text-[9px] font-bold text-gray-300 uppercase tracking-widest">
-                                                    <span>2 Columns</span>
-                                                    <span>3 Columns</span>
-                                                    <span>4 Columns</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <button onClick={() => handleEdit('home-sections', homeSections)} className="w-full py-4 bg-white border-2 border-slate-100 text-slate-800 rounded-xl font-bold uppercase tracking-widest text-[10px] hover:border-luxury-gold hover:text-luxury-gold transition-all mt-6">
-                                            Edit Headings
-                                        </button>
-                                    </div>
-
-                                    <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-xl flex flex-col justify-between">
-                                        <div className="space-y-6">
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-3 bg-rose-50 text-rose-500 rounded-xl"><Check size={20} /></div>
-                                                <h3 className="text-xl font-bold text-slate-800">Trending Picker</h3>
-                                            </div>
-                                            <div className="p-6 bg-gray-50 rounded-2xl border border-gray-100">
-                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Hand-picked Items</p>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {(homeSections.trendingProductIds || []).map(id => {
-                                                        const p = products.find(prod => prod.id === id);
-                                                        return (
-                                                            <div key={id} className="px-3 py-1 bg-white border border-gray-200 rounded-full text-[10px] font-bold text-slate-600 flex items-center gap-2">
-                                                                {p?.name.split(' ')[0]} <button onClick={() => setHomeSections({ ...homeSections, trendingProductIds: (homeSections.trendingProductIds || []).filter(tid => tid !== id) })} className="text-rose-500">×</button>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                    <button onClick={() => setActivePage('products')} className="px-3 py-1 bg-luxury-black text-white rounded-full text-[10px] font-bold hover:bg-luxury-gold transition-colors flex items-center gap-1">
-                                                        <Plus size={10} /> Add
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="mt-6 text-[10px] text-gray-400 font-bold uppercase tracking-widest italic text-center">
-                                            {(homeSections.trendingProductIds || []).length} Products Highlighted
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                );
+                return <AdminHomeSectionsTab homeSections={homeSections} setHomeSections={setHomeSections} products={products} setActivePage={setActivePage} />;
 
             case 'settings-about':
                 return <AboutSettingsPage aboutContent={aboutContent} onEdit={() => handleEdit('about-content', aboutContent)} />;

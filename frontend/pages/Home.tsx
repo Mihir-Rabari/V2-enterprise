@@ -765,7 +765,7 @@ const Home: React.FC = () => {
 
                                     <div className="flex flex-col lg:flex-row items-start gap-10">
                                         {/* Left Sidebar (Desktop) */}
-                                        <div className="hidden lg:flex flex-col w-[260px] flex-shrink-0 sticky top-[100px] max-h-[calc(100vh-120px)] overflow-hidden">
+                                        <div className="hidden lg:flex flex-col w-[260px] flex-shrink-0 sticky top-[100px] max-h-[850px] overflow-hidden">
                                             <div className="flex items-center justify-between mb-4 flex-shrink-0">
                                                 <span className="font-bold text-sm uppercase tracking-widest">Filters</span>
                                                 {activeEssentialsFilterCount > 0 && (

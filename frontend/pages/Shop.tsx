@@ -265,36 +265,6 @@ const Shop: React.FC = () => {
     return (
         <div className="bg-white min-h-screen animate-fade-in relative">
             {/* Page Header */}
-            <div className="py-8 md:py-12 border-b border-gray-50 flex flex-col items-center">
-                <div className="max-w-2xl w-full px-6 space-y-4 md:space-y-6 text-center">
-                    <div className="space-y-2 md:space-y-3">
-                        <span className="text-luxury-gold text-[9px] sm:text-[10px] font-bold uppercase tracking-luxury-widest flex items-center justify-center gap-2">
-                            {isNewArrivalsPage ? <Sparkles size={10} strokeWidth={2} /> : <TrendingUp size={10} strokeWidth={2} />}
-                            {isNewArrivalsPage ? 'Featured' : 'Collections'}
-                        </span>
-                        <h1 className="font-serif text-3xl sm:text-4xl md:text-6xl italic text-luxury-black tracking-tighter">
-                            {isNewArrivalsPage ? 'New Collection' : 'Shop Our Collection'}
-                        </h1>
-                    </div>
-
-                    <div className="relative group max-w-md mx-auto mt-4">
-                        <input
-                            type="text"
-                            placeholder="SEARCH FOR STYLES..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-gray-50 rounded-full px-12 py-2.5 text-[11px] font-bold tracking-luxury-widest focus:outline-none focus:ring-1 focus:ring-luxury-gold transition-all placeholder:text-gray-400 uppercase"
-                        />
-                        <Search size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" strokeWidth={1.5} />
-                        {searchQuery && (
-                            <button onClick={() => setSearchQuery('')} className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-luxury-black">
-                                <X size={16} />
-                            </button>
-                        )}
-                    </div>
-                </div>
-            </div>
-
             {/* Mobile Filter Toggle Overlay Bar (Sticky) */}
             <div className="lg:hidden sticky top-[72px] z-30 bg-white/90 backdrop-blur-md border-b border-gray-100 py-3 shadow-sm">
                 <div className="px-6 flex items-center justify-between w-full">

@@ -601,8 +601,9 @@ const Wishlist = () => {
 };
 
 const Account: React.FC = () => {
-    const { user, isAuthenticated } = useAuth();
+    const { user, isAuthenticated, logout } = useAuth();
     const location = useLocation();
+    const navigate = useNavigate();
 
     if (!isAuthenticated) {
         return <Navigate to="/login" state={{ from: location }} replace />;
@@ -613,7 +614,6 @@ const Account: React.FC = () => {
         { path: '/account/orders', label: 'Orders', icon: Package },
         { path: '/account/wishlist', label: 'Wishlist', icon: Heart },
         { path: '/account/addresses', label: 'Addresses', icon: MapPin },
-        { path: '/account/settings', label: 'Settings', icon: Settings },
     ];
 
     return (
@@ -679,7 +679,13 @@ const Account: React.FC = () => {
 
                             <div className="h-4 w-px bg-gray-100 mx-4 lg:hidden" />
 
-                            <button className="flex items-center gap-3 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.25em] text-red-900 group transition-all duration-300 whitespace-nowrap snap-start hover:bg-red-50/50">
+                            <button
+                                onClick={() => {
+                                    logout();
+                                    navigate('/');
+                                }}
+                                className="flex items-center gap-3 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.25em] text-red-900 group transition-all duration-300 whitespace-nowrap snap-start hover:bg-red-50/50"
+                            >
                                 <LogOut size={14} strokeWidth={1.5} className="group-hover:-translate-x-1 transition-transform" />
                                 Logout
                             </button>
@@ -704,7 +710,6 @@ const Account: React.FC = () => {
                                     <Route path="orders" element={<Orders />} />
                                     <Route path="wishlist" element={<Wishlist />} />
                                     <Route path="addresses" element={<Addresses />} />
-                                    <Route path="settings" element={<Profile />} />
                                 </Routes>
                             </motion.div>
                         </AnimatePresence>

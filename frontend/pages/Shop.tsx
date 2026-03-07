@@ -277,13 +277,13 @@ const Shop: React.FC = () => {
                         </h1>
                     </div>
 
-                    <div className="relative group max-w-md mx-auto mt-6">
+                    <div className="relative group max-w-md mx-auto mt-4">
                         <input
                             type="text"
                             placeholder="SEARCH FOR STYLES..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-gray-50 rounded-full px-12 py-3.5 text-[11px] font-bold tracking-luxury-widest focus:outline-none focus:ring-1 focus:ring-luxury-gold transition-all placeholder:text-gray-400 uppercase"
+                            className="w-full bg-gray-50 rounded-full px-12 py-2.5 text-[11px] font-bold tracking-luxury-widest focus:outline-none focus:ring-1 focus:ring-luxury-gold transition-all placeholder:text-gray-400 uppercase"
                         />
                         <Search size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" strokeWidth={1.5} />
                         {searchQuery && (

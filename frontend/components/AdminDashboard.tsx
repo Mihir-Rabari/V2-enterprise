@@ -219,7 +219,11 @@ const AdminDashboard: React.FC = () => {
                     setNewArrivalSliders(allPromo.filter(s => s.type === 'NEW_ARRIVAL'));
                 }
                 if (settingsRes.data.success && settingsRes.data.data) {
-                    setSiteSettings(settingsRes.data.data);
+                    const s = settingsRes.data.data;
+                    setSiteSettings(s);
+                    if (s.homeSections) setHomeSections(s.homeSections);
+                    if (s.aboutContent) setAboutContent(s.aboutContent);
+                    if (s.commitment) setCommitment(s.commitment);
                 }
                 if (catRes.data.success) {
                     const allCats = catRes.data.data;
@@ -451,12 +455,15 @@ const AdminDashboard: React.FC = () => {
                 const res = await settingsAPI.update(formData);
                 finalData = res.data.data;
             } else if (modalType === 'about-content') {
-                await settingsAPI.update({ aboutContent: formData });
+                const res = await settingsAPI.update({ aboutContent: formData });
+                setAboutContent(formData);
                 finalData = formData;
             } else if (modalType === 'home-sections') {
-                await settingsAPI.update({ homeSections: formData });
+                const res = await settingsAPI.update({ homeSections: formData });
+                setHomeSections(formData);
                 finalData = formData;
-            } else if (modalType === 'main-category' || modalType === 'sub-category') {
+            }
+            else if (modalType === 'main-category' || modalType === 'sub-category') {
                 const identifier = formData.id || formData._id;
                 if (identifier) {
                     const res = await categoriesAPI.update(identifier, formData);

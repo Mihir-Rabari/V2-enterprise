@@ -15,6 +15,7 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
     const [folders, setFolders] = useState<string[]>([]);
     const [currentPath, setCurrentPath] = useState('/');
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -24,7 +25,9 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
     const LIMIT = 100;
 
     const fetchMedia = async (query = '', path = '/', currentSkip = 0, isLoadMore = false) => {
-        setLoading(true);
+        if (isLoadMore) setLoadingMore(true);
+        else setLoading(true);
+
         setError(null);
         try {
             const res = await adminAPI.getMedia({ searchQuery: query, path, skip: currentSkip, limit: LIMIT });
@@ -42,6 +45,7 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
             setError(err?.response?.data?.message || err?.message || 'Connection error');
         } finally {
             setLoading(false);
+            setLoadingMore(false);
         }
     };
 
@@ -57,10 +61,35 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
     }, [searchTerm, currentPath, isOpen]);
 
     const handleLoadMore = () => {
+        if (loading || loadingMore || !hasMore) return;
         const nextSkip = skip + LIMIT;
         setSkip(nextSkip);
         fetchMedia(searchTerm, currentPath, nextSkip, true);
     };
+
+    // Infinite Scroll Sentinel
+    const observerTarget = React.useRef(null);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            entries => {
+                if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
+                    handleLoadMore();
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (observerTarget.current) {
+            observer.observe(observerTarget.current);
+        }
+
+        return () => {
+            if (observerTarget.current) {
+                observer.unobserve(observerTarget.current);
+            }
+        };
+    }, [hasMore, loading, loadingMore, skip]);
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -230,14 +259,15 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
                         </div>
                     )}
 
-                    {hasMore && !loading && !error && filteredMedia.length > 0 && (
-                        <div className="mt-8 flex justify-center">
-                            <button
-                                onClick={handleLoadMore}
-                                className="px-8 py-3 bg-luxury-black text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-luxury-gold transition-all shadow-lg active:scale-95"
-                            >
-                                Load More Assets
-                            </button>
+                    {/* Sentinel element for infinite scroll */}
+                    {(hasMore || loadingMore) && (
+                        <div ref={observerTarget} className="h-20 flex items-center justify-center mt-8">
+                            {(loadingMore || loading) && media.length > 0 && (
+                                <div className="flex flex-col items-center gap-2 text-luxury-gold/60">
+                                    <Loader2 className="animate-spin" size={24} />
+                                    <span className="text-[8px] font-bold uppercase tracking-widest italic">Loading More Assets...</span>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

@@ -179,7 +179,7 @@ async function main() {
                 name: 'Premium Linen Blend Shirt',
                 styleCode: 'SHIRT-01',
                 color: 'White', colorHex: '#FFFFFF',
-                videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+                videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
                 price: 2499,
                 photo: 'https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=800',
                 hoverImage: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=800',
@@ -302,6 +302,7 @@ async function main() {
                 name: 'Pleated Trousers',
                 styleCode: 'TROUS-01',
                 color: 'Black', colorHex: '#000000',
+                videoUrl: 'https://www.youtube.com/embed/XW7_5M0O11I', // Sample video
                 price: 2999,
                 photo: 'https://images.pexels.com/photos/1536619/pexels-photo-1536619.jpeg?auto=compress&cs=tinysrgb&w=800',
                 mainCategory: 'WOMENSWEAR', subCategory: 'Tailoring',
@@ -468,12 +469,13 @@ async function main() {
 
         // ── Dynamic Content ────────────────────────────────────────────────────────
         await Content.insertMany([
-            { type: 'TAGLINE', title: 'We redefine modern luxury with minimalistic elegance.', status: 'ACTIVE' },
-            { type: 'TAGLINE', title: 'Crafting the future of fashion for the contemporary mind.', status: 'ACTIVE' },
-            { type: 'FEATURE_ITEM', caption: 'Truck', title: 'Free Delivery', text: 'On all orders above ₹999', status: 'ACTIVE' },
-            { type: 'FEATURE_ITEM', caption: 'CreditCard', title: 'Secure Payment', text: '100% secure payment processing', status: 'ACTIVE' },
-            { type: 'FEATURE_ITEM', caption: 'RefreshCw', title: '14-Day Returns', text: 'Easy returns and exchanges', status: 'ACTIVE' },
-            { type: 'FEATURE_ITEM', caption: 'Headphones', title: '24/7 Support', text: 'Dedicated customer assistance', status: 'ACTIVE' },
+            { type: 'TAGLINE', text: 'Complimentary Shipping on all orders above ₹999 | 14 Day Returns', status: 'ACTIVE' },
+            { type: 'TAGLINE', text: 'We redefine modern luxury with minimalistic elegance.', status: 'ACTIVE' },
+            { type: 'TAGLINE', text: 'Crafting the future of fashion for the contemporary mind.', status: 'ACTIVE' },
+            { type: 'FEATURE_ITEM', caption: 'Truck', title: 'Free Delivery', description: 'On all orders above ₹999', status: 'ACTIVE' },
+            { type: 'FEATURE_ITEM', caption: 'CreditCard', title: 'Secure Payment', description: '100% secure payment processing', status: 'ACTIVE' },
+            { type: 'FEATURE_ITEM', caption: 'RefreshCw', title: '14-Day Returns', description: 'Easy returns and exchanges', status: 'ACTIVE' },
+            { type: 'FEATURE_ITEM', caption: 'Headphones', title: '24/7 Support', description: 'Dedicated customer assistance', status: 'ACTIVE' },
             { type: 'MARQUEE', text: "V2 ENTERPRISE", status: 'ACTIVE' },
             { type: 'MARQUEE', text: "COLLECTION 2026", status: 'ACTIVE' },
             { type: 'MARQUEE', text: "THE ART OF DISCIPLINE", status: 'ACTIVE' },

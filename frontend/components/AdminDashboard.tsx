@@ -203,7 +203,7 @@ const AdminDashboard: React.FC = () => {
                     fetchContent('LOGO'),
                     fetchContent('BESTSELLER_HEADING'),
                     fetchContent('PAGE'),
-                    fetchContent('FEATURE'),
+                    fetchContent('FEATURE_ITEM'),
                 ]);
 
                 if (tagRes.data.success) setTaglines(tagRes.data.data);
@@ -432,10 +432,11 @@ const AdminDashboard: React.FC = () => {
                     'lookbookItem': 'LOOKBOOK_ITEM',
                     'logo': 'LOGO',
                     'bestseller': 'BESTSELLER_HEADING',
-                    'page': 'PAGE'
+                    'page': 'PAGE',
+                    'feature': 'FEATURE_ITEM'
                 };
-                if (formData.id) {
-                    const res = await updateContent(formData.id, formData);
+                if (formData.id || formData._id) {
+                    const res = await updateContent(formData.id || formData._id, formData);
                     finalData = res.data.data;
                 } else {
                     const res = await createContent({ ...formData, type: typeMap[modalType] });
@@ -899,8 +900,8 @@ const AdminDashboard: React.FC = () => {
                 return (
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Icon (Lucide name)</label>
-                            <input type="text" className="w-full border border-gray-200 p-3 rounded-xl focus:outline-none focus:border-luxury-gold text-sm" value={formData.icon || ''} onChange={e => setFormData({ ...formData, icon: e.target.value })} />
+                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Icon (Lucide name, e.g. Truck)</label>
+                            <input type="text" className="w-full border border-gray-200 p-3 rounded-xl focus:outline-none focus:border-luxury-gold text-sm" value={formData.caption || formData.icon || ''} onChange={e => setFormData({ ...formData, caption: e.target.value })} />
                         </div>
                         <div>
                             <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Title</label>
@@ -908,7 +909,18 @@ const AdminDashboard: React.FC = () => {
                         </div>
                         <div>
                             <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Description</label>
-                            <input type="text" className="w-full border border-gray-200 p-3 rounded-xl focus:outline-none focus:border-luxury-gold text-sm" value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} />
+                            <textarea className="w-full border border-gray-200 p-3 rounded-xl focus:outline-none focus:border-luxury-gold text-sm h-24" value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Status</label>
+                            <select
+                                className="w-full border border-gray-200 p-3 rounded-xl focus:outline-none focus:border-luxury-gold text-sm bg-white"
+                                value={formData.status || 'ACTIVE'}
+                                onChange={e => setFormData({ ...formData, status: e.target.value })}
+                            >
+                                <option value="ACTIVE">Active</option>
+                                <option value="INACTIVE">Inactive</option>
+                            </select>
                         </div>
                     </div>
                 );
@@ -1081,16 +1093,6 @@ const AdminDashboard: React.FC = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Color</label>
-                                    <input
-                                        type="text"
-                                        placeholder="e.g. Black"
-                                        className="w-full border p-2 rounded text-xs"
-                                        value={tempVariant.color}
-                                        onChange={e => setTempVariant({ ...tempVariant, color: e.target.value })}
-                                    />
-                                </div>
-                                <div>
                                     <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Quantity</label>
                                     <input
                                         type="number"
@@ -1106,7 +1108,7 @@ const AdminDashboard: React.FC = () => {
                                             if (!tempVariant.size) return;
                                             const variants = formData.variants || [];
                                             setFormData({ ...formData, variants: [...variants, { ...tempVariant }] });
-                                            setTempVariant({ ...tempVariant, size: '', color: '', quantity: 0 });
+                                            setTempVariant({ ...tempVariant, size: '', quantity: 0 });
                                         }}
                                         className="w-full bg-luxury-black text-white p-2 rounded text-xs font-bold hover:bg-luxury-gold transition-colors"
                                     >
@@ -1122,10 +1124,6 @@ const AdminDashboard: React.FC = () => {
                                             <div className="flex flex-col">
                                                 <span className="text-[10px] font-bold text-gray-400 uppercase">Size</span>
                                                 <span className="text-xs font-bold">{v.size}</span>
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <span className="text-[10px] font-bold text-gray-400 uppercase">Color</span>
-                                                <span className="text-xs font-bold">{v.color || 'N/A'}</span>
                                             </div>
                                             <div className="flex flex-col">
                                                 <span className="text-[10px] font-bold text-gray-400 uppercase">Stock</span>

@@ -3,6 +3,7 @@ import { Product } from '../../models/Product';
 import { Order } from '../../models/Order';
 import { User } from '../../models/User';
 import { ContactMessage } from '../../models/ContactMessage';
+import { Media } from '../../models/Media';
 import { sendSuccess, sendError } from '../../utils/response';
 import { protect } from '../../middlewares/auth.middleware';
 import { adminOnly } from '../../middlewares/admin.middleware';
@@ -193,6 +194,28 @@ router.get('/customers', protect, adminOnly, async (req: Request, res: Response)
     } catch (err: unknown) { return sendError(res, (err as Error).message); }
 });
 
+// Admin: get all media
+router.get('/media', protect, adminOnly, async (req: Request, res: Response) => {
+    try {
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 50;
+        const skip = (page - 1) * limit;
+
+        const [media, total] = await Promise.all([
+            Media.find({ status: 'ACTIVE' })
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+            Media.countDocuments({ status: 'ACTIVE' })
+        ]);
+
+        const mediaWithId = media.map(m => ({ ...m.toObject(), id: m._id.toString() }));
+        return sendSuccess(res, { media: mediaWithId, total, page, limit, totalPages: Math.ceil(total / limit) });
+    } catch (err: unknown) {
+        return sendError(res, (err as Error).message);
+    }
+});
+
 // Admin: Proxy upload to ImageKit (private key stays on server, Basic Auth)
 router.post('/upload', protect, adminOnly, upload.single('file'), async (req: Request, res: Response) => {
     try {
@@ -223,11 +246,22 @@ router.post('/upload', protect, adminOnly, upload.single('file'), async (req: Re
             },
         });
 
+        // Save to Media collection for the Cloud Library
+        const newMedia = await Media.create({
+            url: response.data.url,
+            fileId: response.data.fileId,
+            name: response.data.name,
+            size: response.data.size,
+            mimeType: req.file.mimetype,
+            folder: folder,
+        });
+
         return sendSuccess(res, {
             url: response.data.url,
             fileId: response.data.fileId,
             name: response.data.name,
-        }, 'File uploaded to ImageKit');
+            id: newMedia._id.toString(),
+        }, 'File uploaded to ImageKit and saved to library');
 
     } catch (err: any) {
         const msg = err?.response?.data?.message || err?.message || 'Upload failed';

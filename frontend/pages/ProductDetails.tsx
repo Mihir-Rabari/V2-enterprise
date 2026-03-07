@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ShoppingBag, Heart, ArrowRight, Star, MessageSquare, Send, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, ShoppingBag, Heart, ArrowRight, Star, MessageSquare, Send, CheckCircle2, PlayCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProductCard from '../components/ProductCard';
 import { Accordion } from '../components/Accordion';
@@ -47,6 +47,7 @@ const ProductDetails: React.FC = () => {
     const [selectedSize, setSelectedSize] = useState<string | null>(null);
     const [selectedColor, setSelectedColor] = useState<string | null>(null);
     const [activeImage, setActiveImage] = useState<number>(0);
+    const [isVideoActive, setIsVideoActive] = useState(false);
     const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
     const [isZooming, setIsZooming] = useState(false);
 
@@ -243,15 +244,36 @@ const ProductDetails: React.FC = () => {
                             onMouseEnter={() => setIsZooming(true)}
                             onMouseLeave={() => setIsZooming(false)}
                         >
-                            <motion.img
-                                key={activeImage}
-                                initial={{ opacity: 0, scale: 1.05 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.8, ease: "easeOut" }}
-                                src={galleryImages[activeImage]}
-                                alt={product.name}
-                                className="w-full h-full object-cover"
-                            />
+                            {isVideoActive && product.videoUrl ? (
+                                <div className="absolute inset-0 z-20 bg-black">
+                                    <iframe
+                                        className="w-full h-full"
+                                        src={product.videoUrl.includes('youtube.com/embed')
+                                            ? product.videoUrl
+                                            : product.videoUrl.replace('watch?v=', 'embed/')}
+                                        title="Product Video"
+                                        frameBorder="0"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                        allowFullScreen
+                                    ></iframe>
+                                    <button
+                                        onClick={() => setIsVideoActive(false)}
+                                        className="absolute top-4 right-4 z-30 bg-white/20 hover:bg-white/40 backdrop-blur-md text-white px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all"
+                                    >
+                                        Close Video
+                                    </button>
+                                </div>
+                            ) : (
+                                <motion.img
+                                    key={activeImage}
+                                    initial={{ opacity: 0, scale: 1.05 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ duration: 0.8, ease: "easeOut" }}
+                                    src={galleryImages[activeImage]}
+                                    alt={product.name}
+                                    className="w-full h-full object-cover"
+                                />
+                            )}
 
                             {/* Lens Overlay */}
                             <AnimatePresence>
@@ -300,15 +322,27 @@ const ProductDetails: React.FC = () => {
                             {galleryImages.map((img, idx) => (
                                 <button
                                     key={idx}
-                                    onClick={() => setActiveImage(idx)}
-                                    className={`relative w-20 h-28 md:w-24 md:h-32 transition-all duration-500 overflow-hidden group ${activeImage === idx ? 'ring-2 ring-luxury-gold ring-offset-4 ring-offset-[#F6F3EF]' : 'opacity-60 hover:opacity-100'}`}
+                                    onClick={() => {
+                                        setActiveImage(idx);
+                                        setIsVideoActive(false);
+                                    }}
+                                    className={`relative w-20 h-28 md:w-24 md:h-32 transition-all duration-500 overflow-hidden group ${activeImage === idx && !isVideoActive ? 'ring-2 ring-luxury-gold ring-offset-4 ring-offset-[#F6F3EF]' : 'opacity-60 hover:opacity-100'}`}
                                 >
                                     <img src={img} alt="Thumbnail" className="w-full h-full object-cover grayscale-[0.5] group-hover:grayscale-0 transition-all duration-700" />
-                                    {activeImage === idx && (
+                                    {activeImage === idx && !isVideoActive && (
                                         <div className="absolute inset-0 bg-luxury-gold/5" />
                                     )}
                                 </button>
                             ))}
+                            {product.videoUrl && (
+                                <button
+                                    onClick={() => setIsVideoActive(true)}
+                                    className={`relative w-20 h-28 md:w-24 md:h-32 transition-all duration-500 overflow-hidden group flex flex-col items-center justify-center bg-zinc-900 ${isVideoActive ? 'ring-2 ring-luxury-gold ring-offset-4 ring-offset-[#F6F3EF]' : 'opacity-60 hover:opacity-100'}`}
+                                >
+                                    <PlayCircle size={32} className="text-white mb-2" strokeWidth={1} />
+                                    <span className="text-[8px] font-bold text-white uppercase tracking-widest text-center px-2">Watch Experience</span>
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -358,7 +392,11 @@ const ProductDetails: React.FC = () => {
                                                     className={`relative group flex flex-col items-center gap-1.5 transition-all duration-300`}
                                                 >
                                                     <div className={`w-11 h-11 rounded-lg overflow-hidden border-2 transition-all duration-300 ${isActive ? 'border-luxury-gold ring-2 ring-luxury-gold ring-offset-2 ring-offset-[#F6F3EF]' : 'border-transparent hover:border-[#2A1E17]/20'}`}>
-                                                        <img src={opt.photo} alt={opt.color} className="w-full h-full object-cover" />
+                                                        {opt.photo ? (
+                                                            <img src={opt.photo} alt={opt.color} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <div className="w-full h-full" style={{ backgroundColor: (opt as any).colorHex || '#ccc' }} />
+                                                        )}
                                                     </div>
                                                     <span className="text-[8px] font-bold uppercase tracking-widest text-gray-400">{opt.color}</span>
                                                 </button>

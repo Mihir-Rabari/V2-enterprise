@@ -63,6 +63,8 @@ export interface Product {
   isNewArrival?: boolean;
   isTrending?: boolean;
   tags?: string[];
+  videoUrl?: string;
+  colorHex?: string;
   status: 'Active' | 'Inactive' | 'ACTIVE' | 'INACTIVE';
 }
 
@@ -337,4 +339,15 @@ export interface HeroSlide {
   duration?: number;
   order: number;
   status: 'Active' | 'Inactive';
+}
+
+export interface IMedia {
+  id: string;
+  url: string;
+  fileId: string;
+  name: string;
+  size?: number;
+  mimeType?: string;
+  folder?: string;
+  createdAt: string;
 }

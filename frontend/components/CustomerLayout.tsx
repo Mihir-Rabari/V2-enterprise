@@ -38,8 +38,10 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ onSwitchToAdmin }) => {
     useEffect(() => {
         contentAPI.getByType('TAGLINE')
             .then(res => {
-                if (res.data.success && res.data.data) {
-                    setTaglines(res.data.data.map((t: any) => ({ text: t.title })));
+                if (res.data.success && res.data.data && res.data.data.length > 0) {
+                    setTaglines(res.data.data.map((t: any) => ({ text: t.text || t.title || "V2 Enterprise — Defining Modern Heritage" })));
+                } else {
+                    setTaglines([{ text: "Complimentary Shipping on all orders above ₹999 | 14 Day Returns" }]);
                 }
             })
             .catch(err => {

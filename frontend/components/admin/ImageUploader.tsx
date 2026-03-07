@@ -1,6 +1,8 @@
 import React, { useRef, useState } from 'react';
 import { Upload, Trash2, Loader2, Link2, Image as ImageIcon, Video } from 'lucide-react';
 import { uploadToImageKit } from '../../lib/imagekit';
+import { MediaManagerModal } from './MediaManagerModal';
+import { adminAPI } from '../../lib/apiClient';
 
 interface ImageUploaderProps {
     /** Current value of the URL (image or video URL) */
@@ -33,6 +35,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     const [error, setError] = useState('');
     const [showUrlInput, setShowUrlInput] = useState(false);
     const [urlDraft, setUrlDraft] = useState('');
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     const handleFile = async (file: File) => {
         if (!file) return;
@@ -73,15 +76,14 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         // Compact mode: used for gallery additions (horizontal strip)
         return (
             <div className="flex items-center gap-2">
-                <input ref={inputRef} type="file" accept={accept} className="hidden" onChange={handleFileChange} />
                 <button
                     type="button"
-                    onClick={() => inputRef.current?.click()}
+                    onClick={() => setIsModalOpen(true)}
                     disabled={uploading}
                     className="flex items-center gap-1.5 px-3 py-2 bg-luxury-black text-white rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-luxury-gold transition-colors disabled:opacity-50"
                 >
-                    {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
-                    {uploading ? 'Uploading...' : 'Upload File'}
+                    {uploading ? <Loader2 size={12} className="animate-spin" /> : <ImageIcon size={12} />}
+                    {uploading ? 'Processing...' : 'Media Manager'}
                 </button>
                 <span className="text-[10px] text-gray-400 font-bold">or</span>
                 <input
@@ -92,12 +94,12 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
                     onChange={e => setUrlDraft(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') handleUrlPaste(); }}
                 />
-                {urlDraft && (
-                    <button type="button" onClick={handleUrlPaste} className="text-[10px] font-bold text-luxury-gold hover:underline">
-                        Add
-                    </button>
-                )}
-                {error && <p className="text-red-500 text-[10px]">{error}</p>}
+
+                <MediaManagerModal
+                    isOpen={isModalOpen}
+                    onClose={() => setIsModalOpen(false)}
+                    onSelect={(url) => onChange(url)}
+                />
             </div>
         );
     }
@@ -114,7 +116,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
                 className="relative w-full aspect-video max-h-52 border-2 border-dashed border-gray-200 rounded-2xl overflow-hidden bg-gray-50 flex items-center justify-center group transition-colors hover:border-luxury-gold"
                 onDragOver={e => e.preventDefault()}
                 onDrop={handleDrop}
-                onClick={() => !value && inputRef.current?.click()}
+                onClick={() => !value && setIsModalOpen(true)}
                 style={{ cursor: value ? 'default' : 'pointer' }}
             >
                 {uploading ? (
@@ -132,10 +134,10 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
                         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
                             <button
                                 type="button"
-                                onClick={e => { e.stopPropagation(); inputRef.current?.click(); }}
+                                onClick={e => { e.stopPropagation(); setIsModalOpen(true); }}
                                 className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-black rounded-lg text-[10px] font-bold hover:bg-luxury-gold hover:text-white transition-colors"
                             >
-                                <Upload size={12} /> Replace
+                                <ImageIcon size={12} /> Cloud Manager
                             </button>
                             <button
                                 type="button"
@@ -162,15 +164,14 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
 
             {/* Action row */}
             <div className="flex items-center gap-2">
-                <input ref={inputRef} type="file" accept={accept} className="hidden" onChange={handleFileChange} />
                 <button
                     type="button"
-                    onClick={() => inputRef.current?.click()}
+                    onClick={() => setIsModalOpen(true)}
                     disabled={uploading}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-luxury-black text-white rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-luxury-gold transition-colors disabled:opacity-50 shrink-0"
                 >
-                    {uploading ? <Loader2 size={11} className="animate-spin" /> : <Upload size={11} />}
-                    {uploading ? 'Uploading...' : 'Upload File'}
+                    {uploading ? <Loader2 size={11} className="animate-spin" /> : <ImageIcon size={11} />}
+                    {uploading ? 'Processing...' : 'Media Manager'}
                 </button>
                 <button
                     type="button"
@@ -213,6 +214,12 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
                     </button>
                 </div>
             )}
+
+            <MediaManagerModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onSelect={(url) => onChange(url)}
+            />
 
             {error && (
                 <p className="text-red-500 text-[10px] font-bold">{error}</p>

@@ -233,11 +233,16 @@ export const adminAPI = {
     uploadImage: (file: File) => {
         if (IS_MOCK) return mockResponse({ url: 'https://via.placeholder.com/150' });
         const formData = new FormData();
-        formData.append('image', file);
+        formData.append('file', file);
         return api.post('/admin/upload', formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
     },
+
+    getMedia: (params?: Record<string, number>) =>
+        IS_MOCK
+            ? mockResponse({ media: [] })
+            : api.get('/admin/media', { params }),
 };
 
 export const categoriesAPI = {

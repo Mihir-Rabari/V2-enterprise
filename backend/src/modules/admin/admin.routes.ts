@@ -220,7 +220,7 @@ router.get('/media', protect, adminOnly, async (req: Request, res: Response) => 
         const filesResponse = await axios.get(IK_LIST_URL, {
             params: ikParams,
             auth: {
-                username: IK_PRIVATE_KEY,
+                username: IK_PRIVATE_KEY as string,
                 password: '',
             },
         });
@@ -277,6 +277,9 @@ router.get('/media', protect, adminOnly, async (req: Request, res: Response) => 
 // Admin: Proxy upload to ImageKit (private key stays on server, Basic Auth)
 router.post('/upload', protect, adminOnly, upload.single('file'), async (req: Request, res: Response) => {
     try {
+        if (!IK_PRIVATE_KEY) {
+            return sendError(res, 'ImageKit Private Key not configured', 500);
+        }
         if (!req.file) return sendError(res, 'No file provided.', 400);
 
         const folder = (req.body.folder as string) || '/v2-uploads';
@@ -299,7 +302,7 @@ router.post('/upload', protect, adminOnly, upload.single('file'), async (req: Re
                 ...form.getHeaders(),
             },
             auth: {
-                username: IK_PRIVATE_KEY,
+                username: IK_PRIVATE_KEY as string,
                 password: '',
             },
         });

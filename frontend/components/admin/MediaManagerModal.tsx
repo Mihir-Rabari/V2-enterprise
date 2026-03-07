@@ -13,19 +13,24 @@ interface MediaManagerModalProps {
 export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, onClose, onSelect }) => {
     const [media, setMedia] = useState<IMedia[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedId, setSelectedId] = useState<string | null>(null);
 
     const fetchMedia = async (query = '') => {
         setLoading(true);
+        setError(null);
         try {
             const res = await adminAPI.getMedia({ searchQuery: query });
             if (res.data.success) {
                 setMedia(res.data.data.media || []);
+            } else {
+                setError(res.data.message || 'Failed to load media');
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error('Failed to fetch media:', err);
+            setError(err?.response?.data?.message || err?.message || 'Connection error');
         } finally {
             setLoading(false);
         }
@@ -123,6 +128,17 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
                         <div className="h-64 flex flex-col items-center justify-center gap-4 text-gray-400">
                             <Loader2 className="animate-spin" size={32} />
                             <span className="text-[10px] font-bold uppercase tracking-widest">Accessing Cloud Storage...</span>
+                        </div>
+                    ) : error ? (
+                        <div className="h-64 flex flex-col items-center justify-center gap-4 text-red-500">
+                            <ImageIcon size={48} strokeWidth={1} />
+                            <p className="text-xs font-bold uppercase tracking-widest">{error}</p>
+                            <button
+                                onClick={() => fetchMedia(searchTerm)}
+                                className="text-[10px] font-bold uppercase tracking-widest underline"
+                            >
+                                Try Refreshing
+                            </button>
                         </div>
                     ) : filteredMedia.length === 0 ? (
                         <div className="h-64 flex flex-col items-center justify-center gap-4 text-gray-400">

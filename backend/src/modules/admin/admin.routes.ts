@@ -10,12 +10,13 @@ import { adminOnly } from '../../middlewares/admin.middleware';
 import multer from 'multer';
 import FormData from 'form-data';
 import axios from 'axios';
+import { env } from '../../config/env';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 
-// ImageKit credentials (correct ones from the working PHP system)
-const IK_PRIVATE_KEY = 'private_+81AFoItTHYMWKoCfPqcMxdgw74=';
+// ImageKit credentials from env
+const IK_PRIVATE_KEY = env.IMAGEKIT_PRIVATE_KEY;
 const IK_UPLOAD_URL = 'https://upload.imagekit.io/api/v1/files/upload';
 const IK_LIST_URL = 'https://api.imagekit.io/v1/files';
 
@@ -198,28 +199,38 @@ router.get('/customers', protect, adminOnly, async (req: Request, res: Response)
 // Admin: get all media from ImageKit directly
 router.get('/media', protect, adminOnly, async (req: Request, res: Response) => {
     try {
-        const path = (req.query.path as string) || '/v2-uploads';
+        const path = (req.query.path as string) || undefined; // Remove default folder to see everything
         const searchQuery = (req.query.searchQuery as string) || '';
         const limit = parseInt(req.query.limit as string) || 100;
 
+        if (!IK_PRIVATE_KEY) {
+            console.warn('⚠️ IMAGEKIT_PRIVATE_KEY is missing in backend env');
+            return sendError(res, 'ImageKit Private Key not configured', 500);
+        }
+
+        const maskedKey = IK_PRIVATE_KEY.substring(0, 8) + '...' + IK_PRIVATE_KEY.substring(IK_PRIVATE_KEY.length - 4);
+        console.log(`📡 Fetching Media assets (query: "${searchQuery}", path: "${path || 'root'}") with key: ${maskedKey}`);
+
+        const ikParams: any = { limit };
+        if (path) ikParams.path = path;
+        if (searchQuery) ikParams.searchQuery = `name = "${searchQuery}"`;
+
         // Fetch from ImageKit List Files API
         const response = await axios.get(IK_LIST_URL, {
-            params: {
-                path,
-                searchQuery: searchQuery ? `name : "${searchQuery}"` : undefined,
-                limit
-            },
+            params: ikParams,
             auth: {
                 username: IK_PRIVATE_KEY,
                 password: '',
             },
         });
 
+        console.log(`✅ ImageKit returned ${response.data.length} assets`);
+
         // Map ImageKit response to our frontend expected format
         const media = response.data.map((file: any) => ({
             id: file.fileId,
             url: file.url,
-            thumbnailUrl: `${file.url}?tr=w-200,h-200,fo-auto`, // High perf thumbnails
+            thumbnailUrl: `${file.url}?tr=w-200,h-200,fo-auto`,
             name: file.name,
             size: file.size,
             mimeType: file.fileType,
@@ -230,7 +241,10 @@ router.get('/media', protect, adminOnly, async (req: Request, res: Response) => 
         return sendSuccess(res, { media, total: media.length });
     } catch (err: any) {
         const msg = err?.response?.data?.message || err?.message || 'Failed to fetch media library';
-        console.error('ImageKit list error:', msg);
+        console.error('❌ ImageKit list error:', msg);
+        if (err.response) {
+            console.error('Response details:', JSON.stringify(err.response.data));
+        }
         return sendError(res, msg);
     }
 });

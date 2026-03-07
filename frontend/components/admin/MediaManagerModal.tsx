@@ -17,10 +17,10 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedId, setSelectedId] = useState<string | null>(null);
 
-    const fetchMedia = async () => {
+    const fetchMedia = async (query = '') => {
         setLoading(true);
         try {
-            const res = await adminAPI.getMedia();
+            const res = await adminAPI.getMedia({ searchQuery: query });
             if (res.data.success) {
                 setMedia(res.data.data.media || []);
             }
@@ -32,10 +32,14 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
     };
 
     useEffect(() => {
-        if (isOpen) {
-            fetchMedia();
-        }
-    }, [isOpen]);
+        const delayDebounceFn = setTimeout(() => {
+            if (isOpen) {
+                fetchMedia(searchTerm);
+            }
+        }, 500);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm, isOpen]);
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -59,9 +63,7 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
         }
     };
 
-    const filteredMedia = media.filter(m =>
-        m.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredMedia = media;
 
     if (!isOpen) return null;
 
@@ -139,8 +141,9 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
                                     className="group relative aspect-square bg-white rounded-2xl overflow-hidden border border-gray-100 hover:border-luxury-gold transition-all hover:shadow-xl"
                                 >
                                     <img
-                                        src={m.url}
+                                        src={m.thumbnailUrl || m.url}
                                         alt={m.name}
+                                        loading="lazy"
                                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                                     />
                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">

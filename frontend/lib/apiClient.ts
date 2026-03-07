@@ -239,7 +239,7 @@ export const adminAPI = {
         });
     },
 
-    getMedia: (params?: Record<string, number>) =>
+    getMedia: (params?: Record<string, string | number>) =>
         IS_MOCK
             ? mockResponse({ media: [] })
             : api.get('/admin/media', { params }),

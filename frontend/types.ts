@@ -344,7 +344,7 @@ export interface HeroSlide {
 export interface IMedia {
   id: string;
   url: string;
-  fileId: string;
+  thumbnailUrl: string;
   name: string;
   size?: number;
   mimeType?: string;

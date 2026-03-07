@@ -17,6 +17,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 
 // ImageKit credentials (correct ones from the working PHP system)
 const IK_PRIVATE_KEY = 'private_+81AFoItTHYMWKoCfPqcMxdgw74=';
 const IK_UPLOAD_URL = 'https://upload.imagekit.io/api/v1/files/upload';
+const IK_LIST_URL = 'https://api.imagekit.io/v1/files';
 
 // Admin: get dashboard stats
 router.get('/stats', protect, adminOnly, async (_req: Request, res: Response) => {
@@ -194,25 +195,43 @@ router.get('/customers', protect, adminOnly, async (req: Request, res: Response)
     } catch (err: unknown) { return sendError(res, (err as Error).message); }
 });
 
-// Admin: get all media
+// Admin: get all media from ImageKit directly
 router.get('/media', protect, adminOnly, async (req: Request, res: Response) => {
     try {
-        const page = parseInt(req.query.page as string) || 1;
-        const limit = parseInt(req.query.limit as string) || 50;
-        const skip = (page - 1) * limit;
+        const path = (req.query.path as string) || '/v2-uploads';
+        const searchQuery = (req.query.searchQuery as string) || '';
+        const limit = parseInt(req.query.limit as string) || 100;
 
-        const [media, total] = await Promise.all([
-            Media.find({ status: 'ACTIVE' })
-                .sort({ createdAt: -1 })
-                .skip(skip)
-                .limit(limit),
-            Media.countDocuments({ status: 'ACTIVE' })
-        ]);
+        // Fetch from ImageKit List Files API
+        const response = await axios.get(IK_LIST_URL, {
+            params: {
+                path,
+                searchQuery: searchQuery ? `name : "${searchQuery}"` : undefined,
+                limit
+            },
+            auth: {
+                username: IK_PRIVATE_KEY,
+                password: '',
+            },
+        });
 
-        const mediaWithId = media.map(m => ({ ...m.toObject(), id: m._id.toString() }));
-        return sendSuccess(res, { media: mediaWithId, total, page, limit, totalPages: Math.ceil(total / limit) });
-    } catch (err: unknown) {
-        return sendError(res, (err as Error).message);
+        // Map ImageKit response to our frontend expected format
+        const media = response.data.map((file: any) => ({
+            id: file.fileId,
+            url: file.url,
+            thumbnailUrl: `${file.url}?tr=w-200,h-200,fo-auto`, // High perf thumbnails
+            name: file.name,
+            size: file.size,
+            mimeType: file.fileType,
+            folder: file.filePath.split('/').slice(0, -1).join('/') || '/',
+            createdAt: file.createdAt
+        }));
+
+        return sendSuccess(res, { media, total: media.length });
+    } catch (err: any) {
+        const msg = err?.response?.data?.message || err?.message || 'Failed to fetch media library';
+        console.error('ImageKit list error:', msg);
+        return sendError(res, msg);
     }
 });
 

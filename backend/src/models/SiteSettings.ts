@@ -57,6 +57,7 @@ export interface ISiteSettings extends Document {
         }[];
         trendingProductIds: (string | number | mongoose.Types.ObjectId)[];
         promotionalSliders: {
+            type: string; // Added
             image: string;
             title: string;
             subtitle: string;
@@ -155,6 +156,7 @@ const SiteSettingsSchema = new Schema<ISiteSettings>(
             ],
             promotionalSliders: [
                 {
+                    type: { type: String, enum: ['image', 'video'], default: 'image' },
                     image: { type: String, default: '' },
                     title: { type: String, default: '' },
                     subtitle: { type: String, default: '' },

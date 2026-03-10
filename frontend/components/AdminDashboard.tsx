@@ -1883,11 +1883,26 @@ const AdminDashboard: React.FC = () => {
             case 'new-arrival-slider':
                 return (
                     <div className="space-y-4">
+                        <div className="flex gap-4">
+                            <div className="flex-1">
+                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Media Type</label>
+                                <select
+                                    className="w-full border border-gray-200 p-3 rounded-xl focus:outline-none focus:border-luxury-gold text-sm bg-white"
+                                    value={formData.mediaType || 'image'}
+                                    onChange={e => setFormData({ ...formData, mediaType: e.target.value })}
+                                >
+                                    <option value="image">Image</option>
+                                    <option value="video">Video</option>
+                                </select>
+                            </div>
+                        </div>
                         <ImageUploader
-                            label="Slider Image"
+                            label={formData.mediaType === 'video' ? 'Slider Video' : 'Slider Image'}
                             value={formData.image || ''}
                             onChange={url => setFormData({ ...formData, image: url })}
                             folder="v2-sliders"
+                            isVideo={formData.mediaType === 'video'}
+                            accept={formData.mediaType === 'video' ? 'video/*' : 'image/*'}
                         />
                         <div>
                             <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Title</label>
@@ -2392,7 +2407,11 @@ const AdminDashboard: React.FC = () => {
                         {
                             header: 'Preview', accessor: (row: Slider) => (
                                 <div className="w-20 aspect-video rounded-lg overflow-hidden border border-gray-100 bg-gray-50 relative group">
-                                    <img src={row.image} alt={row.title} className="w-full h-full object-cover" />
+                                    {row.mediaType === 'video' ? (
+                                        <video src={row.image} className="w-full h-full object-cover" muted />
+                                    ) : (
+                                        <img src={row.image} alt={row.title} className="w-full h-full object-cover" />
+                                    )}
                                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </div>
                             )

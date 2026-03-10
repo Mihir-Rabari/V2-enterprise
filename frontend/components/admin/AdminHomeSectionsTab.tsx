@@ -382,9 +382,24 @@ export const AdminHomeSectionsTab: React.FC<AdminHomeSectionsTabProps> = ({ home
                                         <Trash2 size={14} />
                                     </button>
                                     <div className="flex flex-col lg:flex-row gap-6">
-                                        <div className="w-full lg:w-1/3">
+                                        <div className="w-full lg:w-1/3 space-y-4">
+                                            <div className="mb-2">
+                                                <label className="block text-[10px] font-bold text-gray-400 mb-1 uppercase tracking-widest">Media Type</label>
+                                                <select
+                                                    className="w-full border border-gray-200 p-2 rounded-lg text-xs bg-white focus:border-luxury-gold outline-none"
+                                                    value={slide.type || 'image'}
+                                                    onChange={e => {
+                                                        const newSlides = [...formData.promotionalSliders];
+                                                        newSlides[idx] = { ...newSlides[idx], type: e.target.value };
+                                                        setFormData({ ...formData, promotionalSliders: newSlides });
+                                                    }}
+                                                >
+                                                    <option value="image">Image</option>
+                                                    <option value="video">Video</option>
+                                                </select>
+                                            </div>
                                             <ImageUploader
-                                                label="Slide Media (Image or MP4)"
+                                                label={slide.type === 'video' ? 'Slide Video (MP4)' : 'Slide Image'}
                                                 value={slide.image}
                                                 onChange={url => {
                                                     const newSlides = [...formData.promotionalSliders];
@@ -392,7 +407,8 @@ export const AdminHomeSectionsTab: React.FC<AdminHomeSectionsTabProps> = ({ home
                                                     setFormData({ ...formData, promotionalSliders: newSlides });
                                                 }}
                                                 folder="v2-hero-slides"
-                                                accept="image/*,video/*"
+                                                isVideo={slide.type === 'video'}
+                                                accept={slide.type === 'video' ? 'video/*' : 'image/*'}
                                             />
                                         </div>
                                         <div className="w-full lg:w-2/3 space-y-4">

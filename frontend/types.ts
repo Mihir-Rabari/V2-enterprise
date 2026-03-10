@@ -166,6 +166,7 @@ export interface Customer {
 export interface Slider {
   id: string | number;
   type: 'PROMOTIONAL' | 'MARQUEE' | 'CATEGORY' | 'BEST_CATEGORY' | 'NEW_ARRIVAL';
+  mediaType: 'image' | 'video';
   image: string;
   title: string;
   subtitle?: string;
@@ -206,6 +207,7 @@ export interface AboutPageContent {
 
 export interface PromotionalSlide {
   id: string | number;
+  type: 'image' | 'video';
   image: string;
   title: string;
   subtitle?: string;

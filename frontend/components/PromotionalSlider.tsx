@@ -38,7 +38,7 @@ const PromotionalSlider: React.FC<PromotionalSliderProps> = ({ slides }) => {
                     className="absolute inset-0"
                 >
                     <div className="relative h-full w-full">
-                        {currentSlide.image.toLowerCase().endsWith('.mp4') || currentSlide.image.toLowerCase().endsWith('.webm') ? (
+                        {currentSlide.type === 'video' || currentSlide.image.toLowerCase().endsWith('.mp4') || currentSlide.image.toLowerCase().endsWith('.webm') ? (
                             <video
                                 src={currentSlide.image}
                                 autoPlay

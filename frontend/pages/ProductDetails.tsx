@@ -251,9 +251,9 @@ const ProductDetails: React.FC = () => {
                     {/* LEFT: Image Gallery */}
                     <div className="space-y-8">
                         {/* Main Image View */}
-                        <div className="relative aspect-[4/5] bg-[#EBE8E4] overflow-hidden group/zoom cursor-zoom-in"
-                            onMouseMove={handleMouseMove}
-                            onMouseEnter={() => setIsZooming(true)}
+                        <div className={`relative aspect-[4/5] bg-[#EBE8E4] overflow-hidden group/zoom ${isVideoActive === false ? 'cursor-zoom-in' : 'cursor-default'}`}
+                            onMouseMove={isVideoActive === false ? handleMouseMove : undefined}
+                            onMouseEnter={() => isVideoActive === false && setIsZooming(true)}
                             onMouseLeave={() => setIsZooming(false)}
                         >
                             {isVideoActive !== false && (product.videoUrls?.[isVideoActive as number] || product.videoUrl) ? (
@@ -311,21 +311,22 @@ const ProductDetails: React.FC = () => {
                                             initial={{ opacity: 0 }}
                                             animate={{ opacity: 1 }}
                                             exit={{ opacity: 0 }}
-                                            className="absolute border border-white/40 bg-white/10 backdrop-blur-[2px] pointer-events-none z-10 hidden lg:block"
+                                            className="absolute border border-white/60 bg-white/5 backdrop-blur-[1px] pointer-events-none z-10 hidden lg:block"
                                             style={{
                                                 left: lensPos.x,
                                                 top: lensPos.y,
-                                                width: '150px',
-                                                height: '150px',
-                                                boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.15)'
+                                                width: '120px',
+                                                height: '120px',
+                                                boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.25)',
+                                                borderRadius: '4px'
                                             }}
                                         />
                                         {/* Floating Zoom Window */}
                                         <motion.div
-                                            initial={{ opacity: 0, scale: 0.9, x: 20 }}
+                                            initial={{ opacity: 0, scale: 0.9, x: -20 }}
                                             animate={{ opacity: 1, scale: 1, x: 0 }}
-                                            exit={{ opacity: 0, scale: 0.9, x: 20 }}
-                                            className="absolute top-10 right-10 w-[300px] h-[300px] z-[100] bg-white border border-white/20 overflow-hidden shadow-[0_40px_80px_rgba(0,0,0,0.5)] rounded-2xl hidden lg:block"
+                                            exit={{ opacity: 0, scale: 0.9, x: -20 }}
+                                            className="absolute top-1/2 -translate-y-1/2 left-[calc(100%+2rem)] w-[450px] aspect-[4/5] z-[100] bg-white border border-gray-100 overflow-hidden shadow-[20px_40px_100px_rgba(0,0,0,0.15)] rounded-3xl hidden xl:block pointer-events-none"
                                         >
                                             <div
                                                 className="w-full h-full"

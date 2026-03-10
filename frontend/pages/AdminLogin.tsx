@@ -6,6 +6,7 @@ import { authAPI, settingsAPI } from '../lib/apiClient';
 import { SiteSettings } from '../types';
 import { initialSiteSettings } from '../data/initialData';
 import { useEffect } from 'react';
+import { validateEmail } from '../lib/validation';
 
 const AdminLogin: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -25,6 +26,12 @@ const AdminLogin: React.FC = () => {
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!validateEmail(email)) {
+            setError('Please enter a valid administrator email address.');
+            return;
+        }
+
         setError('');
         setLoading(true);
 

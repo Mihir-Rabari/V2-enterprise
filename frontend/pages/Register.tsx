@@ -7,6 +7,7 @@ import { settingsAPI } from '../lib/apiClient';
 import { SiteSettings } from '../types';
 import { initialSiteSettings } from '../data/initialData';
 import { useEffect } from 'react';
+import { validateEmail, validateRequired } from '../lib/validation';
 
 const Register: React.FC = () => {
     const { register, authError } = useAuth();
@@ -37,6 +38,14 @@ const Register: React.FC = () => {
         e.preventDefault();
         setLocalError('');
 
+        if (!validateRequired(form.name)) {
+            setLocalError('Full name is required.');
+            return;
+        }
+        if (!validateEmail(form.email)) {
+            setLocalError('Please enter a valid email address.');
+            return;
+        }
         if (form.password !== form.confirm) {
             setLocalError('Passwords do not match.');
             return;

@@ -6,12 +6,14 @@ import { initialSiteSettings } from '../data/initialData';
 import { SiteSettings } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { contactsAPI, settingsAPI } from '../lib/apiClient';
+import { validateEmail, validateRequired } from '../lib/validation';
 
 const Contact: React.FC = () => {
     const { user } = useAuth();
     const [siteSettings, setSiteSettings] = useState<SiteSettings>(initialSiteSettings);
 
     const [submitted, setSubmitted] = useState(false);
+    const [localError, setLocalError] = useState('');
     const [formData, setFormData] = React.useState({
         firstName: user?.name.split(' ')[0] || '',
         lastName: user?.name.split(' ').slice(1).join(' ') || '',
@@ -38,6 +40,21 @@ const Contact: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setLocalError('');
+
+        if (!validateRequired(formData.firstName) || !validateRequired(formData.lastName)) {
+            setLocalError('Full name is required.');
+            return;
+        }
+        if (!validateEmail(formData.email)) {
+            setLocalError('Please enter a valid email address.');
+            return;
+        }
+        if (!validateRequired(formData.message)) {
+            setLocalError('Message cannot be empty.');
+            return;
+        }
+
         try {
             await contactsAPI.submit({
                 name: `${formData.firstName} ${formData.lastName}`.trim(),
@@ -179,6 +196,15 @@ const Contact: React.FC = () => {
                                     className="space-y-10"
                                     onSubmit={handleSubmit}
                                 >
+                                    {localError && (
+                                        <motion.div
+                                            initial={{ opacity: 0, scale: 0.95 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            className="bg-red-50 border border-red-100 p-4 rounded-sm text-[9px] font-bold text-red-800 uppercase tracking-widest text-center"
+                                        >
+                                            {localError}
+                                        </motion.div>
+                                    )}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                                         <div className="space-y-2 group">
                                             <label className="text-[9px] font-bold uppercase tracking-widest text-gray-400 group-focus-within:text-luxury-gold transition-colors">First Name</label>

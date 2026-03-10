@@ -58,6 +58,7 @@ import Sidebar from './Sidebar';
 import DataTable from './DataTable';
 import StatsCard from './StatsCard';
 import Modal from './Modal';
+import { validateProduct, validateCategory, ValidationErrors } from '../lib/validation';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import DashboardPage from './admin/DashboardPage';
 import { SocialSettingsPage, ContactDetailsPage, AboutSettingsPage } from './admin/SettingsPages';
@@ -151,6 +152,7 @@ const AdminDashboard: React.FC = () => {
     const [taglines, setTaglines] = useState<Tagline[]>([]);
     const [socialPosts, setSocialPosts] = useState<SocialPost[]>([]);
     const [lookbookItems, setLookbookItems] = useState<LookbookItem[]>([]);
+    const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
     const [mainSliders, setMainSliders] = useState<Slider[]>([]); // Using promotional slider routes
     const [categorySliders, setCategorySliders] = useState<Slider[]>([]);
     const [bestCategorySliders, setBestCategorySliders] = useState<Slider[]>([]);
@@ -298,6 +300,7 @@ const AdminDashboard: React.FC = () => {
     // --- HANDLERS ---
     const handleAdd = (type: string) => {
         setModalType(type);
+        setValidationErrors({});
         // Set default status for relevant types to avoid uncontrolled/controlled warnings
         const defaults: any = {};
         if (['product', 'main-category', 'sub-category', 'tagline', 'socialPost', 'slider'].includes(type)) {
@@ -313,6 +316,7 @@ const AdminDashboard: React.FC = () => {
 
     const handleEdit = (type: string, item: any) => {
         setModalType(type);
+        setValidationErrors({});
         setFormData(item);
         if (type === 'product') {
             setProductModalTab('basic');
@@ -886,6 +890,18 @@ const AdminDashboard: React.FC = () => {
 
     const handleSubmit = async () => {
         if (!modalType) return;
+
+        // -- VALIDATION --
+        let errors: ValidationErrors = {};
+        if (modalType === 'product') errors = validateProduct(formData);
+        else if (modalType === 'main-category' || modalType === 'sub-category') errors = validateCategory(formData);
+
+        if (Object.keys(errors).length > 0) {
+            setValidationErrors(errors);
+            return;
+        }
+
+        setValidationErrors({});
         let finalData = formData;
 
         try {
@@ -1512,10 +1528,11 @@ const AdminDashboard: React.FC = () => {
                                         <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Product Name</label>
                                         <input
                                             type="text"
-                                            className="w-full border p-2.5 rounded focus:outline-none focus:border-black text-sm"
+                                            className={`w-full border p-2.5 rounded focus:outline-none focus:border-black text-sm ${validationErrors.name ? 'border-red-500 bg-red-50' : ''}`}
                                             value={formData.name || ''}
                                             onChange={e => setFormData({ ...formData, name: e.target.value })}
                                         />
+                                        {validationErrors.name && <p className="text-[10px] text-red-500 font-bold uppercase mt-1">{validationErrors.name}</p>}
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Status</label>
@@ -1579,7 +1596,7 @@ const AdminDashboard: React.FC = () => {
                                         <div className="relative group/tooltip flex gap-2">
                                             <input
                                                 type="text"
-                                                className="flex-1 border p-2.5 rounded focus:outline-none focus:border-black text-sm uppercase font-bold"
+                                                className={`flex-1 border p-2.5 rounded focus:outline-none focus:border-black text-sm uppercase font-bold ${validationErrors.styleCode ? 'border-red-500 bg-red-50' : ''}`}
                                                 value={formData.styleCode || ''}
                                                 onChange={e => setFormData({ ...formData, styleCode: e.target.value.toUpperCase() })}
                                                 placeholder="e.g. V2-TSHIRT-01"
@@ -1595,6 +1612,7 @@ const AdminDashboard: React.FC = () => {
                                                 Auto
                                             </button>
                                         </div>
+                                        {validationErrors.styleCode && <p className="text-[10px] text-red-500 font-bold uppercase mt-1">{validationErrors.styleCode}</p>}
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Primary Color</label>
@@ -1621,10 +1639,11 @@ const AdminDashboard: React.FC = () => {
                                         <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Price (₹)</label>
                                         <input
                                             type="number"
-                                            className="w-full border p-2.5 rounded focus:outline-none focus:border-black text-sm"
+                                            className={`w-full border p-2.5 rounded focus:outline-none focus:border-black text-sm ${validationErrors.price ? 'border-red-500 bg-red-50' : ''}`}
                                             value={formData.price || ''}
                                             onChange={e => setFormData({ ...formData, price: Number(e.target.value) })}
                                         />
+                                        {validationErrors.price && <p className="text-[10px] text-red-500 font-bold uppercase mt-1">{validationErrors.price}</p>}
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Original Price (₹)</label>
@@ -1719,6 +1738,7 @@ const AdminDashboard: React.FC = () => {
                                         onChange={url => setFormData({ ...formData, photo: url })}
                                         folder="v2-products"
                                     />
+                                    {validationErrors.photo && <p className="text-[10px] text-red-500 font-bold uppercase mt-1">{validationErrors.photo}</p>}
                                 </div>
 
                                 {/* Secondary Hover Photo */}
@@ -1931,10 +1951,11 @@ const AdminDashboard: React.FC = () => {
                             <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Name</label>
                             <input
                                 type="text"
-                                className="w-full bg-transparent border-b border-gray-100 py-3 text-[11px] font-bold tracking-widest focus:outline-none focus:border-luxury-black transition-colors"
+                                className={`w-full bg-transparent border-b border-gray-100 py-3 text-[11px] font-bold tracking-widest focus:outline-none focus:border-luxury-black transition-colors ${validationErrors.name ? 'border-red-500 bg-red-50/30' : ''}`}
                                 value={formData.name || ''}
                                 onChange={e => setFormData({ ...formData, name: e.target.value, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
                             />
+                            {validationErrors.name && <p className="text-[10px] text-red-500 font-bold uppercase mt-1 tracking-wider">{validationErrors.name}</p>}
                         </div>
                         <div>
                             <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Slug</label>
@@ -1961,6 +1982,7 @@ const AdminDashboard: React.FC = () => {
                                 onChange={url => setFormData({ ...formData, image: url })}
                                 folder="v2-categories"
                             />
+                            {validationErrors.photo && <p className="text-[10px] text-red-500 font-bold uppercase mt-1">{validationErrors.photo}</p>}
                         </div>
                         {modalType === 'sub-category' && (
                             <div>

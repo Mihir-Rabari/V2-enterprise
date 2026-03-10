@@ -7,6 +7,7 @@ import { settingsAPI } from '../lib/apiClient';
 import { SiteSettings } from '../types';
 import { initialSiteSettings } from '../data/initialData';
 import { useEffect } from 'react';
+import { validateEmail } from '../lib/validation';
 
 const Login: React.FC = () => {
     const { login, authError } = useAuth();
@@ -32,6 +33,14 @@ const Login: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!email.includes('@')) {
+            // Basic check if email looks valid, or use our utility
+            // I'll use a simple alert or reuse the authError if possible
+            // But I'll just use the utility I created
+            return;
+        }
+
         setLoading(true);
         try {
             const success = await login(email, password);

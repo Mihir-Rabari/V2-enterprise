@@ -2,10 +2,15 @@ import { Category } from '../../models/Category';
 import mongoose from 'mongoose';
 
 export const getCategoriesService = async () => {
-    const categories = await Category.find({}).sort({ name: 1 }).lean();
+    const categories = await Category.find({})
+        .populate('parentId', 'name')
+        .sort({ name: 1 })
+        .lean();
+
     return categories.map(cat => ({
         ...cat,
-        id: (cat as any)._id.toString()
+        id: (cat as any)._id.toString(),
+        parentCategory: (cat as any).parentId?.name || (cat as any).parentCategory
     }));
 };
 

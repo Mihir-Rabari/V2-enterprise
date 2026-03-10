@@ -2,53 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useLocation } from 'react-router-dom';
 import { Search, ChevronDown, X, Filter, TrendingUp, Sparkles } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
+import FilterAccordion from '../components/FilterAccordion';
 import { useProducts } from '../hooks/useProducts';
-import { settingsAPI } from '../lib/apiClient';
+import { settingsAPI, categoriesAPI } from '../lib/apiClient';
 import { initialSiteSettings } from '../data/initialData';
-import { SiteSettings } from '../types';
+import { SiteSettings, Category } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const FilterAccordion = ({ title, options, selected, onToggle, isPriceRange = false, isSort = false, currentSort, onSortChange }: any) => {
-    const [isOpen, setIsOpen] = useState(true);
-    if (!isSort && !isPriceRange && options.length === 0) return null;
 
-    return (
-        <div className="border-b border-gray-100 py-4">
-            <button onClick={() => setIsOpen(!isOpen)} className="flex items-center justify-between w-full text-left font-bold text-[11px] uppercase tracking-widest text-luxury-black bg-transparent outline-none">
-                {title}
-                <ChevronDown size={14} className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
-            </button>
-            <AnimatePresence>
-                {isOpen && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden mt-4 space-y-3">
-                        {isSort ? (
-                            ['Newest', 'Trending', 'Price: Low to High', 'Price: High to Low', 'A - Z'].map(range => (
-                                <label key={range} className="flex items-center gap-3 cursor-pointer group pb-1">
-                                    <input type="radio" checked={currentSort === range} onChange={() => onSortChange(range)} className="w-4 h-4 rounded-full border-gray-300 text-luxury-black focus:ring-luxury-black accent-black" />
-                                    <span className="text-sm font-medium text-gray-500 group-hover:text-black transition-colors">{range}</span>
-                                </label>
-                            ))
-                        ) : isPriceRange ? (
-                            ['Under ₹1000', '₹1000 - ₹2000', 'Over ₹2000'].map(range => (
-                                <label key={range} className="flex items-center gap-3 cursor-pointer group pb-1">
-                                    <input type="checkbox" checked={selected.includes(range)} onChange={() => onToggle(range)} className="w-4 h-4 rounded border-gray-300 text-luxury-black focus:ring-luxury-black accent-black" />
-                                    <span className="text-sm font-medium text-gray-500 group-hover:text-black transition-colors">{range}</span>
-                                </label>
-                            ))
-                        ) : (
-                            options.map((opt: string) => (
-                                <label key={opt} className="flex items-center gap-3 cursor-pointer group pb-1">
-                                    <input type="checkbox" checked={selected.includes(opt)} onChange={() => onToggle(opt)} className="w-4 h-4 rounded border-gray-300 text-luxury-black focus:ring-luxury-black accent-black" />
-                                    <span className="text-sm font-medium text-gray-500 group-hover:text-black transition-colors">{opt}</span>
-                                </label>
-                            ))
-                        )}
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </div>
-    );
-};
 
 const Shop: React.FC = () => {
     const { category, subcategory } = useParams<{ category: string, subcategory: string }>();
@@ -59,18 +20,15 @@ const Shop: React.FC = () => {
     if (subcategory) defaultCat = decodeURIComponent(subcategory);
     else if (category) defaultCat = decodeURIComponent(category);
 
-    const initialCategory = defaultCat || 'All';
+    const initialCategory = (defaultCat && defaultCat.toLowerCase() !== 'all') ? defaultCat : 'All';
     const location = useLocation();
     const isNewArrivalsPage = location.pathname === '/new-arrivals';
 
     const { products: rawProducts, loading: productsLoading } = useProducts({ status: 'ACTIVE', limit: 500 });
     const [siteSettings, setSiteSettings] = useState<SiteSettings>(initialSiteSettings);
+    const [allCategories, setAllCategories] = useState<Category[]>([]);
 
-    const products = rawProducts.map(p => ({
-        ...p,
-        mainCategory: p.category?.parent?.name ?? p.category?.name ?? '',
-        subCategory: p.category?.parent ? p.category.name : '',
-    }));
+    const products = rawProducts; // Preserve original category data from API
 
     const [selectedCategories, setSelectedCategories] = useState<string[]>(
         initialCategory && initialCategory !== 'All' ? [initialCategory] : []
@@ -104,6 +62,12 @@ const Shop: React.FC = () => {
                 setSiteSettings(res.data.data);
             }
         }).catch(err => console.error(err));
+
+        categoriesAPI.getAll().then(res => {
+            if (res.data.success && res.data.data) {
+                setAllCategories(res.data.data);
+            }
+        }).catch(err => console.error(err));
     }, []);
 
     useEffect(() => {
@@ -116,7 +80,18 @@ const Shop: React.FC = () => {
     }, [queryTerm]);
 
     // DERIVE DYNAMIC OPTIONS
-    const activeCategories = Array.from(new Set(rawProducts.map(p => p.category?.parent?.name || p.category?.name || (p as any).mainCategory || '').filter(Boolean))) as string[];
+    const buildCategoryTree = () => {
+        const mains = allCategories.filter(c => !c.parentId && !c.parentCategory);
+        return mains.map(m => ({
+            label: m.name,
+            value: m.name,
+            subOptions: allCategories
+                .filter(c => (c.parentId === m.id || c.parentId === m._id || c.parentCategory === m.name))
+                .map(s => ({ label: s.name, value: s.name }))
+        }));
+    };
+
+    const categoryTree = buildCategoryTree();
 
     const getOptionsFor = (key: string) => {
         if (key === 'color') {
@@ -249,9 +224,9 @@ const Shop: React.FC = () => {
 
     const renderSidebarContent = () => (
         <div className="w-full">
-            <FilterAccordion title="Sort By" isSort currentSort={sortBy} onSortChange={setSortBy} />
-            <FilterAccordion title="Product Category" options={activeCategories} selected={selectedCategories} onToggle={toggleCategory} />
-            <FilterAccordion title="Price" isPriceRange selected={selectedPriceRanges} onToggle={togglePrice} />
+            <FilterAccordion title="Sort By" isSort currentSort={sortBy} onSortChange={setSortBy} options={[]} selected={[]} onToggle={() => { }} />
+            <FilterAccordion title="Product Category" options={categoryTree} selected={selectedCategories} onToggle={toggleCategory} isNested />
+            <FilterAccordion title="Price" isPriceRange selected={selectedPriceRanges} onToggle={togglePrice} options={[]} />
 
             {dynamicFiltersList.map(filter => {
                 const options = getOptionsFor(filter.key);

@@ -9,6 +9,7 @@ import { initialHeroContent, initialCommitment, initialProducts, initialHomeSect
 import PromotionalSlider from '../components/PromotionalSlider';
 import { AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useCallback } from 'react';
+import FilterAccordion from '../components/FilterAccordion';
 import { useProducts } from '../hooks/useProducts';
 import { reviewsAPI, sliderAPI, settingsAPI, categoriesAPI, contentAPI } from '../lib/apiClient';
 
@@ -202,62 +203,7 @@ const ClientVoicesSection: React.FC<{ reviews: any[] }> = ({ reviews }) => (
 );
 
 
-const FilterAccordion = ({ title, options, selected, onToggle, isPriceRange = false, isSort = false, currentSort, onSortChange }: any) => {
-    const [isOpen, setIsOpen] = useState(true);
-    if (!isSort && !isPriceRange && options.length === 0) return null;
 
-    return (
-        <div className="border-b border-gray-100 py-4 w-full">
-            <button onClick={() => setIsOpen(!isOpen)} className="flex items-center justify-between w-full text-left font-bold text-[11px] uppercase tracking-widest text-luxury-black bg-transparent outline-none">
-                {title}
-                <ChevronDown size={14} className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
-            </button>
-            <AnimatePresence>
-                {isOpen && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden mt-4 space-y-3">
-                        {isSort ? (
-                            ['Relevance', 'Price: Low to High', 'Price: High to Low'].map(option => (
-                                <label key={option} className="flex items-center gap-3 cursor-pointer group pb-1">
-                                    <input
-                                        type="radio"
-                                        checked={currentSort === option}
-                                        onChange={() => onSortChange(option)}
-                                        className="w-4 h-4 rounded-full border-gray-300 text-luxury-black focus:ring-luxury-black accent-black"
-                                    />
-                                    <span className={`text-[10px] font-bold uppercase tracking-widest transition-colors ${currentSort === option ? 'text-luxury-black' : 'text-gray-400 group-hover:text-luxury-black'}`}>{option}</span>
-                                </label>
-                            ))
-                        ) : isPriceRange ? (
-                            ['Under ₹1000', '₹1000 - ₹2000', 'Over ₹2000'].map(range => (
-                                <label key={range} className="flex items-center gap-3 cursor-pointer group pb-1">
-                                    <input
-                                        type="checkbox"
-                                        checked={selected.includes(range)}
-                                        onChange={() => onToggle(range)}
-                                        className="w-4 h-4 rounded border-gray-300 text-luxury-black focus:ring-luxury-black accent-black"
-                                    />
-                                    <span className={`text-[10px] font-bold uppercase tracking-widest transition-colors ${selected.includes(range) ? 'text-luxury-black' : 'text-gray-400 group-hover:text-luxury-black'}`}>{range}</span>
-                                </label>
-                            ))
-                        ) : (
-                            options.map((opt: string) => (
-                                <label key={opt} className="flex items-center gap-3 cursor-pointer group pb-1">
-                                    <input
-                                        type="checkbox"
-                                        checked={selected.includes(opt)}
-                                        onChange={() => onToggle(opt)}
-                                        className="w-4 h-4 rounded border-gray-300 text-luxury-black focus:ring-luxury-black accent-black"
-                                    />
-                                    <span className={`text-[10px] font-bold uppercase tracking-widest transition-colors ${selected.includes(opt) ? 'text-luxury-black' : 'text-gray-400 group-hover:text-luxury-black'}`}>{opt}</span>
-                                </label>
-                            ))
-                        )}
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </div>
-    );
-};
 
 const Home: React.FC = () => {
     // API Hooks
@@ -328,6 +274,7 @@ const Home: React.FC = () => {
     const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(initialHeroSlides);
     const [promotionalSlides, setPromotionalSlides] = useState<Slider[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
+    const [allCategories, setAllCategories] = useState<Category[]>([]);
 
     useEffect(() => {
         // Fetch Reviews
@@ -370,6 +317,7 @@ const Home: React.FC = () => {
         categoriesAPI.getAll()
             .then(res => {
                 if (res.data.success && res.data.data) {
+                    setAllCategories(res.data.data);
                     // ONLY show categories that don't have a parentId (Main Categories)
                     setCategories(res.data.data.filter((c: any) => !c.parentId || c.parentId === "" || c.parentId === null));
                 }
@@ -399,6 +347,20 @@ const Home: React.FC = () => {
     }, []);
 
     const reviews = allReviews.filter(r => r.homepageVisible && r.status.toUpperCase() === 'ACTIVE');
+
+    // DERIVE DYNAMIC OPTIONS
+    const buildCategoryTree = () => {
+        const mains = allCategories.filter(c => !c.parentId && !c.parentCategory);
+        return mains.map(m => ({
+            label: m.name,
+            value: m.name,
+            subOptions: allCategories
+                .filter(c => (c.parentId === m.id || c.parentId === m._id || c.parentCategory === m.name))
+                .map(s => ({ label: s.name, value: s.name }))
+        }));
+    };
+
+    const categoryTree = buildCategoryTree();
 
     // Derived states
     const featuredProducts = products.filter(p => p.isTrending);
@@ -654,15 +616,19 @@ const Home: React.FC = () => {
                                     isSort
                                     currentSort={essentialsSortBy}
                                     onSortChange={setEssentialsSortBy}
+                                    options={[]}
+                                    selected={[]}
+                                    onToggle={() => { }}
                                 />
                                 <FilterAccordion
                                     title="Product Category"
-                                    options={essentialsCategories}
+                                    options={categoryTree}
                                     selected={selectedEssentialsCategories}
                                     onToggle={(cat: string) => {
                                         if (selectedEssentialsCategories.includes(cat)) setSelectedEssentialsCategories(prev => prev.filter(c => c !== cat));
                                         else setSelectedEssentialsCategories(prev => [...prev, cat]);
                                     }}
+                                    isNested
                                 />
                                 <FilterAccordion
                                     title="Price"
@@ -672,6 +638,7 @@ const Home: React.FC = () => {
                                         if (selectedEssentialsPriceList.includes(range)) setSelectedEssentialsPriceList(prev => prev.filter(r => r !== range));
                                         else setSelectedEssentialsPriceList(prev => [...prev, range]);
                                     }}
+                                    options={[]}
                                 />
                                 {dynamicFiltersList.map(filter => (
                                     <FilterAccordion

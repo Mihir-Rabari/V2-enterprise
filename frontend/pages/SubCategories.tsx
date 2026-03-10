@@ -21,7 +21,8 @@ const SubCategories: React.FC = () => {
                 // Filter to only find subcategories that belong to this main category
                 // Or you can match parentCategory name directly
                 const subs = allCategories.filter((c: any) =>
-                    c.parentCategory && c.parentCategory.toLowerCase() === decodedCategory.toLowerCase()
+                    (c.parentCategory && c.parentCategory.toLowerCase() === decodedCategory.toLowerCase()) ||
+                    (c.parentId && c.parentId.name && c.parentId.name.toLowerCase() === decodedCategory.toLowerCase())
                 );
                 setSubCategories(subs);
                 setLoading(false);
@@ -45,7 +46,8 @@ const SubCategories: React.FC = () => {
 
     if (subCategories.length === 0 && !loading) {
         // If there are no subcategories, immediately forward them to the shop page for this main category
-        return <Navigate to={`/${category}/all`} replace />;
+        // Ensure 'All' is capitalized to match Shop.tsx case-sensitive check
+        return <Navigate to={`/${category}/All`} replace />;
     }
 
     return (

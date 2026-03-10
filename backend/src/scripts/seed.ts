@@ -174,23 +174,40 @@ async function main() {
         console.log(`✅ Categories seeded (Clothing Only)`);
 
         // ── Products ──────────────────────────────────────────────────────────────
-        const productData = [
+        const productsRaw = [
             {
                 name: 'Premium Linen Blend Shirt',
                 styleCode: 'SHIRT-01',
                 color: 'White', colorHex: '#FFFFFF',
-                videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+                videoUrls: ['https://www.youtube.com/embed/dQw4w9WgXcQ'],
                 price: 2499,
                 photo: 'https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=800',
                 hoverImage: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=800',
                 mainCategory: 'MENSWEAR', subCategory: 'Tailoring',
                 description: 'Refined linen blend shirt offering unparalleled breathability. Perfect for warm days.',
                 materialCare: '55% Linen, 45% Cotton.\nMachine wash cold on gentle cycle.\nDo not bleach.\nIron on medium heat.',
-                sizes: ['S', 'M', 'L', 'XL'],
-                variants: [
-                    { size: 'S', color: 'White', quantity: 10 },
-                    { size: 'M', color: 'White', quantity: 15 },
-                    { size: 'L', color: 'White', quantity: 8 },
+                skus: [
+                    { size: 'S', quantity: 10 },
+                    { size: 'M', quantity: 15 },
+                    { size: 'L', quantity: 8 },
+                ],
+                isNewArrival: true, isTrending: true, tags: ['Linen', 'Formal', 'Summer'],
+                status: 'ACTIVE',
+            },
+            {
+                name: 'Premium Linen Blend Shirt',
+                styleCode: 'SHIRT-01',
+                color: 'Soft Blue', colorHex: '#A2B5CD',
+                videoUrls: ['https://www.youtube.com/embed/dQw4w9WgXcQ'],
+                price: 2499,
+                photo: 'https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=800', // Using same for demo
+                hoverImage: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=800',
+                mainCategory: 'MENSWEAR', subCategory: 'Tailoring',
+                description: 'Refined linen blend shirt offering unparalleled breathability. Perfect for warm days.',
+                materialCare: '55% Linen, 45% Cotton.\nMachine wash cold on gentle cycle.\nDo not bleach.\nIron on medium heat.',
+                skus: [
+                    { size: 'M', quantity: 12 },
+                    { size: 'L', quantity: 5 },
                 ],
                 isNewArrival: true, isTrending: true, tags: ['Linen', 'Formal', 'Summer'],
                 status: 'ACTIVE',
@@ -205,10 +222,9 @@ async function main() {
                 mainCategory: 'MENSWEAR', subCategory: 'Denim',
                 description: 'Signature selvedge denim woven on vintage looms. Ages beautifully.',
                 materialCare: '100% Cotton Selvedge Denim.\nWash sparingly.\nTurn inside out before washing.\nCold wash only.',
-                sizes: ['30', '32', '34', '36'],
-                variants: [
-                    { size: '32', color: 'Indigo', quantity: 14 },
-                    { size: '34', color: 'Indigo', quantity: 10 },
+                skus: [
+                    { size: '32', quantity: 14 },
+                    { size: '34', quantity: 10 },
                 ],
                 isTrending: true, tags: ['Denim', 'Selvedge', 'Classic'],
                 status: 'ACTIVE',
@@ -222,10 +238,9 @@ async function main() {
                 mainCategory: 'WOMENSWEAR', subCategory: 'Essentials',
                 description: 'Wardrobe staple from 100% organic cotton. Soft and breathable.',
                 materialCare: '100% Organic Cotton.\nTumble dry low.\nMachine wash cold with like colors.',
-                sizes: ['XS', 'S', 'M', 'L'],
-                variants: [
-                    { size: 'S', color: 'Sage', quantity: 20 },
-                    { size: 'M', color: 'Sage', quantity: 18 },
+                skus: [
+                    { size: 'S', quantity: 20 },
+                    { size: 'M', quantity: 18 },
                 ],
                 tags: ['Organic', 'Cotton', 'Basic'],
                 status: 'ACTIVE',
@@ -239,10 +254,9 @@ async function main() {
                 mainCategory: 'WOMENSWEAR', subCategory: 'Outerwear',
                 description: 'Luxuriously soft merino wool in an oversized silhouette.',
                 materialCare: '100% Extra Fine Merino Wool.\nHand wash cold/Dry clean only.\nReshape while damp.\nDry flat.',
-                sizes: ['S', 'M', 'L'],
-                variants: [
-                    { size: 'S', color: 'Oatmeal', quantity: 7 },
-                    { size: 'M', color: 'Oatmeal', quantity: 12 },
+                skus: [
+                    { size: 'S', quantity: 7 },
+                    { size: 'M', quantity: 12 },
                 ],
                 isNewArrival: true, isTrending: true, tags: ['Merino', 'Wool', 'Knitwear'],
                 status: 'ACTIVE',
@@ -256,10 +270,10 @@ async function main() {
                 mainCategory: 'MENSWEAR', subCategory: 'Outerwear',
                 description: 'Tailored coat made from premium Italian wool. Structured fit.',
                 materialCare: 'Outer: 80% Wool, 20% Nylon.\nProfessional dry clean only.',
-                sizes: ['M', 'L', 'XL'],
-                variants: [
-                    { size: 'M', color: 'Charcoal', quantity: 6 },
-                    { size: 'L', color: 'Charcoal', quantity: 9 },
+                skus: [
+                    { size: 'M', quantity: 6 },
+                    { size: 'L', quantity: 9 },
+                    { size: 'XL', quantity: 4 },
                 ],
                 isNewArrival: true, tags: ['Wool', 'Coat', 'Tailoring'],
                 status: 'ACTIVE',
@@ -273,10 +287,9 @@ async function main() {
                 mainCategory: 'WOMENSWEAR', subCategory: 'Essentials',
                 description: 'Fluid midi dress cut from sustainable TENCEL. Effortless elegance.',
                 materialCare: '100% TENCEL™ Lyocell.\nMachine wash cold in laundry bag.\nDo not tumble dry.',
-                sizes: ['XS', 'S', 'M', 'L'],
-                variants: [
-                    { size: 'S', color: 'Ivory', quantity: 14 },
-                    { size: 'M', color: 'Ivory', quantity: 16 },
+                skus: [
+                    { size: 'S', quantity: 14 },
+                    { size: 'M', quantity: 16 },
                 ],
                 isNewArrival: true, isTrending: true, tags: ['Dress', 'Midi'],
                 status: 'ACTIVE',
@@ -290,10 +303,9 @@ async function main() {
                 mainCategory: 'MENSWEAR', subCategory: 'Essentials',
                 description: 'Mid-weight French terry with a relaxed silhouette.',
                 materialCare: '100% Cotton French Terry.\nMachine wash warm with like colors.\nTumble dry medium.',
-                sizes: ['S', 'M', 'L', 'XL'],
-                variants: [
-                    { size: 'M', color: 'Ash Grey', quantity: 20 },
-                    { size: 'L', color: 'Ash Grey', quantity: 16 },
+                skus: [
+                    { size: 'M', quantity: 20 },
+                    { size: 'L', quantity: 16 },
                 ],
                 isNewArrival: true, tags: ['Hoodie', 'Casual'],
                 status: 'ACTIVE',
@@ -302,26 +314,34 @@ async function main() {
                 name: 'Pleated Trousers',
                 styleCode: 'TROUS-01',
                 color: 'Black', colorHex: '#000000',
-                videoUrl: 'https://www.youtube.com/embed/XW7_5M0O11I', // Sample video
+                videoUrls: ['https://www.youtube.com/embed/XW7_5M0O11I'],
                 price: 2999,
                 photo: 'https://images.pexels.com/photos/1536619/pexels-photo-1536619.jpeg?auto=compress&cs=tinysrgb&w=800',
                 mainCategory: 'WOMENSWEAR', subCategory: 'Tailoring',
                 description: 'High-waisted trousers with deep pleats for a relaxed silhouette.',
                 materialCare: '60% Rayon, 35% Nylon, 5% Spandex.\nMachine wash cold on gentle.',
-                sizes: ['XS', 'S', 'M', 'L'],
-                variants: [
-                    { size: 'S', color: 'Black', quantity: 10 },
-                    { size: 'M', color: 'Black', quantity: 8 },
+                skus: [
+                    { size: 'S', quantity: 10 },
+                    { size: 'M', quantity: 8 },
                 ],
                 isTrending: true, tags: ['Trousers', 'Tailoring'],
                 status: 'ACTIVE',
             },
         ];
 
-        for (const p of productData) {
-            await Product.create(p);
+        let totalSkus = 0;
+        for (const p of productsRaw) {
+            const { skus, ...baseData } = p;
+            for (const sku of skus) {
+                await Product.create({
+                    ...baseData,
+                    size: sku.size,
+                    quantity: sku.quantity
+                });
+                totalSkus++;
+            }
         }
-        console.log(`✅ ${productData.length} product entries seeded (Clothing Only)`);
+        console.log(`✅ ${totalSkus} SKU documents seeded across ${productsRaw.length} styles`);
 
         // ── Coupon ────────────────────────────────────────────────────────────────
         await Coupon.create({

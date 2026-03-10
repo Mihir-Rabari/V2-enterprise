@@ -11,6 +11,7 @@ const Contact = lazy(() => import('../pages/Contact'));
 const Cart = lazy(() => import('../pages/Cart'));
 const Account = lazy(() => import('../pages/Account'));
 const Categories = lazy(() => import('../pages/Categories'));
+const SubCategories = lazy(() => import('../pages/SubCategories'));
 const Login = lazy(() => import('../pages/Login'));
 const Signup = lazy(() => import('../pages/Signup'));
 const LegalPage = lazy(() => import('../pages/LegalPage'));
@@ -59,6 +60,12 @@ const CustomerView: React.FC<CustomerViewProps> = (props) => {
                 <Route path="returns" element={<LegalPage />} />
                 <Route path="shipping" element={<LegalPage />} />
                 <Route path="terms" element={<LegalPage />} />
+
+                {/* Dynamic Hierarchical Routing */}
+                <Route path=":category" element={<SubCategories />} />
+                <Route path=":category/:subcategory" element={<Shop />} />
+                <Route path=":category/:subcategory/:id" element={<ProductDetails />} />
+
                 <Route path="*" element={<div className="p-40 text-center space-y-4">
                   <h2 className="font-serif text-4xl italic">404</h2>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">The requested coordinate does not exist.</p>

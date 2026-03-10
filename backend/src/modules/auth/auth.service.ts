@@ -49,14 +49,14 @@ export const getMeService = async (userId: string) => {
 };
 
 export const updateMeService = async (userId: string, data: { name?: string; firstName?: string; lastName?: string; phone?: string }) => {
-    console.log('[Auth] Updating user:', userId, 'with data:', JSON.stringify(data, null, 2));
+    // console.log('[Auth] Updating user:', userId, 'with data:', JSON.stringify(data, null, 2));
     try {
         const user = await User.findByIdAndUpdate(userId, data, { new: true }).select('-password');
         if (!user) {
             console.warn('[Auth] User not found for update:', userId);
             throw new Error('User not found.');
         }
-        console.log('[Auth] User updated successfully');
+        // console.log('[Auth] User updated successfully');
         const userObj = user.toObject();
         return { ...userObj, id: user._id.toString() };
     } catch (err: any) {

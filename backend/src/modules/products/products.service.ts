@@ -1,5 +1,6 @@
 import { Product } from '../../models/Product';
 import mongoose from 'mongoose';
+import { syncFiltersFromProducts } from '../filters/filters.service';
 
 export interface ProductFilters {
     mainCategory?: string;
@@ -28,6 +29,10 @@ export const getProductsService = async (filters: ProductFilters) => {
             $or: [
                 { name: { $regex: search, $options: 'i' } },
                 { description: { $regex: search, $options: 'i' } },
+                { styleCode: { $regex: search, $options: 'i' } },
+                { mainCategory: { $regex: search, $options: 'i' } },
+                { subCategory: { $regex: search, $options: 'i' } },
+                { tags: { $regex: search, $options: 'i' } }
             ],
         }),
     };
@@ -68,14 +73,14 @@ export const getProductByIdService = async (id: string | number) => {
     const obj = product.toObject();
     const productWithId = { ...obj, id: product._id.toString() };
 
-    // Fetch siblings — other color variants sharing the same styleCode
+    // Fetch siblings — other SKUs sharing the same styleCode
     let siblings: any[] = [];
     if (product.styleCode) {
         const siblingDocs = await Product.find({
             styleCode: product.styleCode,
             _id: { $ne: product._id },
             status: 'ACTIVE',
-        }).select('_id name color photo price');
+        }).select('_id name color colorHex size photo price quantity styleCode');
 
         siblings = siblingDocs.map(s => {
             const sObj = s.toObject();
@@ -88,6 +93,10 @@ export const getProductByIdService = async (id: string | number) => {
 
 export const createProductService = async (data: any) => {
     const product = await Product.create(data);
+
+    // Sync new attributes to filters collection (fire-and-forget)
+    syncFiltersFromProducts(product).catch(err => console.error("Filter sync error:", err));
+
     const obj = product.toObject();
     return { ...obj, id: product._id.toString() };
 };
@@ -97,6 +106,8 @@ export const updateProductService = async (id: string | number, data: any) => {
     const filter: any = mongoose.Types.ObjectId.isValid(idStr) ? { _id: idStr } : { id: id };
     const product = await Product.findOneAndUpdate(filter, data, { new: true });
     if (!product) throw new Error('Product not found.');
+
+    syncFiltersFromProducts(product).catch(err => console.error("Filter sync error:", err));
 
     const obj = product.toObject();
     return { ...obj, id: product._id.toString() };

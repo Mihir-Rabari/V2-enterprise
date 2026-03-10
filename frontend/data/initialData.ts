@@ -1,12 +1,12 @@
 import { Product, Category, SiteSettings, HeroContent, FeatureItem, CommitmentContent, StaticPage, Review, Color, Tagline, Logo, BestsellerHeading, Slider, Order, ContactMessage, Customer, AboutPageContent, HomeSectionContent, MarqueeItem, JournalPost, SocialPost, LookbookItem, HeroSlide } from '../types';
 
-export const initialOrders: Order[] = [
-    { id: 1, orderId: '#V2-1764685082542', waybill: '', customer: 'Kunal Raykangor', email: 'kunal.raykangor1994@gmail.com', phone: '9033883395', method: 'cod', total: '₹500', status: 'Cancelled' },
-    { id: 2, orderId: '#V2-1764685082999', waybill: '123456789', customer: 'Rahul Sharma', email: 'rahul@gmail.com', phone: '9876543210', method: 'online', total: '₹1200', status: 'Delivered' },
+export const initialOrders: any[] = [
+    { id: 1, orderId: '#V2-1764685082542', waybill: '', customer: 'Kunal Raykangor', email: 'kunal.raykangor1994@gmail.com', phone: '9033883395', method: 'cod', total: 500, status: 'CANCELLED' },
+    { id: 2, orderId: '#V2-1764685082999', waybill: '123456789', customer: 'Rahul Sharma', email: 'rahul@gmail.com', phone: '9876543210', method: 'online', total: 1200, status: 'DELIVERED' },
 ];
 
-export const initialRefundOrders: Order[] = [
-    { id: 3, orderId: '#V2-1764685082111', waybill: '', customer: 'Amit Verma', email: 'amit@gmail.com', phone: '9123456780', method: 'online', total: '₹850', status: 'Refunded' },
+export const initialRefundOrders: any[] = [
+    { id: 3, orderId: '#V2-1764685082111', waybill: '', customer: 'Amit Verma', email: 'amit@gmail.com', phone: '9123456780', method: 'online', total: 850, status: 'REFUNDED' },
 ];
 
 export const initialContacts: ContactMessage[] = [

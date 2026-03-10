@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, useLocation } from 'react-router-dom';
+import { useParams, useSearchParams, useLocation } from 'react-router-dom';
 import { Search, ChevronDown, X, Filter, TrendingUp, Sparkles } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import { useProducts } from '../hooks/useProducts';
@@ -51,9 +51,15 @@ const FilterAccordion = ({ title, options, selected, onToggle, isPriceRange = fa
 };
 
 const Shop: React.FC = () => {
+    const { category, subcategory } = useParams<{ category: string, subcategory: string }>();
     const [searchParams, setSearchParams] = useSearchParams();
     const queryTerm = searchParams.get('q') || '';
-    const initialCategory = searchParams.get('category') || 'All';
+
+    let defaultCat = searchParams.get('category');
+    if (subcategory) defaultCat = decodeURIComponent(subcategory);
+    else if (category) defaultCat = decodeURIComponent(category);
+
+    const initialCategory = defaultCat || 'All';
     const location = useLocation();
     const isNewArrivalsPage = location.pathname === '/new-arrivals';
 

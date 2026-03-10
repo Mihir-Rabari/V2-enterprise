@@ -15,7 +15,9 @@ const Categories: React.FC = () => {
     useEffect(() => {
         categoriesAPI.getAll()
             .then(res => {
-                setCategories(res.data.data ?? []);
+                const allCats = res.data.data ?? [];
+                // ONLY show categories that don't have a parentId (Main Categories)
+                setCategories(allCats.filter((c: any) => !c.parentId || c.parentId === "" || c.parentId === null));
                 setLoading(false);
             })
             .catch(() => setLoading(false));
@@ -72,7 +74,7 @@ const Categories: React.FC = () => {
                             viewport={{ once: true, margin: "-100px" }}
                             className="group"
                         >
-                            <Link to={`/shop?category=${encodeURIComponent(category.name || category.title)}`} className="block space-y-8">
+                            <Link to={`/${encodeURIComponent(category.name || category.title)}`} className="block space-y-8">
                                 <div className="relative aspect-[16/9] overflow-hidden bg-luxury-gray rounded-sm">
                                     <img
                                         src={category.image || category.photo || 'https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=800'}

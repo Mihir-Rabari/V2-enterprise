@@ -17,6 +17,7 @@ import contentRoutes from './modules/settings/content.routes';
 import wishlistRoutes from './modules/wishlist/wishlist.routes';
 import paymentRoutes from './modules/payments/payments.routes';
 import addressRoutes from './modules/addresses/addresses.routes';
+import { filtersRoutes } from './modules/filters/filters.routes';
 
 const app = express();
 
@@ -57,6 +58,7 @@ app.use(`${API}/content`, contentRoutes);
 app.use(`${API}/wishlist`, wishlistRoutes);
 app.use(`${API}/payments`, paymentRoutes);
 app.use(`${API}/addresses`, addressRoutes);
+app.use(`${API}/filters`, filtersRoutes);
 
 // ── 404 Handler ──────────────────────────────────────────────────────────────
 app.use((_req, res) => {

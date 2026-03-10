@@ -50,12 +50,12 @@ export interface ISiteSettings extends Document {
         commitmentJournalLinkText: string;
         sectionOrder: string[];
         categoryColumns: number;
-        trendingProductIds: (string | number | mongoose.Types.ObjectId)[];
         categories: {
             title: string;
             image: string;
             link: string;
         }[];
+        trendingProductIds: (string | number | mongoose.Types.ObjectId)[];
         promotionalSliders: {
             image: string;
             title: string;

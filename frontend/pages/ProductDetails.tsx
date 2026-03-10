@@ -51,19 +51,31 @@ const ProductDetails: React.FC = () => {
     const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
     const [isZooming, setIsZooming] = useState(false);
 
-    // Derived Data — color is per-product, sizes come from variants
-    const uniqueSizes = Array.from(new Set(product?.variants?.map(v => v.size) || product?.sizes || [])) as string[];
-    const galleryImages = product ? [product.photo, ...(product.photos || [])].filter(Boolean) : [];
-    // All color options: the current product + its siblings
+    // For the palette: Get one representative product for each unique color among siblings
     const colorOptions = product ? [
-        { id: String(product.id), color: product.color || 'Default', photo: product.photo },
-        ...(product.siblings || []).map(s => ({ id: s.id, color: s.color, photo: s.photo }))
+        { id: String(product.id), color: product.color || 'Default', photo: product.photo, colorHex: product.colorHex },
+        ...(product.siblings || [])
+            .filter((s, idx, self) => self.findIndex(x => x.color === s.color) === idx && s.color !== product.color)
+            .map(s => ({ id: String(s.id), color: s.color, photo: s.photo, colorHex: s.colorHex }))
     ] : [];
 
-    // Set default size when product loads
+    const galleryImages = product ? [product.photo, ...(product.photos || [])].filter(Boolean) : [];
+
+    // For the size grid: Get all SKUs that have the same color as the current product
+    const sizeOptions = product ? [
+        { id: String(product.id), size: product.size, quantity: product.quantity },
+        ...(product.siblings || [])
+            .filter(s => s.color === product.color)
+            .map(s => ({ id: String(s.id), size: s.size, quantity: s.quantity }))
+    ].sort((a, b) => {
+        const order = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
+        return order.indexOf(a.size) - order.indexOf(b.size);
+    }) : [];
+
+    // Set default values when product loads
     useEffect(() => {
         if (product) {
-            setSelectedSize(uniqueSizes[0] || null);
+            setSelectedSize(product.size || null);
             setSelectedColor(product.color || null);
         }
     }, [product]);
@@ -244,12 +256,13 @@ const ProductDetails: React.FC = () => {
                             onMouseEnter={() => setIsZooming(true)}
                             onMouseLeave={() => setIsZooming(false)}
                         >
-                            {isVideoActive && product.videoUrl ? (
+                            {isVideoActive !== false && (product.videoUrls?.[isVideoActive as number] || product.videoUrl) ? (
                                 <div className="absolute inset-0 z-20 bg-black">
                                     <iframe
                                         className="w-full h-full"
                                         src={(() => {
-                                            const url = product.videoUrl;
+                                            const url = product.videoUrls?.[isVideoActive as number] || product.videoUrl;
+                                            if (!url) return '';
                                             if (url.includes('youtube.com/embed/')) return url;
 
                                             // Handle youtu.be/ID
@@ -349,15 +362,17 @@ const ProductDetails: React.FC = () => {
                                     )}
                                 </button>
                             ))}
-                            {product.videoUrl && (
+                            {/* Multiple Videos Support */}
+                            {(product.videoUrls || (product.videoUrl ? [product.videoUrl] : [])).map((url, vIdx) => (
                                 <button
-                                    onClick={() => setIsVideoActive(true)}
-                                    className={`relative w-20 h-28 md:w-24 md:h-32 transition-all duration-500 overflow-hidden group flex flex-col items-center justify-center bg-zinc-900 ${isVideoActive ? 'ring-2 ring-luxury-gold ring-offset-4 ring-offset-[#F6F3EF]' : 'opacity-60 hover:opacity-100'}`}
+                                    key={`vid-${vIdx}`}
+                                    onClick={() => setIsVideoActive(vIdx)}
+                                    className={`relative w-20 h-28 md:w-24 md:h-32 transition-all duration-500 overflow-hidden group flex flex-col items-center justify-center bg-zinc-900 ${isVideoActive === vIdx ? 'ring-2 ring-luxury-gold ring-offset-4 ring-offset-[#F6F3EF]' : 'opacity-60 hover:opacity-100'}`}
                                 >
                                     <PlayCircle size={32} className="text-white mb-2" strokeWidth={1} />
-                                    <span className="text-[8px] font-bold text-white uppercase tracking-widest text-center px-2">Watch Experience</span>
+                                    <span className="text-[8px] font-bold text-white uppercase tracking-widest text-center px-2">Experience {vIdx + 1}</span>
                                 </button>
-                            )}
+                            ))}
                         </div>
                     </div>
 
@@ -428,24 +443,24 @@ const ProductDetails: React.FC = () => {
                                     <button className="text-[9px] font-bold uppercase tracking-[0.2em] text-luxury-gold border-b border-luxury-gold/30 pb-0.5">Measurement Guide</button>
                                 </div>
                                 <div className="grid grid-cols-4 gap-4">
-                                    {uniqueSizes.map(size => {
-                                        const variant = product.variants?.find(v => v.size === size);
-                                        const isOutOfStock = product.variants && product.variants.length > 0 && (!variant || variant.quantity <= 0);
+                                    {sizeOptions.map(opt => {
+                                        const isOutOfStock = opt.quantity <= 0;
+                                        const isActive = opt.id === String(product.id);
 
                                         return (
                                             <button
-                                                key={size}
+                                                key={opt.id}
                                                 disabled={isOutOfStock}
-                                                onClick={() => setSelectedSize(size)}
-                                                className={`h-16 flex items-center justify-center text-[12px] font-bold tracking-widest transition-all duration-500 border relative overflow-hidden group ${selectedSize === size
+                                                onClick={() => !isActive && navigate(`/product/${opt.id}`)}
+                                                className={`h-16 flex items-center justify-center text-[12px] font-bold tracking-widest transition-all duration-500 border relative overflow-hidden group ${isActive
                                                     ? 'bg-luxury-black text-white border-luxury-black shadow-lg shadow-black/10'
                                                     : isOutOfStock
                                                         ? 'bg-gray-100 border-gray-100 text-gray-300 cursor-not-allowed'
                                                         : 'bg-white/40 border-[#2A1E17]/10 text-gray-500 hover:border-[#2A1E17] hover:text-[#2A1E17]'
                                                     }`}
                                             >
-                                                <span className="relative z-10">{size}</span>
-                                                {selectedSize !== size && !isOutOfStock && (
+                                                <span className="relative z-10">{opt.size}</span>
+                                                {!isActive && !isOutOfStock && (
                                                     <div className="absolute inset-0 bg-luxury-black/5 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
                                                 )}
                                                 {isOutOfStock && (
@@ -462,13 +477,12 @@ const ProductDetails: React.FC = () => {
                             {/* CTA Actions - Side by Side */}
                             <div className="flex gap-4 pt-8">
                                 <button
-                                    disabled={!selectedSize}
                                     onClick={() => {
-                                        if (product && selectedSize) {
-                                            addToCart(product, 1, selectedSize, selectedColor || undefined);
+                                        if (product) {
+                                            addToCart(product, 1, product.size, product.color || undefined);
                                         }
                                     }}
-                                    className="flex-[2] h-16 bg-[#2A1E17] text-white text-[11px] font-bold uppercase tracking-[0.3em] overflow-hidden relative group shadow-2xl shadow-black/20 hover:scale-[1.02] active:scale-95 transition-all duration-300 disabled:opacity-40 disabled:hover:scale-100"
+                                    className="flex-[2] h-16 bg-[#2A1E17] text-white text-[11px] font-bold uppercase tracking-[0.3em] overflow-hidden relative group shadow-2xl shadow-black/20 hover:scale-[1.02] active:scale-95 transition-all duration-300"
                                 >
                                     <div className="absolute inset-0 bg-luxury-black translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-500 ease-in-out" />
                                     <div className="relative z-10 flex items-center justify-center gap-3">
@@ -486,18 +500,44 @@ const ProductDetails: React.FC = () => {
                                 </button>
                             </div>
 
-                            {/* Material & Care - New Section */}
-                            {product?.materialCare && (
-                                <div className="pt-12 border-t border-[#2A1E17]/5 space-y-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-[1px] bg-luxury-gold/30" />
-                                        <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-luxury-gold">Composition & Maintenance</span>
+                            {/* Composition & Maintenance */}
+                            {(product?.materialCare || (product.variants?.find(v => v.size === selectedSize) && (
+                                product.variants?.find(v => v.size === selectedSize)?.fabric ||
+                                product.variants?.find(v => v.size === selectedSize)?.collar ||
+                                product.variants?.find(v => v.size === selectedSize)?.sleeve
+                            ))) && (
+                                    <div className="pt-12 border-t border-[#2A1E17]/5 space-y-6">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-[1px] bg-luxury-gold/30" />
+                                            <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-luxury-gold">Composition & Specifications</span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-y-4 gap-x-8">
+                                            {[
+                                                { label: 'Fabric', value: product.fabric },
+                                                { label: 'Pattern', value: product.patternType },
+                                                { label: 'Collar', value: product.collar },
+                                                { label: 'Sleeve', value: product.sleeve },
+                                                { label: 'Neck', value: product.neck },
+                                                { label: 'Length', value: product.length },
+                                                { label: 'Pocket', value: product.pocket },
+                                                { label: 'Chest', value: product.chest },
+                                                { label: 'Waist', value: product.waist },
+                                                { label: 'Shoulder', value: product.shoulder },
+                                                { label: 'Sleeve Length', value: product.sleeveLength },
+                                            ].filter(a => a.value).map(a => (
+                                                <div key={a.label} className="flex flex-col gap-1">
+                                                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{a.label}</span>
+                                                    <span className="text-[11px] font-bold text-[#2A1E17] uppercase tracking-luxury-widest">{a.value}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {product.materialCare && (
+                                            <p className="text-[12px] font-medium text-[#2A1E17]/70 leading-relaxed whitespace-pre-line italic pt-2">
+                                                {product.materialCare}
+                                            </p>
+                                        )}
                                     </div>
-                                    <p className="text-[12px] font-medium text-[#2A1E17]/70 leading-relaxed whitespace-pre-line italic">
-                                        {product.materialCare}
-                                    </p>
-                                </div>
-                            )}
+                                )}
                         </div>
                     </div>
                 </div>

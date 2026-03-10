@@ -7,21 +7,17 @@ export interface IProduct extends Document {
     discount?: string;
     photo: string;
     photos?: string[];
-    videoUrl?: string; // NEW API property for embedded videos
+    videoUrls?: string[]; // Multiple YouTube videos
     hoverImage?: string;
     mainCategory: string;
     subCategory: string;
     styleCode?: string;
     color: string;
-    colorHex?: string; // NEW API property for precision color
+    colorHex?: string;
+    size: string;
+    quantity: number;
     description: string;
     materialCare: string;
-    sizes: string[];
-    variants: {
-        size: string;
-        color?: string;
-        quantity: number;
-    }[];
     patternType?: string;
     fabric?: string;
     collar?: string;
@@ -49,24 +45,17 @@ const ProductSchema = new Schema<IProduct>(
         discount: { type: String },
         photo: { type: String, required: true },
         photos: [{ type: String }],
-        videoUrl: { type: String },
+        videoUrls: [{ type: String }],
         hoverImage: { type: String },
         mainCategory: { type: String, required: true, index: true },
         subCategory: { type: String, required: true, index: true },
         styleCode: { type: String, required: false, index: true },
         color: { type: String, required: true },
         colorHex: { type: String },
+        size: { type: String, required: true },
+        quantity: { type: Number, required: true, default: 0 },
         description: { type: String, required: true },
         materialCare: { type: String, required: true },
-        sizes: [{ type: String }],
-        variants: [
-            {
-                size: { type: String, required: true },
-                color: { type: String },
-                quantity: { type: Number, required: true, default: 0 },
-                _id: false
-            }
-        ],
         patternType: { type: String },
         fabric: { type: String },
         collar: { type: String },

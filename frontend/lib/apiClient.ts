@@ -15,7 +15,7 @@ const IS_MOCK = import.meta.env.VITE_USE_MOCK_API === 'true';
 export const api = axios.create({
     baseURL: BASE_URL,
     headers: { 'Content-Type': 'application/json' },
-    timeout: 15000,
+    timeout: 30000,
 });
 
 // ─── Request Interceptor: Attach JWT ─────────────────────────────────────────
@@ -316,4 +316,12 @@ export const addressesAPI = {
         IS_MOCK
             ? mockResponse({ success: true })
             : api.patch(`/addresses/${id}/default`),
+};
+
+// --- NEW FILTERS API ---
+export const filtersAPI = {
+    getSuggestions: () =>
+        IS_MOCK
+            ? mockResponse({ fabric: [], size: [], collar: [], patternType: [], neck: [], sleeve: [], chest: [], length: [], pocket: [], shoulder: [], sleeveLength: [], waist: [], color: [] })
+            : api.get('/filters/suggestions'),
 };

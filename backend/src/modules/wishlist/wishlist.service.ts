@@ -3,14 +3,14 @@ import { Product } from '../../models/Product';
 import mongoose from 'mongoose';
 
 export const getWishlist = async (userId: string) => {
-    console.log('[Wishlist] Fetching for user:', userId);
+    // ('[Wishlist] Fetching for user:', userId);
     try {
         const user = await User.findById(userId).populate('wishlist');
         if (!user) {
             console.warn('[Wishlist] User not found:', userId);
             throw new Error('User not found');
         }
-        console.log('[Wishlist] Found user, wishlist size:', user.wishlist?.length || 0);
+        // console.log('[Wishlist] Found user, wishlist size:', user.wishlist?.length || 0);
         return user.wishlist;
     } catch (err: any) {
         console.error('[Wishlist] Error in getWishlist:', err.message);
@@ -44,18 +44,18 @@ export const addToWishlist = async (userId: string, productId: string) => {
     });
 
     if (alreadyExists) {
-        console.log('[Wishlist] Product already in wishlist:', productId);
+        // console.log('[Wishlist] Product already in wishlist:', productId);
         return user.wishlist;
     }
 
     user.wishlist.push(pId as any);
     await user.save();
-    console.log('[Wishlist] Added product to wishlist:', productId);
-    return user.wishlist;
+    // console.log('[Wishlist] Added product to wishlist:', productId);
+    // return user.wishlist;
 };
 
 export const removeFromWishlist = async (userId: string, productId: string) => {
-    console.log('[Wishlist] Removing product:', productId, 'for user:', userId);
+    // console.log('[Wishlist] Removing product:', productId, 'for user:', userId);
     const user = await User.findById(userId);
     if (!user) {
         throw new Error('User not found');
@@ -73,9 +73,9 @@ export const removeFromWishlist = async (userId: string, productId: string) => {
 
     if (user.wishlist.length !== initialSize) {
         await user.save();
-        console.log('[Wishlist] Removed product from wishlist:', productId);
+        // console.log('[Wishlist] Removed product from wishlist:', productId);
     } else {
-        console.log('[Wishlist] Product was not in wishlist:', productId);
+        // console.log('[Wishlist] Product was not in wishlist:', productId);
     }
 
     return user.wishlist;

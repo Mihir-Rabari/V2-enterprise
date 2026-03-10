@@ -17,8 +17,8 @@ interface CreateOrderInput {
 }
 
 export const createOrderService = async (input: CreateOrderInput) => {
-    console.log('[Orders] Creating order for user:', input.userId);
-    console.log('[Orders] Input items:', JSON.stringify(input.items, null, 2));
+    // console.log('[Orders] Creating order for user:', input.userId);
+    // console.log('[Orders] Input items:', JSON.stringify(input.items, null, 2));
 
     if (!mongoose.Types.ObjectId.isValid(input.userId)) {
         console.error('[Orders] CRITICAL: Invalid User ID format received:', input.userId);
@@ -39,7 +39,7 @@ export const createOrderService = async (input: CreateOrderInput) => {
         status: 'ACTIVE'
     });
 
-    console.log('[Orders] Products found in DB:', products.length);
+    // console.log('[Orders] Products found in DB:', products.length);
 
     if (products.length !== input.items.length) {
         const foundIds = products.map(p => p._id.toString());

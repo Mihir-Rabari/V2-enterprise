@@ -37,17 +37,13 @@ export interface Product {
   subCategory: string;
   styleCode: string;
   color: string;
+  size: string;
+  quantity: number;
   price: number;
   originalPrice?: number;
   discount?: string;
   description: string;
   materialCare: string;
-  sizes?: string[];
-  variants?: {
-    size: string;
-    quantity: number;
-  }[];
-  colors?: string[];
   patternType?: string;
   fabric?: string;
   collar?: string;
@@ -59,11 +55,12 @@ export interface Product {
   waist?: string;
   shoulder?: string;
   sleeveLength?: string;
+  colorHex?: string;
   siblings?: Product[];
   isNewArrival?: boolean;
   isTrending?: boolean;
   tags?: string[];
-  videoUrl?: string;
+  videoUrls?: string[];
   colorHex?: string;
   status: 'Active' | 'Inactive' | 'ACTIVE' | 'INACTIVE';
 }
@@ -171,8 +168,10 @@ export interface Slider {
   type: 'PROMOTIONAL' | 'MARQUEE' | 'CATEGORY' | 'BEST_CATEGORY' | 'NEW_ARRIVAL';
   image: string;
   title: string;
+  subtitle?: string;
+  buttonText?: string;
   link: string;
-  status: 'Active' | 'Inactive';
+  status: 'Active' | 'Inactive' | 'ACTIVE' | 'INACTIVE';
 }
 
 export interface Category {
@@ -209,9 +208,9 @@ export interface PromotionalSlide {
   id: string | number;
   image: string;
   title: string;
-  subtitle: string;
+  subtitle?: string;
   link: string;
-  buttonText: string;
+  buttonText?: string;
 }
 
 export interface HomeSectionContent {

@@ -169,8 +169,10 @@ const SearchBar: React.FC = () => {
     useEffect(() => {
         if (query.length > 1) {
             const filtered = products.filter(p =>
-            (p.name?.toLowerCase().includes(query.toLowerCase()) ||
-                p.subCategory?.toLowerCase().includes(query.toLowerCase()))
+                p.name?.toLowerCase().includes(query.toLowerCase()) ||
+                p.subCategory?.toLowerCase().includes(query.toLowerCase()) ||
+                p.styleCode?.toLowerCase().includes(query.toLowerCase()) ||
+                p.tags?.some(tag => tag.toLowerCase().includes(query.toLowerCase()))
             ).slice(0, 5);
             setResults(filtered);
         } else {

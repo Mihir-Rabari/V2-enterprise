@@ -72,6 +72,7 @@ const menuItems: any[] = [
     items: [
       { id: 'settings-home', label: 'Home Sections', icon: Home },
       { id: 'hero-slider', label: 'Hero Slider', icon: Monitor },
+      { id: 'promotional-slider', label: 'Promotions', icon: Tag },
       { id: 'hero-features', label: 'Features', icon: FileText },
       {
         id: 'pages',

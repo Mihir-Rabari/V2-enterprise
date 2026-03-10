@@ -210,7 +210,7 @@ router.get('/media', protect, adminOnly, async (req: Request, res: Response) => 
         }
 
         const maskedKey = IK_PRIVATE_KEY.substring(0, 8) + '...' + IK_PRIVATE_KEY.substring(IK_PRIVATE_KEY.length - 4);
-        console.log(`📡 Fetching Media assets (query: "${searchQuery}", path: "${path}") with key: ${maskedKey}`);
+        // console.log(`📡 Fetching Media assets (query: "${searchQuery}", path: "${path}") with key: ${maskedKey}`);
 
         const ikParams: any = { limit, skip };
         if (path && path !== '/') ikParams.path = path;
@@ -244,7 +244,7 @@ router.get('/media', protect, adminOnly, async (req: Request, res: Response) => 
             }
         }
 
-        console.log(`✅ ImageKit returned ${filesResponse.data.length} assets and ${subfolders.length} folders`);
+        // console.log(`✅ ImageKit returned ${filesResponse.data.length} assets and ${subfolders.length} folders`);
 
         // Map ImageKit response to our frontend expected format
         const media = filesResponse.data.map((file: any) => ({

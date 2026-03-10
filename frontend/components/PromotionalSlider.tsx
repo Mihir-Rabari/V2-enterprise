@@ -38,11 +38,22 @@ const PromotionalSlider: React.FC<PromotionalSliderProps> = ({ slides }) => {
                     className="absolute inset-0"
                 >
                     <div className="relative h-full w-full">
-                        <img
-                            src={currentSlide.image}
-                            alt={currentSlide.title}
-                            className="h-full w-full object-cover"
-                        />
+                        {currentSlide.image.toLowerCase().endsWith('.mp4') || currentSlide.image.toLowerCase().endsWith('.webm') ? (
+                            <video
+                                src={currentSlide.image}
+                                autoPlay
+                                loop
+                                muted
+                                playsInline
+                                className="h-full w-full object-cover"
+                            />
+                        ) : (
+                            <img
+                                src={currentSlide.image}
+                                alt={currentSlide.title}
+                                className="h-full w-full object-cover"
+                            />
+                        )}
                         <div className="absolute inset-0 bg-black/30" />
 
                         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">

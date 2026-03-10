@@ -351,7 +351,8 @@ const Home: React.FC = () => {
         sliderAPI.getPromotional()
             .then(res => {
                 if (res.data.success && res.data.data.length > 0) {
-                    setPromotionalSlides(res.data.data);
+                    const activePromoSlides = res.data.data.filter((s: any) => s.type === 'PROMOTIONAL' && s.status?.toUpperCase() === 'ACTIVE');
+                    setPromotionalSlides(activePromoSlides);
                 }
             })
             .catch(err => console.error('Error fetching promotional sliders:', err));
@@ -369,7 +370,8 @@ const Home: React.FC = () => {
         categoriesAPI.getAll()
             .then(res => {
                 if (res.data.success && res.data.data) {
-                    setCategories(res.data.data);
+                    // ONLY show categories that don't have a parentId (Main Categories)
+                    setCategories(res.data.data.filter((c: any) => !c.parentId || c.parentId === "" || c.parentId === null));
                 }
             })
             .catch(err => console.error('Error fetching categories:', err));

@@ -184,7 +184,7 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
                     <label className="flex items-center gap-2 bg-luxury-black text-white px-6 py-2.5 rounded-2xl text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:bg-luxury-gold transition-all shadow-lg active:scale-95">
                         {uploading ? <Loader2 className="animate-spin" size={14} /> : <Upload size={14} />}
                         <span>{uploading ? 'Uploading...' : 'Upload Local'}</span>
-                        <input type="file" className="hidden" onChange={handleFileUpload} accept="image/*" />
+                        <input type="file" className="hidden" onChange={handleFileUpload} accept="image/*,video/*" />
                     </label>
                 </div>
 

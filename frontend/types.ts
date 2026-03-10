@@ -208,6 +208,7 @@ export interface AboutPageContent {
 export interface PromotionalSlide {
   id: string | number;
   type: 'image' | 'video';
+  mediaType?: 'image' | 'video';
   image: string;
   title: string;
   subtitle?: string;

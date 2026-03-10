@@ -184,7 +184,7 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
                     <label className="flex items-center gap-2 bg-luxury-black text-white px-6 py-2.5 rounded-2xl text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:bg-luxury-gold transition-all shadow-lg active:scale-95">
                         {uploading ? <Loader2 className="animate-spin" size={14} /> : <Upload size={14} />}
                         <span>{uploading ? 'Uploading...' : 'Upload Local'}</span>
-                        <input type="file" className="hidden" onChange={handleFileUpload} accept="image/*" />
+                        <input type="file" className="hidden" onChange={handleFileUpload} accept="image/*,video/*" />
                     </label>
                 </div>
 
@@ -240,12 +240,21 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
                                     }}
                                     className="group relative aspect-square bg-white rounded-2xl overflow-hidden border border-gray-100 hover:border-luxury-gold transition-all hover:shadow-xl"
                                 >
-                                    <img
-                                        src={m.thumbnailUrl || m.url}
-                                        alt={m.name}
-                                        loading="lazy"
-                                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                                    />
+                                    {m.mimeType?.startsWith('video') || m.name?.match(/\.(mp4|mov|webm|ogg)$/i) ? (
+                                        <video
+                                            src={m.url}
+                                            muted
+                                            playsInline
+                                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                        />
+                                    ) : (
+                                        <img
+                                            src={m.thumbnailUrl || m.url}
+                                            alt={m.name}
+                                            loading="lazy"
+                                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                        />
+                                    )}
                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                         <div className="bg-white/90 backdrop-blur text-[10px] font-bold text-luxury-black py-2 px-4 rounded-full uppercase tracking-widest translate-y-2 group-hover:translate-y-0 transition-transform">
                                             Select

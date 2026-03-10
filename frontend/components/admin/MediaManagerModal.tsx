@@ -240,21 +240,12 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
                                     }}
                                     className="group relative aspect-square bg-white rounded-2xl overflow-hidden border border-gray-100 hover:border-luxury-gold transition-all hover:shadow-xl"
                                 >
-                                    {m.mimeType?.startsWith('video') || m.name?.match(/\.(mp4|mov|webm|ogg)$/i) ? (
-                                        <video
-                                            src={m.url}
-                                            muted
-                                            playsInline
-                                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                                        />
-                                    ) : (
-                                        <img
-                                            src={m.thumbnailUrl || m.url}
-                                            alt={m.name}
-                                            loading="lazy"
-                                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                                        />
-                                    )}
+                                    <img
+                                        src={m.thumbnailUrl || m.url}
+                                        alt={m.name}
+                                        loading="lazy"
+                                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                    />
                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                         <div className="bg-white/90 backdrop-blur text-[10px] font-bold text-luxury-black py-2 px-4 rounded-full uppercase tracking-widest translate-y-2 group-hover:translate-y-0 transition-transform">
                                             Select

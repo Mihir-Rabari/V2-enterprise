@@ -12,10 +12,11 @@ export interface ProductFilters {
     page?: number;
     limit?: number;
     status?: 'ACTIVE' | 'INACTIVE' | 'ALL';
+    groupByColor?: boolean;
 }
 
 export const getProductsService = async (filters: ProductFilters) => {
-    const { mainCategory, subCategory, isTrending, isNewArrival, tag, search, status, page = 1, limit = 12 } = filters;
+    const { mainCategory, subCategory, isTrending, isNewArrival, tag, search, status, page = 1, limit = 12, groupByColor } = filters;
     const skip = (page - 1) * limit;
 
     const query: Record<string, unknown> = {
@@ -36,6 +37,45 @@ export const getProductsService = async (filters: ProductFilters) => {
             ],
         }),
     };
+
+    if (groupByColor) {
+        // Group by (styleCode, color) so only one product per color variant is returned.
+        // Products without a styleCode are treated as unique (grouped by their own _id).
+        const colorGroupKey = {
+            $cond: [
+                { $gt: [{ $ifNull: ['$styleCode', ''] }, ''] },
+                { styleCode: '$styleCode', color: '$color' },
+                '$_id'
+            ]
+        };
+
+        const pipeline: any[] = [
+            { $match: query },
+            { $sort: { createdAt: -1 as const } },
+            { $group: { _id: colorGroupKey, doc: { $first: '$$ROOT' } } },
+            { $replaceRoot: { newRoot: '$doc' } },
+            { $sort: { createdAt: -1 as const } },
+        ];
+
+        const countPipeline: any[] = [
+            { $match: query },
+            { $group: { _id: colorGroupKey } },
+            { $count: 'total' }
+        ];
+
+        const [products, countResult] = await Promise.all([
+            Product.aggregate([...pipeline, { $skip: skip }, { $limit: limit }]),
+            Product.aggregate(countPipeline),
+        ]);
+
+        const total = countResult[0]?.total || 0;
+        const productsWithId = products.map(p => ({
+            ...p,
+            id: p._id.toString(),
+        }));
+
+        return { products: productsWithId, total, page, limit, totalPages: Math.ceil(total / limit) };
+    }
 
     const [products, total] = await Promise.all([
         Product.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),

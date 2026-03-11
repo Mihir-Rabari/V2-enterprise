@@ -7,7 +7,7 @@ import {
 
 export const getProducts = async (req: Request, res: Response) => {
     try {
-        const { mainCategory, subCategory, isTrending, isNew, tag, search, page, limit, status } = req.query;
+        const { mainCategory, subCategory, isTrending, isNew, tag, search, page, limit, status, groupByColor } = req.query;
         const result = await getProductsService({
             mainCategory: mainCategory as string,
             subCategory: subCategory as string,
@@ -18,6 +18,7 @@ export const getProducts = async (req: Request, res: Response) => {
             status: status as 'ACTIVE' | 'INACTIVE' | 'ALL',
             page: page ? parseInt(page as string) : 1,
             limit: limit ? parseInt(limit as string) : 12,
+            groupByColor: groupByColor === 'true',
         });
         return sendSuccess(res, result);
     } catch (err: unknown) {

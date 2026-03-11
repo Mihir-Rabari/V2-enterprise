@@ -207,7 +207,7 @@ const ClientVoicesSection: React.FC<{ reviews: any[] }> = ({ reviews }) => (
 
 const Home: React.FC = () => {
     // API Hooks
-    const { products, loading: productsLoading } = useProducts({ limit: 300 });
+    const { products, loading: productsLoading } = useProducts({ limit: 300, groupByColor: true });
     const [allReviews, setAllReviews] = useState<Review[]>([]);
     const [reviewsLoading, setReviewsLoading] = useState(true);
     const [activeFeatureCategory, setActiveFeatureCategory] = useState<string>('All');

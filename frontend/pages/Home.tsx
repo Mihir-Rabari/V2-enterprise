@@ -4,7 +4,7 @@ import { ArrowRight, ArrowUpRight, TrendingUp, Sparkles, Star, ShieldCheck, Zap,
 import { Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import { HeroContent, CommitmentContent, Product, HomeSectionContent, MarqueeItem, JournalPost, LookbookItem, Review, HeroSlide, Slider, Category, SiteSettings } from '../types';
+import { HeroContent, CommitmentContent, Product, HomeSectionContent, MarqueeItem, JournalPost, LookbookItem, Review, HeroSlide, Slider, Category, SiteSettings, PromotionalSlide } from '../types';
 import { initialHeroContent, initialCommitment, initialProducts, initialHomeSections, initialMarquee, initialJournal, initialLookbook, initialReviews, initialHeroSlides, initialSiteSettings } from '../data/initialData';
 import PromotionalSlider from '../components/PromotionalSlider';
 import { AnimatePresence } from 'framer-motion';
@@ -272,78 +272,86 @@ const Home: React.FC = () => {
     const [commitment, setCommitment] = useState<CommitmentContent>(initialCommitment);
     const [siteSettings, setSiteSettings] = useState<SiteSettings>(initialSiteSettings);
     const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(initialHeroSlides);
-    const [promotionalSlides, setPromotionalSlides] = useState<Slider[]>([]);
+    const [promotionalSlides, setPromotionalSlides] = useState<PromotionalSlide[]>([]);
+    const [bottomPromoSlides, setBottomPromoSlides] = useState<PromotionalSlide[]>([]);
+    const [journalPosts, setJournalPosts] = useState<JournalPost[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [allCategories, setAllCategories] = useState<Category[]>([]);
 
     useEffect(() => {
-        // Fetch Reviews
-        reviewsAPI.getHomepage()
-            .then(res => {
-                setAllReviews(res.data.data ?? []);
-                setReviewsLoading(false);
-            })
-            .catch(() => setReviewsLoading(false));
+        const fetchData = async () => {
+            // Fetch Reviews
+            reviewsAPI.getHomepage()
+                .then(res => {
+                    setAllReviews(res.data.data ?? []);
+                    setReviewsLoading(false);
+                })
+                .catch(() => setReviewsLoading(false));
 
-        // Fetch Hero Slides
-        sliderAPI.getHero()
-            .then(res => {
-                if (res.data.success && res.data.data.length > 0) {
-                    setHeroSlides(res.data.data);
-                }
-            })
-            .catch(err => console.error('Error fetching hero slides:', err));
+            // Fetch Hero Slides
+            sliderAPI.getHero()
+                .then(res => {
+                    if (res.data.success && res.data.data.length > 0) {
+                        setHeroSlides(res.data.data);
+                    }
+                })
+                .catch(err => console.error('Error fetching hero slides:', err));
 
-        // Fetch Promotional Sliders
-        sliderAPI.getPromotional()
-            .then(res => {
-                if (res.data.success && res.data.data.length > 0) {
-                    const activePromoSlides = res.data.data.filter((s: any) => s.type === 'PROMOTIONAL' && s.status?.toUpperCase() === 'ACTIVE');
+            // Fetch Promotional Sliders
+            try {
+                const promoRes = await sliderAPI.getPromotional();
+                if (promoRes.data.success && promoRes.data.data.length > 0) {
+                    const activePromoSlides = promoRes.data.data.filter((s: any) => s.type === 'PROMOTIONAL' && s.status?.toUpperCase() === 'ACTIVE');
                     setPromotionalSlides(activePromoSlides);
+                    const bottomPromoSlidesData = promoRes.data.data.filter((s: any) => s.type === 'BOTTOM_PROMOTIONAL' && s.status?.toUpperCase() === 'ACTIVE');
+                    setBottomPromoSlides(bottomPromoSlidesData);
                 }
-            })
-            .catch(err => console.error('Error fetching promotional sliders:', err));
+            } catch (err) {
+                console.error('Error fetching promotional sliders:', err);
+            }
 
-        // Fetch Marquee Items
-        sliderAPI.getMarquee()
-            .then(res => {
-                if (res.data.success && res.data.data.length > 0) {
-                    setMarqueeItems(res.data.data);
-                }
-            })
-            .catch(err => console.error('Error fetching marquee items:', err));
+            // Fetch Marquee Items
+            sliderAPI.getMarquee()
+                .then(res => {
+                    if (res.data.success && res.data.data.length > 0) {
+                        setMarqueeItems(res.data.data);
+                    }
+                })
+                .catch(err => console.error('Error fetching marquee items:', err));
 
-        // Fetch Categories
-        categoriesAPI.getAll()
-            .then(res => {
-                if (res.data.success && res.data.data) {
-                    setAllCategories(res.data.data);
-                    // ONLY show categories that don't have a parentId (Main Categories)
-                    setCategories(res.data.data.filter((c: any) => !c.parentId || c.parentId === "" || c.parentId === null));
-                }
-            })
-            .catch(err => console.error('Error fetching categories:', err));
+            // Fetch Categories
+            categoriesAPI.getAll()
+                .then(res => {
+                    if (res.data.success && res.data.data) {
+                        setAllCategories(res.data.data);
+                        // ONLY show categories that don't have a parentId (Main Categories)
+                        setCategories(res.data.data.filter((c: any) => !c.parentId || c.parentId === "" || c.parentId === null));
+                    }
+                })
+                .catch(err => console.error('Error fetching categories:', err));
 
-        // Fetch Site Settings
-        settingsAPI.get()
-            .then(res => {
-                if (res.data.success && res.data.data) {
-                    setSiteSettings(res.data.data);
-                    if (res.data.data.homeSections) setHomeSections(res.data.data.homeSections);
-                    if (res.data.data.commitment) setCommitment(res.data.data.commitment);
-                }
-            })
-            .catch(err => console.error('Error fetching settings:', err));
+            // Fetch Site Settings
+            settingsAPI.get()
+                .then(res => {
+                    if (res.data.success && res.data.data) {
+                        setSiteSettings(res.data.data);
+                        if (res.data.data.homeSections) setHomeSections(res.data.data.homeSections);
+                        if (res.data.data.commitment) setCommitment(res.data.data.commitment);
+                    }
+                })
+                .catch(err => console.error('Error fetching settings:', err));
 
 
-        contentAPI.getByType('LOOKBOOK_ITEM')
-            .then(res => {
-                if (res.data.success && res.data.data) {
-                    setLookbookItems(res.data.data);
-                }
-            })
-            .catch(err => console.error('Error fetching lookbook items:', err));
+            contentAPI.getByType('LOOKBOOK_ITEM')
+                .then(res => {
+                    if (res.data.success && res.data.data) {
+                        setLookbookItems(res.data.data);
+                    }
+                })
+                .catch(err => console.error('Error fetching lookbook items:', err));
+        };
 
+        fetchData();
     }, []);
 
     const reviews = allReviews.filter(r => r.homepageVisible && r.status.toUpperCase() === 'ACTIVE');
@@ -502,35 +510,7 @@ const Home: React.FC = () => {
                         return homeSections.promotionalBanner.isVisible && (
                             <section key="promotional" className="py-24 bg-white overflow-hidden">
                                 <div className="max-w-[1800px] mx-auto px-6 lg:px-12">
-                                    <div className="relative aspect-[16/10] md:aspect-[21/9] w-full rounded-[2rem] md:rounded-[4rem] overflow-hidden group shadow-2xl shadow-black/5">
-                                        <img
-                                            src={homeSections.promotionalBanner.image}
-                                            alt={homeSections.promotionalBanner.title}
-                                            className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
-                                        />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col items-center justify-center p-8 text-center">
-                                            <motion.div
-                                                initial={{ opacity: 0, y: 30 }}
-                                                whileInView={{ opacity: 1, y: 0 }}
-                                                viewport={{ once: true }}
-                                                transition={{ duration: 1 }}
-                                                className="flex flex-col items-center"
-                                            >
-                                                <span className="text-luxury-gold text-[10px] md:text-xs font-bold uppercase tracking-[0.5em] mb-4 md:mb-6">
-                                                    {homeSections.promotionalBanner.subtitle}
-                                                </span>
-                                                <h2 className="text-white font-serif text-4xl md:text-7xl italic tracking-tighter mb-8 md:mb-10 max-w-4xl leading-[1.1]">
-                                                    {homeSections.promotionalBanner.title}
-                                                </h2>
-                                                <Link
-                                                    to={homeSections.promotionalBanner.link}
-                                                    className="bg-white text-luxury-black px-10 md:px-16 py-4 md:py-5 text-[10px] font-bold uppercase tracking-[0.3em] rounded-full hover:bg-luxury-gold hover:text-white transition-all transform hover:scale-105 active:scale-95 shadow-xl"
-                                                >
-                                                    {homeSections.promotionalBanner.buttonText}
-                                                </Link>
-                                            </motion.div>
-                                        </div>
-                                    </div>
+                                    <PromotionalSlider slides={bottomPromoSlides.length > 0 ? bottomPromoSlides : (homeSections.promotionalSliders || [])} />
                                 </div>
                             </section>
                         );
@@ -900,7 +880,7 @@ const Home: React.FC = () => {
                         return null;
                 }
             })}
-        </div>
+        </div >
     );
 };
 

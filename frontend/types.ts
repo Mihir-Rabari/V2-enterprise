@@ -165,13 +165,14 @@ export interface Customer {
 
 export interface Slider {
   id: string | number;
-  type: 'PROMOTIONAL' | 'MARQUEE' | 'CATEGORY' | 'BEST_CATEGORY' | 'NEW_ARRIVAL';
+  type: 'PROMOTIONAL' | 'MARQUEE' | 'CATEGORY' | 'BEST_CATEGORY' | 'NEW_ARRIVAL' | 'BOTTOM_PROMOTIONAL';
   mediaType: 'image' | 'video';
   image: string;
   title: string;
   subtitle?: string;
   buttonText?: string;
   link: string;
+  duration?: number;
   status: 'Active' | 'Inactive' | 'ACTIVE' | 'INACTIVE';
 }
 
@@ -214,6 +215,7 @@ export interface PromotionalSlide {
   subtitle?: string;
   link: string;
   buttonText?: string;
+  duration?: number;
 }
 
 export interface HomeSectionContent {

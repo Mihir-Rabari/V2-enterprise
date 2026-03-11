@@ -221,7 +221,7 @@ const AdminDashboard: React.FC = () => {
                 if (heroRes.data.success) setHeroSlides(heroRes.data.data);
                 if (promoRes.data.success) {
                     const allPromo = promoRes.data.data as Slider[];
-                    setMainSliders(allPromo.filter(s => s.type === 'PROMOTIONAL'));
+                    setMainSliders(allPromo.filter(s => s.type === 'PROMOTIONAL' || s.type === 'BOTTOM_PROMOTIONAL'));
                     setCategorySliders(allPromo.filter(s => s.type === 'CATEGORY'));
                     setBestCategorySliders(allPromo.filter(s => s.type === 'BEST_CATEGORY'));
                     setNewArrivalSliders(allPromo.filter(s => s.type === 'NEW_ARRIVAL'));
@@ -309,6 +309,9 @@ const AdminDashboard: React.FC = () => {
         if (type === 'product') {
             setProductModalTab('basic');
             defaults.styleCode = 'V2-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+        }
+        if (['slider', 'category-slider', 'best-category-slider', 'new-arrival-slider', 'hero-slide'].includes(type)) {
+            defaults.duration = 5000;
         }
         setFormData(defaults);
         setModalOpen(true);
@@ -999,12 +1002,12 @@ const AdminDashboard: React.FC = () => {
                 }
             } else if (['slider', 'category-slider', 'best-category-slider', 'new-arrival-slider'].includes(modalType)) {
                 const typeMap: Record<string, string> = {
-                    'slider': 'PROMOTIONAL',
                     'category-slider': 'CATEGORY',
                     'best-category-slider': 'BEST_CATEGORY',
                     'new-arrival-slider': 'NEW_ARRIVAL'
                 };
-                const sliderData = { ...formData, type: typeMap[modalType] };
+                // Use formData.type if provided (for 'slider' which supports top/bottom), otherwise use typeMap fallback
+                const sliderData = { ...formData, type: formData.type || typeMap[modalType] || 'PROMOTIONAL' };
                 if (sliderData.status) sliderData.status = sliderData.status.toUpperCase();
 
                 if (formData.id) {
@@ -1883,6 +1886,19 @@ const AdminDashboard: React.FC = () => {
             case 'new-arrival-slider':
                 return (
                     <div className="space-y-4">
+                        {modalType === 'slider' && (
+                            <div className="flex-1">
+                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Placement</label>
+                                <select
+                                    className="w-full border border-gray-200 p-3 rounded-xl focus:outline-none focus:border-luxury-gold text-sm bg-white"
+                                    value={formData.type || 'PROMOTIONAL'}
+                                    onChange={e => setFormData({ ...formData, type: e.target.value })}
+                                >
+                                    <option value="PROMOTIONAL">Top Promo Divider</option>
+                                    <option value="BOTTOM_PROMOTIONAL">Bottom Promo Section</option>
+                                </select>
+                            </div>
+                        )}
                         <div className="flex gap-4">
                             <div className="flex-1">
                                 <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Media Type</label>
@@ -1943,6 +1959,17 @@ const AdminDashboard: React.FC = () => {
                                 onChange={e => setFormData({ ...formData, buttonText: e.target.value })}
                                 placeholder="Shop Now"
                             />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Duration (ms)</label>
+                            <input
+                                type="number"
+                                className="w-full bg-transparent border-b border-gray-100 py-3 text-[11px] font-bold tracking-widest focus:outline-none focus:border-luxury-black transition-colors"
+                                value={formData.duration || 5000}
+                                onChange={e => setFormData({ ...formData, duration: Number(e.target.value) })}
+                                placeholder="5000"
+                            />
+                            <p className="text-[9px] text-gray-400 mt-1">Time to show this slide (1000ms = 1s)</p>
                         </div>
                         <div>
                             <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Status</label>
@@ -2419,7 +2446,12 @@ const AdminDashboard: React.FC = () => {
                         {
                             header: 'Tagline & Title', accessor: (row: Slider) => (
                                 <div className="max-w-xs">
-                                    <p className="text-[8px] font-bold uppercase tracking-widest text-luxury-gold mb-1">{row.subtitle}</p>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className={`px-1.5 py-0.5 rounded-md text-[8px] font-bold uppercase tracking-widest ${row.type === 'BOTTOM_PROMOTIONAL' ? 'bg-slate-100 text-slate-600' : 'bg-amber-50 text-luxury-gold'}`}>
+                                            {row.type === 'BOTTOM_PROMOTIONAL' ? 'Bottom Section' : 'Top Banner'}
+                                        </span>
+                                        <p className="text-[8px] font-bold uppercase tracking-widest text-luxury-gold">{row.subtitle}</p>
+                                    </div>
                                     <p className="font-serif italic text-sm text-luxury-black line-clamp-1">{row.title}</p>
                                 </div>
                             )
@@ -2506,7 +2538,7 @@ const AdminDashboard: React.FC = () => {
             case 'best-category-slider':
             case 'new-arrival-slider':
                 const sliderGroups = [
-                    { title: 'Main Hero Sliders', data: mainSliders, type: 'slider', path: ['Sliders', 'Main Slider'] },
+                    { title: 'Promo Sliders', data: mainSliders, type: 'slider', path: ['Sliders', 'Promo Slider'] },
                     { title: 'Category Promo Sliders', data: categorySliders, type: 'category-slider', path: ['Sliders', 'Category Slider'] },
                     { title: 'Best Category Sliders', data: bestCategorySliders, type: 'best-category-slider', path: ['Sliders', 'Best Category Slider'] },
                     { title: 'New Arrival Sliders', data: newArrivalSliders, type: 'new-arrival-slider', path: ['Sliders', 'New Arrival Slider'] }

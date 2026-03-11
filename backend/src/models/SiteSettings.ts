@@ -63,6 +63,7 @@ export interface ISiteSettings extends Document {
             subtitle: string;
             link: string;
             buttonText: string;
+            duration?: number;
         }[];
         promotionalBanner: {
             image: string;
@@ -161,7 +162,8 @@ const SiteSettingsSchema = new Schema<ISiteSettings>(
                     title: { type: String, default: '' },
                     subtitle: { type: String, default: '' },
                     link: { type: String, default: '' },
-                    buttonText: { type: String, default: 'Explore' }
+                    buttonText: { type: String, default: 'Explore' },
+                    duration: { type: Number, default: 5000 }
                 }
             ],
             promotionalBanner: {

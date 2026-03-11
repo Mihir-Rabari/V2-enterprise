@@ -70,18 +70,31 @@ async function main() {
                 ],
                 promotionalSliders: [
                     {
+                        type: 'image',
                         image: 'https://images.pexels.com/photos/1884581/pexels-photo-1884581.jpeg?auto=compress&cs=tinysrgb&w=800',
                         title: 'New Season Arrival',
                         subtitle: 'UP TO 50% OFF SELECT PIECES',
                         buttonText: 'Shop Newest',
-                        link: '/shop?sort=Newest'
+                        link: '/shop?sort=Newest',
+                        duration: 6000
                     },
                     {
+                        type: 'video',
+                        image: 'https://v2-fashion.s3.amazonaws.com/v2-hero-slides/hero_video.mp4',
+                        title: 'The Art of Motion',
+                        subtitle: 'NEW SEASON CAMPAIGN',
+                        buttonText: 'Watch Collection',
+                        link: '/shop',
+                        duration: 8000
+                    },
+                    {
+                        type: 'image',
                         image: 'https://images.pexels.com/photos/1926769/pexels-photo-1926769.jpeg?auto=compress&cs=tinysrgb&w=800',
                         title: 'Exquisite Knitwear',
                         subtitle: 'CURATED ESSENTIALS',
                         buttonText: 'Explore Knitwear',
-                        link: '/shop?category=Knitwear'
+                        link: '/shop?category=Knitwear',
+                        duration: 5000
                     }
                 ],
                 promotionalBanner: {
@@ -183,31 +196,18 @@ async function main() {
                 price: 2499,
                 photo: 'https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=800',
                 hoverImage: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=800',
+                photos: [
+                    'https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=800',
+                    'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=800'
+                ],
                 mainCategory: 'MENSWEAR', subCategory: 'Tailoring',
                 description: 'Refined linen blend shirt offering unparalleled breathability. Perfect for warm days.',
                 materialCare: '55% Linen, 45% Cotton.\nMachine wash cold on gentle cycle.\nDo not bleach.\nIron on medium heat.',
+                fabric: 'Linen Blend', collar: 'Classic', sleeve: 'Long Sleeve',
                 skus: [
                     { size: 'S', quantity: 10 },
                     { size: 'M', quantity: 15 },
                     { size: 'L', quantity: 8 },
-                ],
-                isNewArrival: true, isTrending: true, tags: ['Linen', 'Formal', 'Summer'],
-                status: 'ACTIVE',
-            },
-            {
-                name: 'Premium Linen Blend Shirt',
-                styleCode: 'SHIRT-01',
-                color: 'Soft Blue', colorHex: '#A2B5CD',
-                videoUrls: ['https://www.youtube.com/embed/dQw4w9WgXcQ'],
-                price: 2499,
-                photo: 'https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=800', // Using same for demo
-                hoverImage: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=800',
-                mainCategory: 'MENSWEAR', subCategory: 'Tailoring',
-                description: 'Refined linen blend shirt offering unparalleled breathability. Perfect for warm days.',
-                materialCare: '55% Linen, 45% Cotton.\nMachine wash cold on gentle cycle.\nDo not bleach.\nIron on medium heat.',
-                skus: [
-                    { size: 'M', quantity: 12 },
-                    { size: 'L', quantity: 5 },
                 ],
                 isNewArrival: true, isTrending: true, tags: ['Linen', 'Formal', 'Summer'],
                 status: 'ACTIVE',
@@ -219,9 +219,14 @@ async function main() {
                 price: 4999,
                 photo: 'https://images.pexels.com/photos/1598507/pexels-photo-1598507.jpeg?auto=compress&cs=tinysrgb&w=800',
                 hoverImage: 'https://images.pexels.com/photos/1598505/pexels-photo-1598505.jpeg?auto=compress&cs=tinysrgb&w=800',
+                photos: [
+                    'https://images.pexels.com/photos/1598507/pexels-photo-1598507.jpeg?auto=compress&cs=tinysrgb&w=800',
+                    'https://images.pexels.com/photos/1598505/pexels-photo-1598505.jpeg?auto=compress&cs=tinysrgb&w=800'
+                ],
                 mainCategory: 'MENSWEAR', subCategory: 'Denim',
                 description: 'Signature selvedge denim woven on vintage looms. Ages beautifully.',
                 materialCare: '100% Cotton Selvedge Denim.\nWash sparingly.\nTurn inside out before washing.\nCold wash only.',
+                fabric: 'Selvedge Denim', patternType: 'Solid', length: 'Full Length',
                 skus: [
                     { size: '32', quantity: 14 },
                     { size: '34', quantity: 10 },
@@ -230,52 +235,21 @@ async function main() {
                 status: 'ACTIVE',
             },
             {
-                name: 'Organic Cotton Essential Tee',
-                styleCode: 'TEE-01',
-                color: 'Sage', colorHex: '#879F84',
-                price: 1299,
-                photo: 'https://images.pexels.com/photos/4066293/pexels-photo-4066293.jpeg?auto=compress&cs=tinysrgb&w=800',
-                mainCategory: 'WOMENSWEAR', subCategory: 'Essentials',
-                description: 'Wardrobe staple from 100% organic cotton. Soft and breathable.',
-                materialCare: '100% Organic Cotton.\nTumble dry low.\nMachine wash cold with like colors.',
-                skus: [
-                    { size: 'S', quantity: 20 },
-                    { size: 'M', quantity: 18 },
-                ],
-                tags: ['Organic', 'Cotton', 'Basic'],
-                status: 'ACTIVE',
-            },
-            {
                 name: 'Merino Wool Oversized Knit',
                 styleCode: 'KNIT-01',
                 color: 'Oatmeal', colorHex: '#E0D6CC',
                 price: 3599,
                 photo: 'https://images.pexels.com/photos/5935754/pexels-photo-5935754.jpeg?auto=compress&cs=tinysrgb&w=800',
+                photos: ['https://images.pexels.com/photos/5935754/pexels-photo-5935754.jpeg?auto=compress&cs=tinysrgb&w=800'],
                 mainCategory: 'WOMENSWEAR', subCategory: 'Outerwear',
                 description: 'Luxuriously soft merino wool in an oversized silhouette.',
                 materialCare: '100% Extra Fine Merino Wool.\nHand wash cold/Dry clean only.\nReshape while damp.\nDry flat.',
+                fabric: 'Merino Wool', neck: 'Round Neck', sleeve: 'Full Sleeve',
                 skus: [
                     { size: 'S', quantity: 7 },
                     { size: 'M', quantity: 12 },
                 ],
                 isNewArrival: true, isTrending: true, tags: ['Merino', 'Wool', 'Knitwear'],
-                status: 'ACTIVE',
-            },
-            {
-                name: 'Structured Wool Coat',
-                styleCode: 'COAT-01',
-                color: 'Charcoal', colorHex: '#36454F',
-                price: 8999,
-                photo: 'https://images.pexels.com/photos/837140/pexels-photo-837140.jpeg?auto=compress&cs=tinysrgb&w=800',
-                mainCategory: 'MENSWEAR', subCategory: 'Outerwear',
-                description: 'Tailored coat made from premium Italian wool. Structured fit.',
-                materialCare: 'Outer: 80% Wool, 20% Nylon.\nProfessional dry clean only.',
-                skus: [
-                    { size: 'M', quantity: 6 },
-                    { size: 'L', quantity: 9 },
-                    { size: 'XL', quantity: 4 },
-                ],
-                isNewArrival: true, tags: ['Wool', 'Coat', 'Tailoring'],
                 status: 'ACTIVE',
             },
             {
@@ -287,44 +261,12 @@ async function main() {
                 mainCategory: 'WOMENSWEAR', subCategory: 'Essentials',
                 description: 'Fluid midi dress cut from sustainable TENCEL. Effortless elegance.',
                 materialCare: '100% TENCEL™ Lyocell.\nMachine wash cold in laundry bag.\nDo not tumble dry.',
+                fabric: 'Tencel', length: 'Midi',
                 skus: [
                     { size: 'S', quantity: 14 },
                     { size: 'M', quantity: 16 },
                 ],
                 isNewArrival: true, isTrending: true, tags: ['Dress', 'Midi'],
-                status: 'ACTIVE',
-            },
-            {
-                name: 'French Terry Hoodie',
-                styleCode: 'HOODIE-01',
-                color: 'Ash Grey', colorHex: '#B2BEB5',
-                price: 2799,
-                photo: 'https://images.pexels.com/photos/7679720/pexels-photo-7679720.jpeg?auto=compress&cs=tinysrgb&w=800',
-                mainCategory: 'MENSWEAR', subCategory: 'Essentials',
-                description: 'Mid-weight French terry with a relaxed silhouette.',
-                materialCare: '100% Cotton French Terry.\nMachine wash warm with like colors.\nTumble dry medium.',
-                skus: [
-                    { size: 'M', quantity: 20 },
-                    { size: 'L', quantity: 16 },
-                ],
-                isNewArrival: true, tags: ['Hoodie', 'Casual'],
-                status: 'ACTIVE',
-            },
-            {
-                name: 'Pleated Trousers',
-                styleCode: 'TROUS-01',
-                color: 'Black', colorHex: '#000000',
-                videoUrls: ['https://www.youtube.com/embed/XW7_5M0O11I'],
-                price: 2999,
-                photo: 'https://images.pexels.com/photos/1536619/pexels-photo-1536619.jpeg?auto=compress&cs=tinysrgb&w=800',
-                mainCategory: 'WOMENSWEAR', subCategory: 'Tailoring',
-                description: 'High-waisted trousers with deep pleats for a relaxed silhouette.',
-                materialCare: '60% Rayon, 35% Nylon, 5% Spandex.\nMachine wash cold on gentle.',
-                skus: [
-                    { size: 'S', quantity: 10 },
-                    { size: 'M', quantity: 8 },
-                ],
-                isTrending: true, tags: ['Trousers', 'Tailoring'],
                 status: 'ACTIVE',
             },
         ];
@@ -469,23 +411,50 @@ async function main() {
         await Slider.create([
             {
                 type: 'PROMOTIONAL',
+                mediaType: 'image',
                 image: 'https://images.pexels.com/photos/1884581/pexels-photo-1884581.jpeg?auto=compress&cs=tinysrgb&w=800',
                 title: 'New Season Arrival',
                 subtitle: 'UP TO 50% OFF SELECT PIECES',
                 buttonText: 'Shop Newest',
                 link: '/shop?sort=Newest',
+                duration: 6000,
                 status: 'ACTIVE'
             },
             {
                 type: 'PROMOTIONAL',
-                image: 'https://images.pexels.com/photos/1926769/pexels-photo-1926769.jpeg?auto=compress&cs=tinysrgb&w=800',
-                title: 'New Arrivals',
-                subtitle: 'CURATED ESSENTIALS',
-                buttonText: 'Explore New',
-                link: '/shop?filter=New Arrivals',
+                mediaType: 'video',
+                image: 'https://v2-fashion.s3.amazonaws.com/v2-hero-slides/hero_video.mp4',
+                title: 'Campaign 2026',
+                subtitle: 'THE ART OF DISCIPLINE',
+                buttonText: 'Watch Now',
+                link: '/new-arrivals',
+                duration: 8000,
+                status: 'ACTIVE'
+            },
+            {
+                type: 'BOTTOM_PROMOTIONAL',
+                mediaType: 'video',
+                image: '/The_Dior_Men_s_Summer_2022_Campaign_Video_720P.mp4',
+                title: 'Limited Collection\n2026 Release',
+                subtitle: 'EXCLUSIVE DROP',
+                buttonText: 'View Collection',
+                link: '/shop?sort=Newest',
+                duration: 7000,
+                status: 'ACTIVE'
+            },
+            {
+                type: 'BOTTOM_PROMOTIONAL',
+                mediaType: 'image',
+                image: 'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?auto=format&fit=crop&q=80&w=2670',
+                title: 'Timeless Elegance',
+                subtitle: 'NEW ARCHIVE',
+                buttonText: 'Explore Now',
+                link: '/shop',
+                duration: 5000,
                 status: 'ACTIVE'
             }
         ]);
+        console.log('✅ Promotional sliders seeded (including Bottom Promo)');
 
         // ── Dynamic Content ────────────────────────────────────────────────────────
         await Content.insertMany([

@@ -13,11 +13,14 @@ const PromotionalSlider: React.FC<PromotionalSliderProps> = ({ slides }) => {
 
     useEffect(() => {
         if (slides.length <= 1) return;
-        const timer = setInterval(() => {
+        const currentDuration = slides[currentIndex]?.duration || 5000;
+
+        const timer = setTimeout(() => {
             setCurrentIndex((prev) => (prev + 1) % slides.length);
-        }, 5000);
-        return () => clearInterval(timer);
-    }, [slides.length]);
+        }, currentDuration);
+
+        return () => clearTimeout(timer);
+    }, [currentIndex, slides]);
 
     if (!slides || slides.length === 0) return null;
 

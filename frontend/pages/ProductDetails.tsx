@@ -154,8 +154,8 @@ const ProductDetails: React.FC = () => {
         let y = e.clientY - top;
 
         // Ensure lens stays within bounds
-        const lensWidth = 150;
-        const lensHeight = 150;
+        const lensWidth = 120;
+        const lensHeight = 120;
 
         let lensX = x - lensWidth / 2;
         let lensY = y - lensHeight / 2;
@@ -251,12 +251,13 @@ const ProductDetails: React.FC = () => {
 
                     {/* LEFT: Image Gallery */}
                     <div className="space-y-8">
-                        {/* Main Image View */}
-                        <div className={`relative aspect-[4/5] bg-[#EBE8E4] overflow-hidden group/zoom ${isVideoActive === false ? 'cursor-zoom-in' : 'cursor-default'}`}
+                        {/* Main Image View Container */}
+                        <div className={`relative aspect-[4/5] bg-[#EBE8E4] group/zoom ${isVideoActive === false ? 'cursor-zoom-in' : 'cursor-default'}`}
                             onMouseMove={isVideoActive === false ? handleMouseMove : undefined}
                             onMouseEnter={() => isVideoActive === false && setIsZooming(true)}
                             onMouseLeave={() => setIsZooming(false)}
                         >
+                            <div className="w-full h-full overflow-hidden relative">
                             {isVideoActive !== false && (product.videoUrls?.[isVideoActive as number] || product.videoUrl) ? (
                                 <div className="absolute inset-0 z-20 bg-black">
                                     <iframe
@@ -303,46 +304,37 @@ const ProductDetails: React.FC = () => {
                                     className="w-full h-full object-cover"
                                 />
                             )}
+                            </div>
 
-                            {/* Lens Overlay */}
+                            {/* Zoom Loupe */}
                             <AnimatePresence>
                                 {isZooming && (
-                                    <>
-                                        <motion.div
-                                            initial={{ opacity: 0 }}
-                                            animate={{ opacity: 1 }}
-                                            exit={{ opacity: 0 }}
-                                            className="absolute border border-white/60 bg-white/5 backdrop-blur-[1px] pointer-events-none z-10 hidden lg:block"
+                                    <motion.div
+                                        initial={{ opacity: 0, scale: 0.8 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.8 }}
+                                        transition={{ duration: 0.15, ease: "easeOut" }}
+                                        className="absolute z-[100] bg-white border border-gray-100 overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-[2rem] hidden lg:block pointer-events-none"
+                                        style={{
+                                            left: cursorPos.x + 24,
+                                            top: cursorPos.y - 140,
+                                            width: '280px',
+                                            height: '280px'
+                                        }}
+                                    >
+                                        <div
+                                            className="w-full h-full"
                                             style={{
-                                                left: lensPos.x,
-                                                top: lensPos.y,
-                                                width: '120px',
-                                                height: '120px',
-                                                boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.25)',
-                                                borderRadius: '4px'
+                                                backgroundImage: `url(${galleryImages[activeImage]})`,
+                                                backgroundSize: '300%',
+                                                backgroundPosition: `${zoomPos.x}% ${zoomPos.y}%`,
+                                                backgroundRepeat: 'no-repeat'
                                             }}
                                         />
-                                        {/* Floating Zoom Window */}
-                                        <motion.div
-                                            initial={{ opacity: 0, scale: 0.9, x: -20 }}
-                                            animate={{ opacity: 1, scale: 1, x: 0 }}
-                                            exit={{ opacity: 0, scale: 0.9, x: -20 }}
-                                            className="absolute top-1/2 -translate-y-1/2 left-[calc(100%+2rem)] w-[450px] aspect-[4/5] z-[100] bg-white border border-gray-100 overflow-hidden shadow-[20px_40px_100px_rgba(0,0,0,0.15)] rounded-3xl hidden xl:block pointer-events-none"
-                                        >
-                                            <div
-                                                className="w-full h-full"
-                                                style={{
-                                                    backgroundImage: `url(${galleryImages[activeImage]})`,
-                                                    backgroundSize: '450%',
-                                                    backgroundPosition: `${zoomPos.x}% ${zoomPos.y}%`,
-                                                    backgroundRepeat: 'no-repeat'
-                                                }}
-                                            />
-                                            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-luxury-black/90 backdrop-blur-md px-5 py-2 rounded-full text-[10px] font-bold text-white uppercase tracking-widest border border-white/10">
-                                                LUXE ZOOM 4.5X
-                                            </div>
-                                        </motion.div>
-                                    </>
+                                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-luxury-black/90 backdrop-blur-md px-4 py-1.5 rounded-full text-[9px] font-bold text-white uppercase tracking-[0.2em] whitespace-nowrap">
+                                            LUXE ZOOM
+                                        </div>
+                                    </motion.div>
                                 )}
                             </AnimatePresence>
                         </div>
@@ -544,12 +536,11 @@ const ProductDetails: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Bottom Sections: Full Width relative to the 1600px container */}
                 <div className="mt-32 space-y-32">
 
                     {/* Reviews Section */}
                     <div className="w-full mb-24 space-y-12">
-                        <div className="flex flex-col md:flex-row justify-between items-end border-b border-[#2A1E17]/10 pb-8 gap-6">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-[#2A1E17]/10 pb-8 gap-6">
                             <div className="space-y-2">
                                 <span className="text-luxury-gold text-[10px] font-bold uppercase tracking-[0.4em]">Feedback</span>
                                 <h3 className="font-serif text-4xl italic text-[#2A1E17]">Client Experiences</h3>

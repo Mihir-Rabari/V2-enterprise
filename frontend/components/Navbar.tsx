@@ -156,7 +156,7 @@ const MobileNavLink: React.FC<{ to: string; children: React.ReactNode }> = ({ to
 const SearchBar: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [query, setQuery] = useState('');
-    const { products } = useProducts({ limit: 500 }); // Fetch all for search
+    const { products } = useProducts({ limit: 500, groupByColor: true }); // Fetch all for search
     const [results, setResults] = useState<Product[]>([]);
     const location = useLocation();
     const navigate = useNavigate();

@@ -24,7 +24,7 @@ const Shop: React.FC = () => {
     const location = useLocation();
     const isNewArrivalsPage = location.pathname === '/new-arrivals';
 
-    const { products: rawProducts, loading: productsLoading } = useProducts({ status: 'ACTIVE', limit: 500 });
+    const { products: rawProducts, loading: productsLoading } = useProducts({ status: 'ACTIVE', limit: 500, groupByColor: true });
     const [siteSettings, setSiteSettings] = useState<SiteSettings>(initialSiteSettings);
     const [allCategories, setAllCategories] = useState<Category[]>([]);
 

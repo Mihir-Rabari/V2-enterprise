@@ -13,7 +13,8 @@ const RelatedProducts: React.FC<{ currentId: string | number; categoryName?: str
     const { products, loading } = useProducts({
         category: categoryName,
         limit: 4,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        groupByColor: true
     });
 
     const related = products.filter(p => p.id !== currentId).slice(0, 4);

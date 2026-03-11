@@ -380,7 +380,7 @@ const Home: React.FC = () => {
         ? categories.map(c => ({
             title: c.name,
             image: c.image || 'https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=800',
-            link: `/shop?category=${c.slug}`
+            link: `/${encodeURIComponent(c.name)}`
         }))
         : (homeSections.categories || []);
 

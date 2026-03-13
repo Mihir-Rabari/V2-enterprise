@@ -31,6 +31,7 @@ const RelatedProducts: React.FC<{ currentId: string | number; categoryName?: str
                     name={p.name}
                     price={p.price}
                     image={p.photo}
+                    sizes={(p as any).sizes}
                 />
             ))}
         </>

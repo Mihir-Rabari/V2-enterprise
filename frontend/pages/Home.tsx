@@ -775,6 +775,7 @@ const Home: React.FC = () => {
                                                                     hoverImage={product.hoverImage || product.photos?.[1]}
                                                                     isTrending={product.isTrending}
                                                                     isNewArrival={product.isNewArrival}
+                                                                    sizes={product.sizes}
                                                                 />
                                                             </motion.div>
                                                         ))}
@@ -833,6 +834,7 @@ const Home: React.FC = () => {
                                                     hoverImage={product.hoverImage || product.photos?.[1]}
                                                     isTrending={product.isTrending}
                                                     isNewArrival={product.isNewArrival}
+                                                    sizes={product.sizes}
                                                 />
                                             </motion.div>
                                         ))}

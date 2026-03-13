@@ -380,6 +380,7 @@ const Shop: React.FC = () => {
                                             hoverImage={product.hoverImage || product.photos?.[1]}
                                             isTrending={product.isTrending}
                                             isNewArrival={product.isNewArrival}
+                                            sizes={product.sizes}
                                         />
                                     ))}
                                 </div>

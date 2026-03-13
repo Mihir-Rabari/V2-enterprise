@@ -18,10 +18,11 @@ interface ProductCardProps {
     isTrending?: boolean;
     isNewArrival?: boolean;
     isWishlistPage?: boolean;
+    sizes?: string[];
     onRemove?: (id: string | number) => void;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ id, name, price, image, hoverImage, category, theme = 'light', isTrending, isNewArrival, isWishlistPage, onRemove }) => {
+const ProductCard: React.FC<ProductCardProps> = ({ id, name, price, image, hoverImage, category, theme = 'light', isTrending, isNewArrival, isWishlistPage, sizes, onRemove }) => {
     const { addToCart, showToast } = useCart();
     const { openQuickView } = useQuickView();
     const { user } = useAuth();
@@ -149,7 +150,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ id, name, price, image, hover
                 </Link>
 
                 {/* Action Bar - Quick Buy & Quick View */}
-                <div className="absolute inset-x-4 bottom-4 flex flex-col gap-2 translate-y-8 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500">
+                <div className="absolute inset-x-4 bottom-4 hidden lg:flex flex-col gap-2 translate-y-8 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500">
                     <button
                         onClick={(e) => {
                             e.preventDefault();
@@ -211,7 +212,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ id, name, price, image, hover
                     </p>
                 </div>
                 <div className="flex items-center justify-between">
-                    <span className={`text-[9px] font-bold uppercase tracking-widest ${mutedColor}`}>Available Item</span>
+                    <span className={`text-[9px] font-bold uppercase tracking-widest ${mutedColor}`}>
+                        {sizes && sizes.length > 0 ? sizes.join(', ') : 'Available Item'}
+                    </span>
                     <Link to={`/product/${id}`} className="text-[9px] font-bold uppercase tracking-widest text-luxury-gold opacity-0 group-hover:opacity-100 transition-opacity">
                         View Details
                     </Link>

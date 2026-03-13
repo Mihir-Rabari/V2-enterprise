@@ -588,6 +588,7 @@ const Wishlist = () => {
                             price={item.price}
                             image={item.photo}
                             isWishlistPage={true}
+                            sizes={item.sizes}
                             onRemove={(id) => {
                                 setSavedItems(prev => prev.filter(p => (p._id || p.id) !== id));
                             }}

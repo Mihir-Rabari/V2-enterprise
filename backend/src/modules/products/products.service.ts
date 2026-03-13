@@ -52,8 +52,20 @@ export const getProductsService = async (filters: ProductFilters) => {
         const pipeline: any[] = [
             { $match: query },
             { $sort: { createdAt: -1 as const } },
-            { $group: { _id: colorGroupKey, doc: { $first: '$$ROOT' } } },
-            { $replaceRoot: { newRoot: '$doc' } },
+            { 
+                $group: { 
+                    _id: colorGroupKey, 
+                    doc: { $first: '$$ROOT' },
+                    sizes: { $addToSet: '$size' }
+                } 
+            },
+            { 
+                $replaceRoot: { 
+                    newRoot: { 
+                        $mergeObjects: [ "$doc", { sizes: "$sizes" } ] 
+                    } 
+                } 
+            },
             { $sort: { createdAt: -1 as const } },
         ];
 

@@ -32,6 +32,6 @@ export const validateProduct = (data: any): ValidationErrors => {
 export const validateCategory = (data: any): ValidationErrors => {
     const errors: ValidationErrors = {};
     if (!validateRequired(data.name)) errors.name = 'Category name is required';
-    if (!validateRequired(data.photo)) errors.photo = 'Category image URL is required';
+    if (!validateRequired(data.photo) && !validateRequired(data.image)) errors.photo = 'Category image URL is required';
     return errors;
 };

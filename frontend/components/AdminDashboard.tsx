@@ -306,6 +306,9 @@ const AdminDashboard: React.FC = () => {
         if (['product', 'main-category', 'sub-category', 'tagline', 'socialPost', 'slider'].includes(type)) {
             defaults.status = 'ACTIVE';
         }
+        if (type === 'sub-category' && mainCategories.length > 0) {
+            defaults.parentCategory = mainCategories[0].name;
+        }
         if (type === 'product') {
             setProductModalTab('basic');
             defaults.styleCode = 'V2-' + Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -897,7 +900,12 @@ const AdminDashboard: React.FC = () => {
         // -- VALIDATION --
         let errors: ValidationErrors = {};
         if (modalType === 'product') errors = validateProduct(formData);
-        else if (modalType === 'main-category' || modalType === 'sub-category') errors = validateCategory(formData);
+        else if (modalType === 'main-category' || modalType === 'sub-category') {
+            errors = validateCategory(formData);
+            if (modalType === 'sub-category' && !formData.parentCategory) {
+                errors.parentCategory = 'Parent category is required';
+            }
+        }
 
         if (Object.keys(errors).length > 0) {
             setValidationErrors(errors);

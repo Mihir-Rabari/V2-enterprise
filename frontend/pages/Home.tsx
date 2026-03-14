@@ -11,7 +11,7 @@ import { AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useCallback } from 'react';
 import FilterAccordion from '../components/FilterAccordion';
 import { useProducts } from '../hooks/useProducts';
-import { reviewsAPI, sliderAPI, settingsAPI, categoriesAPI, contentAPI } from '../lib/apiClient';
+import { reviewsAPI, sliderAPI, settingsAPI, categoriesAPI, contentAPI, filtersAPI } from '../lib/apiClient';
 
 interface HeroProps {
     slides: HeroSlide[];
@@ -221,17 +221,28 @@ const Home: React.FC = () => {
     const [isEssentialsCategoryOpen, setIsEssentialsCategoryOpen] = useState(true);
     const [isHovered, setIsHovered] = useState(false);
     const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+    const [filterSuggestions, setFilterSuggestions] = useState<Record<string, string[]>>({});
 
     const dynamicFiltersList = [
         { key: 'color', label: 'Color' },
         { key: 'size', label: 'Size' },
+        { key: 'patternType', label: 'Pattern Type' },
         { key: 'fabric', label: 'Fabric' },
         { key: 'collar', label: 'Collar' },
         { key: 'sleeve', label: 'Sleeve' },
         { key: 'neck', label: 'Neck' },
+        { key: 'pocket', label: 'Pocket' },
+        { key: 'length', label: 'Length' },
+        { key: 'chest', label: 'Chest' },
+        { key: 'waist', label: 'Waist' },
+        { key: 'shoulder', label: 'Shoulder' },
+        { key: 'sleeveLength', label: 'Sleeve Length' },
     ];
 
     const getOptionsFor = (key: string) => {
+        if (filterSuggestions && Array.isArray(filterSuggestions[key])) {
+            return filterSuggestions[key];
+        }
         if (key === 'color') {
             const colors = new Set<string>();
             products.forEach(p => {
@@ -330,6 +341,15 @@ const Home: React.FC = () => {
                 })
                 .catch(err => console.error('Error fetching categories:', err));
 
+            // Fetch filter suggestions globally
+            filtersAPI.getSuggestions()
+                .then(res => {
+                    if (res.data.success && res.data.data) {
+                        setFilterSuggestions(res.data.data);
+                    }
+                })
+                .catch(err => console.error('Error fetching filters:', err));
+
             // Fetch Site Settings
             settingsAPI.get()
                 .then(res => {
@@ -363,7 +383,10 @@ const Home: React.FC = () => {
             label: m.name,
             value: m.name,
             subOptions: allCategories
-                .filter(c => (c.parentId === m.id || c.parentId === m._id || c.parentCategory === m.name))
+                .filter(c => {
+                    const pid = typeof c.parentId === 'object' ? (c.parentId as any)?._id || (c.parentId as any)?.id : c.parentId;
+                    return String(pid) === String(m.id) || String(pid) === String(m._id) || c.parentCategory === m.name;
+                })
                 .map(s => ({ label: s.name, value: s.name }))
         }));
     };

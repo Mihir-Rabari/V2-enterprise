@@ -69,9 +69,8 @@ const Categories: React.FC = () => {
                         <motion.div
                             key={category.title}
                             initial={{ opacity: 0, y: 30 }}
-                            whileInView={{ opacity: 1, y: 0 }}
+                            animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.8, delay: idx * 0.15 }}
-                            viewport={{ once: true, margin: "-100px" }}
                             className="group"
                         >
                             <Link to={`/${encodeURIComponent(category.name || category.title)}`} className="block space-y-8">

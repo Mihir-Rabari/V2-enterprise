@@ -563,8 +563,7 @@ const ProductDetails: React.FC = () => {
                                     <motion.div
                                         key={idx}
                                         initial={{ opacity: 0, y: 20 }}
-                                        whileInView={{ opacity: 1, y: 0 }}
-                                        viewport={{ once: true }}
+                                        animate={{ opacity: 1, y: 0 }}
                                         className="space-y-4"
                                     >
                                         <div className="flex justify-between items-start">

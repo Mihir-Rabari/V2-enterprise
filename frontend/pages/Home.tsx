@@ -503,8 +503,7 @@ const Home: React.FC = () => {
                                             <Link to={cat.link} key={i} className="group relative aspect-[3/4] overflow-hidden block min-w-[75vw] md:min-w-0 snap-center md:snap-align-none">
                                                 <motion.div
                                                     initial={{ opacity: 0, y: 20 }}
-                                                    whileInView={{ opacity: 1, y: 0 }}
-                                                    viewport={{ once: true }}
+                                                    animate={{ opacity: 1, y: 0 }}
                                                     transition={{ delay: i * 0.1, duration: 0.8 }}
                                                     className="w-full h-full"
                                                 >
@@ -786,9 +785,8 @@ const Home: React.FC = () => {
                                                         {displayFeatured.map((product, i) => (
                                                             <motion.div
                                                                 key={product.id}
-                                                                initial={{ opacity: 0, y: 30 }}
-                                                                whileInView={{ opacity: 1, y: 0 }}
-                                                                viewport={{ once: true }}
+                                                initial={{ opacity: 0, y: 30 }}
+                                                animate={{ opacity: 1, y: 0 }}
                                                                 transition={{ delay: i * 0.05, duration: 0.8 }}
                                                                 className="group flex flex-col space-y-4"
                                                             >
@@ -847,8 +845,7 @@ const Home: React.FC = () => {
                                             <motion.div
                                                 key={product.id}
                                                 initial={{ opacity: 0, scale: 0.95 }}
-                                                whileInView={{ opacity: 1, scale: 1 }}
-                                                viewport={{ once: true }}
+                                                animate={{ opacity: 1, scale: 1 }}
                                                 transition={{ delay: i * 0.15, duration: 1, ease: [0.22, 1, 0.36, 1] }}
                                             >
                                                 <ProductCard

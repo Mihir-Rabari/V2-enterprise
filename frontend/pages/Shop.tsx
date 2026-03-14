@@ -4,7 +4,7 @@ import { Search, ChevronDown, X, Filter, TrendingUp, Sparkles } from 'lucide-rea
 import ProductCard from '../components/ProductCard';
 import FilterAccordion from '../components/FilterAccordion';
 import { useProducts } from '../hooks/useProducts';
-import { settingsAPI, categoriesAPI } from '../lib/apiClient';
+import { settingsAPI, categoriesAPI, filtersAPI } from '../lib/apiClient';
 import { initialSiteSettings } from '../data/initialData';
 import { SiteSettings, Category } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -27,6 +27,7 @@ const Shop: React.FC = () => {
     const { products: rawProducts, loading: productsLoading } = useProducts({ status: 'ACTIVE', limit: 500, groupByColor: true });
     const [siteSettings, setSiteSettings] = useState<SiteSettings>(initialSiteSettings);
     const [allCategories, setAllCategories] = useState<Category[]>([]);
+    const [filterSuggestions, setFilterSuggestions] = useState<Record<string, string[]>>({});
 
     const products = rawProducts; // Preserve original category data from API
 
@@ -68,6 +69,12 @@ const Shop: React.FC = () => {
                 setAllCategories(res.data.data);
             }
         }).catch(err => console.error(err));
+
+        filtersAPI.getSuggestions().then(res => {
+            if (res.data.success && res.data.data) {
+                setFilterSuggestions(res.data.data);
+            }
+        }).catch(err => console.error(err));
     }, []);
 
     useEffect(() => {
@@ -86,7 +93,10 @@ const Shop: React.FC = () => {
             label: m.name,
             value: m.name,
             subOptions: allCategories
-                .filter(c => (c.parentId === m.id || c.parentId === m._id || c.parentCategory === m.name))
+                .filter(c => {
+                    const pid = typeof c.parentId === 'object' ? (c.parentId as any)?._id || (c.parentId as any)?.id : c.parentId;
+                    return String(pid) === String(m.id) || String(pid) === String(m._id) || c.parentCategory === m.name;
+                })
                 .map(s => ({ label: s.name, value: s.name }))
         }));
     };
@@ -94,6 +104,12 @@ const Shop: React.FC = () => {
     const categoryTree = buildCategoryTree();
 
     const getOptionsFor = (key: string) => {
+        // Use the globally synced filter suggestions from the API
+        if (filterSuggestions && Array.isArray(filterSuggestions[key])) {
+            return filterSuggestions[key];
+        }
+        
+        // Fallback to deriving from loaded products if API fails
         if (key === 'color') {
             const colors = new Set<string>();
             rawProducts.forEach(p => {

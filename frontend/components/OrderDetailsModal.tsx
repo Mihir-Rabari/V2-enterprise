@@ -59,6 +59,12 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ isOpen, onClose, 
         }
     };
 
+    const getAbsoluteUrl = (url: string) => {
+        if (!url) return '#';
+        if (url.startsWith('http://') || url.startsWith('https://')) return url;
+        return `https://${url}`;
+    };
+
     return (
         <AnimatePresence>
             {isOpen && (
@@ -187,7 +193,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ isOpen, onClose, 
                                                 )}
                                                 {(order as any).trackingLink && (
                                                     <a
-                                                        href={(order as any).trackingLink}
+                                                        href={getAbsoluteUrl((order as any).trackingLink)}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="flex items-center justify-between w-full p-4 bg-white/5 hover:bg-white/10 rounded-2xl transition-all border border-white/10 group"

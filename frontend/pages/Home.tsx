@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, useScroll, useTransform, useSpring, useMotionValue } from 'framer-motion';
 import { ArrowRight, ArrowUpRight, TrendingUp, Sparkles, Star, ShieldCheck, Zap, Send, Filter, ChevronDown, Search, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -415,8 +416,54 @@ const Home: React.FC = () => {
         }))
         : (homeSections.categories || []);
 
+    const activeEssentialsFilterCount = selectedEssentialsCategories.length + selectedEssentialsPriceList.length + Object.values(selectedFilters).reduce((acc: number, curr: string[]) => acc + curr.length, 0);
+
+    const renderEssentialsSidebarContent = () => (
+        <div className="w-full">
+            <FilterAccordion
+                title="Sort By"
+                isSort
+                currentSort={essentialsSortBy}
+                onSortChange={setEssentialsSortBy}
+                options={[]}
+                selected={[]}
+                onToggle={() => { }}
+            />
+            <FilterAccordion
+                title="Product Category"
+                options={categoryTree}
+                selected={selectedEssentialsCategories}
+                onToggle={(cat: string) => {
+                    if (selectedEssentialsCategories.includes(cat)) setSelectedEssentialsCategories(prev => prev.filter(c => c !== cat));
+                    else setSelectedEssentialsCategories(prev => [...prev, cat]);
+                }}
+                isNested
+            />
+            <FilterAccordion
+                title="Price"
+                isPriceRange
+                selected={selectedEssentialsPriceList}
+                onToggle={(range: string) => {
+                    if (selectedEssentialsPriceList.includes(range)) setSelectedEssentialsPriceList(prev => prev.filter(r => r !== range));
+                    else setSelectedEssentialsPriceList(prev => [...prev, range]);
+                }}
+                options={[]}
+            />
+            {dynamicFiltersList.map(filter => (
+                <FilterAccordion
+                    key={filter.key}
+                    title={filter.label}
+                    options={getOptionsFor(filter.key)}
+                    selected={selectedFilters[filter.key] || []}
+                    onToggle={(val: string) => toggleFilter(filter.key, val)}
+                />
+            ))}
+        </div>
+    );
+
     return (
-        <div className="bg-white">
+        <>
+            <div className="bg-white">
             {Array.from(new Set(homeSections.sectionOrder || [])).map((sectionId) => {
                 switch (sectionId) {
                     case 'hero':
@@ -609,51 +656,6 @@ const Home: React.FC = () => {
                         // Max 8 products
                         displayFeatured = displayFeatured.slice(0, 8);
 
-                        const activeEssentialsFilterCount = selectedEssentialsCategories.length + selectedEssentialsPriceList.length + Object.values(selectedFilters).reduce((acc: number, curr: string[]) => acc + curr.length, 0);
-
-                        const renderEssentialsSidebarContent = () => (
-                            <div className="w-full">
-                                <FilterAccordion
-                                    title="Sort By"
-                                    isSort
-                                    currentSort={essentialsSortBy}
-                                    onSortChange={setEssentialsSortBy}
-                                    options={[]}
-                                    selected={[]}
-                                    onToggle={() => { }}
-                                />
-                                <FilterAccordion
-                                    title="Product Category"
-                                    options={categoryTree}
-                                    selected={selectedEssentialsCategories}
-                                    onToggle={(cat: string) => {
-                                        if (selectedEssentialsCategories.includes(cat)) setSelectedEssentialsCategories(prev => prev.filter(c => c !== cat));
-                                        else setSelectedEssentialsCategories(prev => [...prev, cat]);
-                                    }}
-                                    isNested
-                                />
-                                <FilterAccordion
-                                    title="Price"
-                                    isPriceRange
-                                    selected={selectedEssentialsPriceList}
-                                    onToggle={(range: string) => {
-                                        if (selectedEssentialsPriceList.includes(range)) setSelectedEssentialsPriceList(prev => prev.filter(r => r !== range));
-                                        else setSelectedEssentialsPriceList(prev => [...prev, range]);
-                                    }}
-                                    options={[]}
-                                />
-                                {dynamicFiltersList.map(filter => (
-                                    <FilterAccordion
-                                        key={filter.key}
-                                        title={filter.label}
-                                        options={getOptionsFor(filter.key)}
-                                        selected={selectedFilters[filter.key] || []}
-                                        onToggle={(val: string) => toggleFilter(filter.key, val)}
-                                    />
-                                ))}
-                            </div>
-                        );
-
                         return (
                             <section key="essentials" className="bg-white text-luxury-black py-24 md:py-32 overflow-hidden relative border-t border-gray-100">
                                 <div className="max-w-[1800px] mx-auto px-6 lg:px-12 relative z-10">
@@ -680,59 +682,6 @@ const Home: React.FC = () => {
                                             </div>
                                         </div>
                                     </div>
-
-                                    {/* Mobile Sidebar */}
-                                    <AnimatePresence>
-                                        {isMobileFiltersOpen && (
-                                            <>
-                                                <motion.div
-                                                    initial={{ opacity: 0 }}
-                                                    animate={{ opacity: 1 }}
-                                                    exit={{ opacity: 0 }}
-                                                    className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] lg:hidden"
-                                                    onClick={() => setIsMobileFiltersOpen(false)}
-                                                />
-                                                <motion.div
-                                                    initial={{ x: '-100%' }}
-                                                    animate={{ x: 0 }}
-                                                    exit={{ x: '-100%' }}
-                                                    transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                                                    className="fixed inset-y-0 left-0 w-[85vw] max-w-sm bg-white shadow-2xl z-[100] flex flex-col lg:hidden"
-                                                >
-                                                    <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gray-50/50">
-                                                        <h3 className="font-serif text-2xl italic tracking-tight">Filters</h3>
-                                                        <button onClick={() => setIsMobileFiltersOpen(false)} className="p-2 bg-white rounded-full text-gray-500 shadow-sm border border-gray-100 hover:bg-gray-100">
-                                                            <X size={16} />
-                                                        </button>
-                                                    </div>
-
-                                                    <div className="flex-1 overflow-y-auto px-6 pt-2 pb-6">
-                                                        {renderEssentialsSidebarContent()}
-                                                    </div>
-
-                                                    <div className="p-5 border-t border-gray-100 bg-white space-y-3">
-                                                        <div className="text-center text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
-                                                            {displayFeatured.length} Results
-                                                        </div>
-                                                        <div className="flex gap-3">
-                                                            <button
-                                                                onClick={() => { setSelectedEssentialsCategories([]); setSelectedEssentialsPriceList([]); setSelectedFilters({}); }}
-                                                                className="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-500 border border-gray-200 rounded hover:bg-gray-50"
-                                                            >
-                                                                Clear
-                                                            </button>
-                                                            <button
-                                                                onClick={() => setIsMobileFiltersOpen(false)}
-                                                                className="flex-[2] py-3 text-[10px] font-bold uppercase tracking-widest bg-luxury-black text-white rounded hover:bg-luxury-gold transition-colors"
-                                                            >
-                                                                Apply Filters
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </motion.div>
-                                            </>
-                                        )}
-                                    </AnimatePresence>
 
                                     <div className="flex flex-col lg:flex-row items-start gap-10">
                                         {/* Left Sidebar (Desktop) */}
@@ -903,6 +852,63 @@ const Home: React.FC = () => {
                 }
             })}
         </div >
+
+            {/* Mobile Sidebar - Portaled to circumvent stacking contexts */}
+            {typeof document !== 'undefined' && createPortal(
+                <AnimatePresence>
+                    {isMobileFiltersOpen && (
+                        <>
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[10000] lg:hidden"
+                                onClick={() => setIsMobileFiltersOpen(false)}
+                            />
+                            <motion.div
+                                initial={{ x: '-100%' }}
+                                animate={{ x: 0 }}
+                                exit={{ x: '-100%' }}
+                                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                                className="fixed inset-y-0 left-0 w-[85vw] max-w-sm bg-white shadow-2xl z-[10000] flex flex-col lg:hidden"
+                            >
+                                <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gray-50/50">
+                                    <h3 className="font-serif text-2xl italic tracking-tight">Filters</h3>
+                                    <button onClick={() => setIsMobileFiltersOpen(false)} className="p-2 bg-white rounded-full text-gray-500 shadow-sm border border-gray-100 hover:bg-gray-100">
+                                        <X size={16} />
+                                    </button>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto px-6 pt-2 pb-6">
+                                    {renderEssentialsSidebarContent()}
+                                </div>
+
+                                <div className="p-5 border-t border-gray-100 bg-white space-y-3">
+                                    <div className="text-center text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
+                                        {displayFeatured.length} Results
+                                    </div>
+                                    <div className="flex gap-3">
+                                        <button
+                                            onClick={() => { setSelectedEssentialsCategories([]); setSelectedEssentialsPriceList([]); setSelectedFilters({}); }}
+                                            className="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-500 border border-gray-200 rounded hover:bg-gray-50"
+                                        >
+                                            Clear
+                                        </button>
+                                        <button
+                                            onClick={() => setIsMobileFiltersOpen(false)}
+                                            className="flex-[2] py-3 text-[10px] font-bold uppercase tracking-widest bg-luxury-black text-white rounded hover:bg-luxury-gold transition-colors"
+                                        >
+                                            Apply Filters
+                                        </button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        </>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
+        </>
     );
 };
 

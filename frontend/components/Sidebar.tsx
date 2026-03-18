@@ -127,12 +127,12 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, isOpen }) => 
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => onNavigate(activePage)} // Effectively close when clicking backdrop if parent handles it
-            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
+            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[9999] lg:hidden"
           />
         )}
       </AnimatePresence>
 
-      <aside className={`fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white border-r border-gray-200 text-gray-700 transition-all duration-300 overflow-y-auto custom-scrollbar z-50 ${isOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full lg:translate-x-0'}`}>
+      <aside className={`fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white border-r border-gray-200 text-gray-700 transition-all duration-300 overflow-y-auto custom-scrollbar z-[10000] ${isOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full lg:translate-x-0'}`}>
         <nav className="py-4 space-y-8">
           {menuItems.map((section) => (
             <div key={section.id} className="px-6">

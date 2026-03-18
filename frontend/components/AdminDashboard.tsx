@@ -1682,9 +1682,10 @@ const AdminDashboard: React.FC = () => {
                                         <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Main Category</label>
                                         <select
                                             className="w-full border p-2.5 rounded focus:outline-none focus:border-black text-sm bg-white"
-                                            value={formData.mainCategory || 'MENSWEAR'}
-                                            onChange={e => setFormData({ ...formData, mainCategory: e.target.value })}
+                                            value={formData.mainCategory || ''}
+                                            onChange={e => setFormData({ ...formData, mainCategory: e.target.value, subCategory: '' })}
                                         >
+                                            <option value="">Select Main Category</option>
                                             {mainCategories.map((c, idx) => <option key={c._id || c.id || idx} value={c.name}>{c.name}</option>)}
                                         </select>
                                     </div>

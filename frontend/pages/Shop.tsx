@@ -290,7 +290,7 @@ const Shop: React.FC = () => {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 lg:hidden"
+                            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] lg:hidden"
                             onClick={() => setIsMobileFiltersOpen(false)}
                         />
                         <motion.div
@@ -298,7 +298,7 @@ const Shop: React.FC = () => {
                             animate={{ x: 0 }}
                             exit={{ x: '-100%' }}
                             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className="fixed inset-y-0 left-0 w-[85vw] max-w-sm bg-white shadow-2xl z-50 flex flex-col lg:hidden"
+                            className="fixed inset-y-0 left-0 w-[85vw] max-w-sm bg-white shadow-2xl z-[100] flex flex-col lg:hidden"
                         >
                             <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gray-50/50">
                                 <h3 className="font-serif text-2xl italic tracking-tight">Filters</h3>

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useSearchParams, useLocation } from 'react-router-dom';
 import { Search, ChevronDown, X, Filter, TrendingUp, Sparkles } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
@@ -282,58 +283,61 @@ const Shop: React.FC = () => {
                 </div>
             </div>
 
-            {/* Mobile Sidebar */}
-            <AnimatePresence>
-                {isMobileFiltersOpen && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] lg:hidden"
-                            onClick={() => setIsMobileFiltersOpen(false)}
-                        />
-                        <motion.div
-                            initial={{ x: '-100%' }}
-                            animate={{ x: 0 }}
-                            exit={{ x: '-100%' }}
-                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className="fixed inset-y-0 left-0 w-[85vw] max-w-sm bg-white shadow-2xl z-[100] flex flex-col lg:hidden"
-                        >
-                            <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gray-50/50">
-                                <h3 className="font-serif text-2xl italic tracking-tight">Filters</h3>
-                                <button onClick={() => setIsMobileFiltersOpen(false)} className="p-2 bg-white rounded-full text-gray-500 shadow-sm border border-gray-100 hover:bg-gray-100">
-                                    <X size={16} />
-                                </button>
-                            </div>
-
-                            <div className="flex-1 overflow-y-auto px-6 pt-2 pb-6">
-                                {renderSidebarContent()}
-                            </div>
-
-                            <div className="p-5 border-t border-gray-100 bg-white space-y-3">
-                                <div className="text-center text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
-                                    {filteredProducts.length} Results
-                                </div>
-                                <div className="flex gap-3">
-                                    <button
-                                        onClick={() => { setSelectedCategories([]); setSelectedPriceRanges([]); setSelectedFilters({}); }}
-                                        className="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-500 border border-gray-200 rounded hover:bg-gray-50"
-                                    >
-                                        Clear
-                                    </button>
-                                    <button
-                                        onClick={() => setIsMobileFiltersOpen(false)}
-                                        className="flex-[2] py-3 text-[10px] font-bold uppercase tracking-widest bg-luxury-black text-white rounded hover:bg-luxury-gold transition-colors"
-                                    >
-                                        Apply Filters
+            {/* Mobile Sidebar - Handled via Portal */}
+            {typeof document !== 'undefined' && createPortal(
+                <AnimatePresence>
+                    {isMobileFiltersOpen && (
+                        <>
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9999] lg:hidden"
+                                onClick={() => setIsMobileFiltersOpen(false)}
+                            />
+                            <motion.div
+                                initial={{ x: '-100%' }}
+                                animate={{ x: 0 }}
+                                exit={{ x: '-100%' }}
+                                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                                className="fixed inset-y-0 left-0 w-[85vw] max-w-sm bg-white shadow-2xl z-[9999] flex flex-col lg:hidden"
+                            >
+                                <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gray-50/50">
+                                    <h3 className="font-serif text-2xl italic tracking-tight">Filters</h3>
+                                    <button onClick={() => setIsMobileFiltersOpen(false)} className="p-2 bg-white rounded-full text-gray-500 shadow-sm border border-gray-100 hover:bg-gray-100">
+                                        <X size={16} />
                                     </button>
                                 </div>
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
+
+                                <div className="flex-1 overflow-y-auto px-6 pt-2 pb-6">
+                                    {renderSidebarContent()}
+                                </div>
+
+                                <div className="p-5 border-t border-gray-100 bg-white space-y-3">
+                                    <div className="text-center text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
+                                        {filteredProducts.length} Results
+                                    </div>
+                                    <div className="flex gap-3">
+                                        <button
+                                            onClick={() => { setSelectedCategories([]); setSelectedPriceRanges([]); setSelectedFilters({}); }}
+                                            className="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-500 border border-gray-200 rounded hover:bg-gray-50"
+                                        >
+                                            Clear
+                                        </button>
+                                        <button
+                                            onClick={() => setIsMobileFiltersOpen(false)}
+                                            className="flex-[2] py-3 text-[10px] font-bold uppercase tracking-widest bg-luxury-black text-white rounded hover:bg-luxury-gold transition-colors"
+                                        >
+                                            Apply Filters
+                                        </button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        </>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
 
             {/* Main Application Area (Desktop) */}
             <div className="max-w-[1700px] mx-auto px-6 lg:px-12 py-8 lg:py-12">

@@ -502,9 +502,9 @@ const Home: React.FC = () => {
                                         {displayCategories.map((cat, i) => (
                                             <Link to={cat.link} key={i} className="group relative aspect-[3/4] overflow-hidden block min-w-[75vw] md:min-w-0 snap-center md:snap-align-none">
                                                 <motion.div
-                                                    initial={{ opacity: 0, y: 20 }}
+                                                    initial={{ opacity: 0, y: 10 }}
                                                     animate={{ opacity: 1, y: 0 }}
-                                                    transition={{ delay: i * 0.1, duration: 0.8 }}
+                                                    transition={{ duration: 0.6 }}
                                                     className="w-full h-full"
                                                 >
                                                     <img
@@ -785,9 +785,9 @@ const Home: React.FC = () => {
                                                         {displayFeatured.map((product, i) => (
                                                             <motion.div
                                                                 key={product.id}
-                                                initial={{ opacity: 0, y: 30 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                                transition={{ delay: i * 0.05, duration: 0.8 }}
+                                                                initial={{ opacity: 0, y: 10 }}
+                                                                animate={{ opacity: 1, y: 0 }}
+                                                                transition={{ duration: 0.6 }}
                                                                 className="group flex flex-col space-y-4"
                                                             >
                                                                 <ProductCard
@@ -844,9 +844,9 @@ const Home: React.FC = () => {
                                         {trendingProducts.map((product, i) => (
                                             <motion.div
                                                 key={product.id}
-                                                initial={{ opacity: 0, scale: 0.95 }}
+                                                initial={{ opacity: 0, scale: 0.98 }}
                                                 animate={{ opacity: 1, scale: 1 }}
-                                                transition={{ delay: i * 0.15, duration: 1, ease: [0.22, 1, 0.36, 1] }}
+                                                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
                                             >
                                                 <ProductCard
                                                     {...product}

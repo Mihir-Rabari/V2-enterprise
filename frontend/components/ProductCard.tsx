@@ -74,9 +74,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ id, name, price, image, hover
 
     return (
         <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: [0.21, 0.47, 0.32, 0.98] }}
+            transition={{ duration: 0.5, ease: [0.21, 0.47, 0.32, 0.98] }}
             className="group relative"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}

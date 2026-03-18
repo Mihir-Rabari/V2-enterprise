@@ -61,8 +61,21 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ isOpen, onClose, 
 
     const getAbsoluteUrl = (url: string) => {
         if (!url) return '#';
-        if (url.startsWith('http://') || url.startsWith('https://')) return url;
-        return `https://${url}`;
+        const trimmed = url.trim();
+        // Handle protocol-relative URLs (e.g., //google.com) or full URLs
+        if (/^(https?:\/\/|\/\/)/i.test(trimmed)) {
+            return trimmed.startsWith('//') ? `https:${trimmed}` : trimmed;
+        }
+        // Handle URLs with localhost or current origin mistakenly included
+        if (trimmed.includes(window.location.host)) {
+            const parts = trimmed.split(window.location.host);
+            const path = parts[parts.length - 1];
+            if (path.startsWith('http://') || path.startsWith('https://')) return path;
+            // Otherwise, it's likely a messy input like localhost:3000/google.com
+            const clean = path.startsWith('/') ? path.substring(1) : path;
+            return `https://${clean}`;
+        }
+        return `https://${trimmed}`;
     };
 
     return (

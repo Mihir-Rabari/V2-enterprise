@@ -91,7 +91,7 @@ const Checkout: React.FC = () => {
 
     const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
     const shipping = 0; // Removed extra shipping charges
-    const discountPerItem = 0; // Removed extra method discounts
+    const discountPerItem = paymentMethod === 'pickup' ? 100 : (paymentMethod === 'prepaid' ? 50 : 0);
     const checkoutDiscount = totalItems * discountPerItem;
     const total = subtotal + shipping - checkoutDiscount;
 

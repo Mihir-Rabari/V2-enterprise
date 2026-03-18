@@ -93,10 +93,10 @@ const SubCategories: React.FC = () => {
                     {/* Map Subcategories */}
                     {subCategories.map((sub, idx) => (
                         <motion.div
-                            key={sub.name || sub.title}
-                            initial={{ opacity: 0, y: 30 }}
+                            key={sub.id || sub.name}
+                            initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.8, delay: idx * 0.15 }}
+                            transition={{ duration: 0.6 }}
                             className="group"
                         >
                             <Link to={`/${category}/${encodeURIComponent(sub.name || sub.title)}`} className="block space-y-8">

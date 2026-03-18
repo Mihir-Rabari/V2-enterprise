@@ -69,11 +69,18 @@ export const createOrderService = async (input: CreateOrderInput) => {
         };
     });
 
-    // 3. Apply coupon discount safely
+    // 3. Apply coupon and method-specific discounts safely
     let discount = 0;
 
-    // Method-specific discounts have been removed as per user request
+    // Method-specific discounts (₹50/item for prepaid, ₹100/item for pickup)
     const method = input.method.toLowerCase();
+    const totalItems = input.items.reduce((acc, item) => acc + item.quantity, 0);
+    
+    if (method === 'pickup') {
+        discount += totalItems * 100;
+    } else if (method === 'prepaid') {
+        discount += totalItems * 50;
+    }
 
     if (input.couponCode) {
         const coupon = await Coupon.findOne({ code: input.couponCode });

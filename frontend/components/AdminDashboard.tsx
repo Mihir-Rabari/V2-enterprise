@@ -916,6 +916,7 @@ const AdminDashboard: React.FC = () => {
                                 onChange={url => setFormData({ ...formData, logoImage: url })}
                                 folder="v2-logo"
                             />
+                            <p className="text-[10px] text-gray-400 mt-1 italic font-medium tracking-wider">Recommended: 400x100px (Horizontal) or 200x200px (Square)</p>
                         </div>
                         <div>
                             <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Email</label>
@@ -1004,6 +1005,7 @@ const AdminDashboard: React.FC = () => {
                                 folder="v2-hero"
                                 isVideo={true}
                             />
+                            <p className="text-[10px] text-gray-400 mt-1 italic font-medium tracking-wider">Recommended: 1920x1080px (16:9) for Desktop</p>
                         </div>
                         <div>
                             <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Tagline</label>
@@ -1317,6 +1319,7 @@ const AdminDashboard: React.FC = () => {
                                         onChange={url => setFormData({ ...formData, photo: url })}
                                         folder="v2-products"
                                     />
+                                    <p className="text-[10px] text-gray-400 mt-1 italic font-medium tracking-wider">Recommended: 1000x1500px (2:3 Aspect Ratio)</p>
                                     {validationErrors.photo && <p className="text-[10px] text-red-500 font-bold uppercase mt-1">{validationErrors.photo}</p>}
                                 </div>
 
@@ -1328,6 +1331,7 @@ const AdminDashboard: React.FC = () => {
                                         onChange={url => setFormData({ ...formData, hoverImage: url })}
                                         folder="v2-products"
                                     />
+                                    <p className="text-[10px] text-gray-400 mt-1 italic font-medium tracking-wider">Recommended: 1000x1500px (Used for hover effects)</p>
                                 </div>
 
                                 {/* Additional Photos Gallery & Video */}
@@ -1343,6 +1347,7 @@ const AdminDashboard: React.FC = () => {
                                         folder="v2-products"
                                         compact={true}
                                     />
+                                    <p className="text-[10px] text-gray-400 mt-1 italic font-medium tracking-wider">Recommended: 1000x1500px (Add multiple views)</p>
 
                                     <div className="mt-4">
                                         <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Embedded Video URLs (e.g. YouTube)</label>
@@ -1496,6 +1501,7 @@ const AdminDashboard: React.FC = () => {
                             isVideo={formData.mediaType === 'video'}
                             accept={formData.mediaType === 'video' ? 'video/*' : 'image/*'}
                         />
+                        <p className="text-[10px] text-gray-400 mt-1 italic font-medium tracking-wider">Recommended: 1920x600px (3.2:1 Aspect Ratio)</p>
                         <div>
                             <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Title</label>
                             <input
@@ -1637,6 +1643,7 @@ const AdminDashboard: React.FC = () => {
                                 onChange={url => setFormData({ ...formData, image: url })}
                                 folder="v2-logos"
                             />
+                            <p className="text-[10px] text-gray-400 mt-1 italic font-medium tracking-wider">Recommended: Horizontal (~400x100px) or Square (~200px)</p>
                         </div>
                         <div>
                             <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Location</label>
@@ -1783,16 +1790,55 @@ const AdminDashboard: React.FC = () => {
                                 </select>
                             </div>
                         </div>
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Media (Image or Video)</label>
-                            <ImageUploader
-                                value={formData.url || ''}
-                                onChange={url => setFormData({ ...formData, url: url })}
-                                accept="image/*,video/*"
-                                folder="v2-hero-slides"
-                                isVideo={formData.type === 'video'}
-                            />
-                        </div>
+                        {formData.type === 'video' ? (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Laptop Video (21:9)</label>
+                                    <ImageUploader
+                                        value={formData.laptopUrl || formData.url || ''}
+                                        onChange={url => setFormData({ ...formData, laptopUrl: url, url: url })}
+                                        accept="video/*"
+                                        folder="v2-hero-slides"
+                                        isVideo={true}
+                                    />
+                                    <p className="text-[10px] text-gray-400 mt-0.5 italic tracking-wider">1920x1080 (16:9) or 2560x1080 (21:9)</p>
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Tablet Video (4:3)</label>
+                                    <ImageUploader
+                                        value={formData.tabletUrl || ''}
+                                        onChange={url => setFormData({ ...formData, tabletUrl: url })}
+                                        accept="video/*"
+                                        folder="v2-hero-slides"
+                                        isVideo={true}
+                                    />
+                                    <p className="text-[10px] text-gray-400 mt-0.5 italic tracking-wider">1024x1024 (Square) or 1024x768 (4:3)</p>
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Mobile Video (9:16)</label>
+                                    <ImageUploader
+                                        value={formData.mobileUrl || ''}
+                                        onChange={url => setFormData({ ...formData, mobileUrl: url })}
+                                        accept="video/*"
+                                        folder="v2-hero-slides"
+                                        isVideo={true}
+                                    />
+                                    <p className="text-[10px] text-gray-400 mt-0.5 italic tracking-wider">1080x1920 (9:16 Vertical Content)</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Slide Image</label>
+                                <ImageUploader
+                                    value={formData.url || ''}
+                                    onChange={url => setFormData({ ...formData, url: url })}
+                                    accept="image/*"
+                                    folder="v2-hero-slides"
+                                    isVideo={false}
+                                />
+                                <p className="text-[10px] text-gray-400 mt-1 italic tracking-wider">Recommended: 1920x1080px (16:9)</p>
+                            </div>
+                        )}
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Tagline</label>
@@ -1969,7 +2015,7 @@ const AdminDashboard: React.FC = () => {
                             header: 'Preview', accessor: (row: HeroSlide) => (
                                 <div className="w-20 aspect-video rounded-lg overflow-hidden border border-gray-100 bg-gray-50 relative group">
                                     {row.type === 'video' ? (
-                                        <video src={row.url} className="w-full h-full object-cover" muted />
+                                        <video src={row.laptopUrl || row.url} className="w-full h-full object-cover" muted />
                                     ) : (
                                         <img src={row.url} alt={row.title} className="w-full h-full object-cover" />
                                     )}

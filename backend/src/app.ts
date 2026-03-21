@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
 import { env } from './config/env';
 import { errorHandler } from './middlewares/error.middleware';
 
@@ -60,10 +61,26 @@ app.use(`${API}/payments`, paymentRoutes);
 app.use(`${API}/addresses`, addressRoutes);
 app.use(`${API}/filters`, filtersRoutes);
 
-// ── 404 Handler ──────────────────────────────────────────────────────────────
-app.use((_req, res) => {
-    res.status(404).json({ success: false, message: 'Route not found' });
+// ── API 404 Handler ──────────────────────────────────────────────────────────
+app.use('/api', (_req, res) => {
+    res.status(404).json({ success: false, message: 'API Route not found' });
 });
+
+// ── Serve Frontend (Production) ──────────────────────────────────────────────
+if (env.NODE_ENV === 'production') {
+    // In production (dist/app.js), __dirname is backend/dist. We go up twice to reach the root public_html/new_website/build.
+    const frontendPath = path.join(__dirname, '../../build');
+    app.use(express.static(frontendPath));
+
+    app.get('*', (req, res) => {
+        res.sendFile(path.join(frontendPath, 'index.html'));
+    });
+} else {
+    // ── Global 404 Handler (Development) ─────────────────────────────────────
+    app.use((_req, res) => {
+        res.status(404).json({ success: false, message: 'Route not found' });
+    });
+}
 
 // ── Global Error Handler ──────────────────────────────────────────────────────
 app.use(errorHandler);

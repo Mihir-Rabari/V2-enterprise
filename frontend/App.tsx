@@ -5,6 +5,7 @@ import CustomerView from './components/CustomerView';
 // Lazy load admin components to optimize performance and fix preload warnings
 const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
 const AdminLogin = lazy(() => import('./pages/AdminLogin'));
+const SizeGuide = lazy(() => import('./pages/SizeGuide'));
 
 const ProtectedAdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const isAdmin = localStorage.getItem('v2_admin_session') === 'true';
@@ -37,6 +38,8 @@ function App() {
               </ProtectedAdminRoute>
             }
           />
+
+          <Route path="/size-guide" element={<SizeGuide />} />
 
           {/* Customer routes - default */}
           <Route path="/*" element={<CustomerView onSwitchToAdmin={() => window.location.href = '/admin/login'} />} />

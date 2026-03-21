@@ -60,8 +60,6 @@ export interface Product {
   isNewArrival?: boolean;
   isTrending?: boolean;
   tags?: string[];
-  videoUrls?: string[];
-  colorHex?: string;
   status: 'Active' | 'Inactive' | 'ACTIVE' | 'INACTIVE';
 }
 
@@ -360,6 +358,9 @@ export interface HeroSlide {
   id: string | number;
   type: 'image' | 'video';
   url: string;
+  laptopUrl?: string;
+  mobileUrl?: string;
+  tabletUrl?: string;
   tagline: string;
   title: string;
   description: string;

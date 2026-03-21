@@ -20,8 +20,15 @@ interface HeroProps {
 
 const Hero: React.FC<HeroProps> = ({ slides }) => {
     const [index, setIndex] = React.useState(0);
+    const [width, setWidth] = React.useState(window.innerWidth);
     const activeSlides = slides.filter(s => s.status.toUpperCase() === 'ACTIVE');
     const current = activeSlides[index] || activeSlides[0];
+
+    React.useEffect(() => {
+        const handleResize = () => setWidth(window.innerWidth);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     React.useEffect(() => {
         if (activeSlides.length <= 1) return;
@@ -34,6 +41,13 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
 
         return () => clearInterval(timer);
     }, [activeSlides.length, index, current?.duration]);
+
+    const videoUrl = React.useMemo(() => {
+        if (!current) return '';
+        if (width < 640) return current.mobileUrl || current.url;
+        if (width < 1024) return current.tabletUrl || current.url;
+        return current.laptopUrl || current.url;
+    }, [current, width]);
 
     if (!current) return null;
 
@@ -55,10 +69,10 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
                                 loop
                                 muted
                                 playsInline
-                                key={current.url}
+                                key={videoUrl}
                                 className="w-full h-full object-cover opacity-60 scale-105"
                             >
-                                <source src={current.url} type="video/mp4" />
+                                <source src={videoUrl} type="video/mp4" />
                             </video>
                         ) : (
                             <img

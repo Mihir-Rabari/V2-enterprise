@@ -435,7 +435,12 @@ const ProductDetails: React.FC = () => {
                             <div className="space-y-4 pt-4">
                                 <div className="flex justify-between items-center">
                                     <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">Select Proportions</span>
-                                    <button className="text-[9px] font-bold uppercase tracking-[0.2em] text-luxury-gold border-b border-luxury-gold/30 pb-0.5">Measurement Guide</button>
+                                    <button 
+                                        onClick={() => navigate('/size-guide')}
+                                        className="text-[9px] font-bold uppercase tracking-[0.2em] text-luxury-gold border-b border-luxury-gold/30 pb-0.5 hover:border-luxury-gold transition-colors"
+                                    >
+                                        Measurement Guide
+                                    </button>
                                 </div>
                                 <div className="grid grid-cols-4 gap-4">
                                     {sizeOptions.map(opt => {

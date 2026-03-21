@@ -149,9 +149,6 @@ const Footer: React.FC<FooterProps> = ({ onSwitchToAdmin }) => {
                         <span className="text-[9px] font-bold tracking-luxury-widest text-gray-400 uppercase">
                             {siteSettings.copyright}
                         </span>
-                        <span className="text-[8px] font-bold tracking-luxury-widest text-gray-300 uppercase">
-                            Developed by <a href="https://eaglebyte.in" target="_blank" rel="noopener noreferrer" className="text-luxury-gold hover:text-luxury-black transition-colors">eaglebyte.in</a>
-                        </span>
                     </div>
                     <div className="flex items-center gap-4 grayscale opacity-60">
                         {/* Payment Icons Simulation */}

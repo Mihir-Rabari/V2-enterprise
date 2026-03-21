@@ -153,10 +153,15 @@ const AdminLogin: React.FC = () => {
                     </form>
                 </motion.div>
 
-                <div className="mt-8 text-center">
+                <div className="mt-8 text-center space-y-4">
                     <Link to="/" className="inline-flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-gray-400 hover:text-black transition-colors">
                         <ChevronLeft size={14} /> Return to Storefront
                     </Link>
+                    <div className="pt-8 border-t border-gray-100/50">
+                        <p className="text-[8px] font-bold tracking-luxury-widest text-gray-300 uppercase">
+                            Developed by <a href="https://eaglebyte.in" target="_blank" rel="noopener noreferrer" className="text-luxury-gold hover:text-luxury-black transition-colors">eaglebyte.in</a>
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>

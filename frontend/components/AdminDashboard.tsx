@@ -1885,8 +1885,13 @@ const AdminDashboard: React.FC = () => {
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-gray-400 mb-1">Hero Image URL</label>
-                                <input type="text" className="w-full border p-2 rounded text-sm" value={formData.heroImage || ''} onChange={e => setFormData({ ...formData, heroImage: e.target.value })} />
+                                <label className="block text-xs font-bold text-gray-400 mb-1">Hero Image</label>
+                                <ImageUploader
+                                    value={formData.heroImage || ''}
+                                    onChange={url => setFormData({ ...formData, heroImage: url })}
+                                    folder="v2-about"
+                                />
+                                <p className="text-[10px] text-gray-400 mt-1 italic tracking-wider">Recommended: 1920x1080px (16:9)</p>
                             </div>
                         </div>
 
@@ -1912,8 +1917,13 @@ const AdminDashboard: React.FC = () => {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-400 mb-1">Vision Image URL</label>
-                                    <input type="text" className="w-full border p-2 rounded text-sm" value={formData.visionImage || ''} onChange={e => setFormData({ ...formData, visionImage: e.target.value })} />
+                                    <label className="block text-xs font-bold text-gray-400 mb-1">Vision Image</label>
+                                    <ImageUploader
+                                        value={formData.visionImage || ''}
+                                        onChange={url => setFormData({ ...formData, visionImage: url })}
+                                        folder="v2-about"
+                                    />
+                                    <p className="text-[10px] text-gray-400 mt-1 italic tracking-wider">Recommended: 1000x1200px (Portrait)</p>
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-gray-400 mb-1">Archive Text</label>
@@ -1925,8 +1935,13 @@ const AdminDashboard: React.FC = () => {
                         <div className="space-y-4">
                             <h4 className="text-[10px] font-bold uppercase tracking-widest text-luxury-gold border-b pb-1">Footer Aesthetics</h4>
                             <div>
-                                <label className="block text-xs font-bold text-gray-400 mb-1">Footer Image URL</label>
-                                <input type="text" className="w-full border p-2 rounded text-sm" value={formData.footerImage || ''} onChange={e => setFormData({ ...formData, footerImage: e.target.value })} />
+                                <label className="block text-xs font-bold text-gray-400 mb-1">Footer Image</label>
+                                <ImageUploader
+                                    value={formData.footerImage || ''}
+                                    onChange={url => setFormData({ ...formData, footerImage: url })}
+                                    folder="v2-about"
+                                />
+                                <p className="text-[10px] text-gray-400 mt-1 italic tracking-wider">Recommended: 1920x800px (Wide)</p>
                             </div>
                         </div>
                     </div>

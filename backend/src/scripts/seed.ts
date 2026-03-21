@@ -371,6 +371,9 @@ async function main() {
             {
                 type: 'video',
                 url: '/The_Dior_Men_s_Summer_2022_Campaign_Video_720P.mp4',
+                laptopUrl: '/The_Dior_Men_s_Summer_2022_Campaign_Video_720P.mp4',
+                tabletUrl: '/The_Dior_Men_s_Summer_2022_Campaign_Video_720P.mp4',
+                mobileUrl: '/The_Dior_Men_s_Summer_2022_Campaign_Video_720P.mp4',
                 tagline: 'COLLECTION 2026',
                 title: 'THE ART OF\nDISCIPLINE',
                 description: 'Meticulously crafted for the modern individual who values silence over noise.',

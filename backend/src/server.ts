@@ -1,4 +1,10 @@
-import './config/env'; // Must be first — validates env vars
+// Load .env relative to THIS file's location (backend/src/server.ts → compiled to backend/dist/server.js)
+// This ensures dotenv works regardless of which directory PM2/Node starts from.
+import path from 'path';
+import dotenv from 'dotenv';
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+import './config/env'; // Validate required vars after dotenv has loaded them
 import app from './app';
 import { connectDB } from './config/db';
 import { env } from './config/env';
@@ -24,3 +30,4 @@ process.on('SIGINT', async () => {
 });
 
 start();
+

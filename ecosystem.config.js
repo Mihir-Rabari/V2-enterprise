@@ -1,12 +1,17 @@
 // PM2 Ecosystem Configuration
-// Usage: pm2 start ecosystem.config.js
+// Usage: pm2 start ecosystem.config.js --env production
 // Docs: https://pm2.keymetrics.io/docs/usage/application-declaration/
 
 module.exports = {
     apps: [
         {
             name: 'v2-app',
-            script: './backend/dist/server.js',
+
+            // Path is relative to cwd below
+            script: './dist/server.js',
+
+            // !! Critical: run from backend/ so dotenv finds .env in the right place
+            cwd: './backend',
 
             // # Instances & Clustering
             instances: 1,           // Use 'max' for cluster mode across all CPU cores
@@ -17,13 +22,13 @@ module.exports = {
             watch: false,           // Never watch in production
             max_memory_restart: '512M',
 
-            // # Logging
-            output: './logs/out.log',
-            error: './logs/error.log',
+            // # Logging (relative to repo root)
+            output: '../logs/out.log',
+            error: '../logs/error.log',
             log_date_format: 'YYYY-MM-DD HH:mm:ss',
             merge_logs: true,
 
-            // # Environment
+            // # Environment — passed directly so they're available even before dotenv runs
             env_production: {
                 NODE_ENV: 'production',
                 PORT: 5000,
@@ -31,3 +36,4 @@ module.exports = {
         },
     ],
 };
+

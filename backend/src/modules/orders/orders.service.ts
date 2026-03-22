@@ -1,8 +1,11 @@
 import { Order } from '../../models/Order';
 import { Product } from '../../models/Product';
 import { Coupon } from '../../models/Coupon';
+import { User } from '../../models/User';
 import mongoose from 'mongoose';
 import { verifyRazorpaySignature } from '../payments/payments.service';
+import { sendMail } from '../../utils/mailer';
+import { orderPlacedTemplate, orderStatusTemplate } from '../../utils/emailTemplates';
 
 interface CreateOrderInput {
     userId: string;
@@ -17,9 +20,6 @@ interface CreateOrderInput {
 }
 
 export const createOrderService = async (input: CreateOrderInput) => {
-    // console.log('[Orders] Creating order for user:', input.userId);
-    // console.log('[Orders] Input items:', JSON.stringify(input.items, null, 2));
-
     if (!mongoose.Types.ObjectId.isValid(input.userId)) {
         console.error('[Orders] CRITICAL: Invalid User ID format received:', input.userId);
         throw new Error(`Invalid User ID format (${input.userId}). Please log out and log in again.`);
@@ -39,17 +39,12 @@ export const createOrderService = async (input: CreateOrderInput) => {
         status: 'ACTIVE'
     });
 
-    // console.log('[Orders] Products found in DB:', products.length);
-
     if (products.length !== input.items.length) {
         const foundIds = products.map(p => p._id.toString());
         const missingIds = input.items
             .filter(i => !foundIds.includes(i.productId))
             .map(i => i.productId);
-
         const foundButInactive = products.filter(p => p.status !== 'ACTIVE').map(p => p._id.toString());
-
-        console.error('[Orders] ERROR: Missing or Inactive products detected:', { missingIds, foundButInactive });
         throw new Error(`Some items in your cart are no longer available (${[...missingIds, ...foundButInactive].join(', ')}). Please clear your cart and try again.`);
     }
 
@@ -69,13 +64,11 @@ export const createOrderService = async (input: CreateOrderInput) => {
         };
     });
 
-    // 3. Apply coupon and method-specific discounts safely
+    // 3. Apply coupon and method-specific discounts
     let discount = 0;
-
-    // Method-specific discounts (₹50/item for prepaid, ₹100/item for pickup)
     const method = input.method.toLowerCase();
     const totalItems = input.items.reduce((acc, item) => acc + item.quantity, 0);
-    
+
     if (method === 'pickup') {
         discount += totalItems * 100;
     } else if (method === 'prepaid') {
@@ -99,15 +92,12 @@ export const createOrderService = async (input: CreateOrderInput) => {
         if (!input.razorpayOrderId || !input.razorpayPaymentId || !input.razorpaySignature) {
             throw new Error('Razorpay payment details are missing for prepaid order.');
         }
-
         const isVerified = verifyRazorpaySignature(
             input.razorpayOrderId,
             input.razorpayPaymentId,
             input.razorpaySignature
         );
-
         if (!isVerified) {
-            console.error('[Orders] Razorpay verification failed for signature:', input.razorpaySignature);
             throw new Error('Payment verification failed. Please contact support.');
         }
     }
@@ -133,18 +123,44 @@ export const createOrderService = async (input: CreateOrderInput) => {
         status: method === 'prepaid' ? 'CONFIRMED' : 'PENDING',
     });
 
-    // 6. Deduct stock for confirmed orders (Prepaid is confirmed immediately, COD/Pickup are pending but should still hold stock?)
-    // In most e-commerce, COD also deducts stock to prevent overselling.
+    // 6. Deduct stock
     for (const item of input.items) {
         if (item.size) {
             await Product.updateOne(
                 { _id: item.productId, 'variants.size': item.size },
                 { $inc: { 'variants.$.quantity': -item.quantity } }
             );
-        } else {
-            // Handle products without sizes if any (like accessories)
-            // But based on schema variants always have size
         }
+    }
+
+    // 7. Send Order Placed confirmation email (non-blocking)
+    try {
+        const user = await User.findById(input.userId).select('name email').lean();
+        if (user?.email) {
+            await sendMail(
+                user.email,
+                `Your V2 Order ${orderIdCode} is Confirmed`,
+                orderPlacedTemplate({
+                    orderId: orderIdCode,
+                    name: user.name,
+                    items: orderItems.map(i => ({
+                        productName: i.productName,
+                        productPhoto: i.productPhoto,
+                        quantity: i.quantity,
+                        size: i.size,
+                        color: i.color,
+                        priceAtTime: i.priceAtTime,
+                    })),
+                    total,
+                    discount,
+                    method: input.method,
+                    address: input.address,
+                    phone: input.phone,
+                })
+            );
+        }
+    } catch (emailErr: any) {
+        console.error('[Orders] Failed to send order confirmation email:', emailErr.message);
     }
 
     return { ...order.toObject(), id: order._id.toString() };
@@ -169,7 +185,6 @@ export const getAllOrdersService = async (page = 1, limit = 20) => {
 
     const ordersWithId = orders.map(o => {
         const obj = o.toObject();
-        // Rename userId to user to match Prisma output if frontend expects it
         const { userId, ...rest } = obj;
         return { ...rest, user: userId, id: o._id.toString() };
     });
@@ -180,7 +195,6 @@ export const getAllOrdersService = async (page = 1, limit = 20) => {
 export const updateOrderStatusService = async (id: string, updates: { status?: string; awbNumber?: string; trackingLink?: string }) => {
     const query = mongoose.Types.ObjectId.isValid(id) ? { _id: id } : { id: id };
 
-    // Build update object based on provided fields
     const updateData: any = {};
     if (updates.status) updateData.status = updates.status;
     if (updates.awbNumber !== undefined) updateData.awbNumber = updates.awbNumber;
@@ -190,8 +204,44 @@ export const updateOrderStatusService = async (id: string, updates: { status?: s
         query,
         { $set: updateData },
         { new: true }
-    );
+    ).populate('userId', 'name email');
     if (!order) throw new Error('Order not found.');
+
+    // Send status change email (non-blocking)
+    if (updates.status) {
+        try {
+            const userField = (order as any).userId as { name?: string; email?: string } | null;
+            const userEmail = userField?.email;
+            const userName = userField?.name || 'Customer';
+
+            if (userEmail) {
+                const statuses: Record<string, string> = {
+                    PENDING: 'Your Order is Pending',
+                    CONFIRMED: 'Your Order is Confirmed',
+                    PROCESSING: 'Your Order is Being Prepared',
+                    SHIPPED: `Your V2 Order has been Dispatched`,
+                    DELIVERED: 'Your V2 Order has Arrived',
+                    CANCELLED: 'Update on Your V2 Order',
+                };
+                const subject = statuses[updates.status] || `Order Update: ${updates.status}`;
+
+                await sendMail(
+                    userEmail,
+                    subject,
+                    orderStatusTemplate(
+                        userName,
+                        order.orderId,
+                        updates.status,
+                        updates.awbNumber,
+                        updates.trackingLink
+                    )
+                );
+            }
+        } catch (emailErr: any) {
+            console.error('[Orders] Failed to send status update email:', emailErr.message);
+        }
+    }
+
     return { ...order.toObject(), id: order._id.toString() };
 };
 

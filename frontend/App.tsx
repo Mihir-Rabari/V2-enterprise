@@ -6,6 +6,8 @@ import CustomerView from './components/CustomerView';
 const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
 const AdminLogin = lazy(() => import('./pages/AdminLogin'));
 const SizeGuide = lazy(() => import('./pages/SizeGuide'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 
 const ProtectedAdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const isAdmin = localStorage.getItem('v2_admin_session') === 'true';
@@ -41,6 +43,10 @@ function App() {
 
           <Route path="/size-guide" element={<SizeGuide />} />
 
+          {/* Auth utility routes */}
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
+
           {/* Customer routes - default */}
           <Route path="/*" element={<CustomerView onSwitchToAdmin={() => window.location.href = '/admin/login'} />} />
         </Routes>
@@ -50,3 +56,4 @@ function App() {
 }
 
 export default App;
+

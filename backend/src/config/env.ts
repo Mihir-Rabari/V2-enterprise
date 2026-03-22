@@ -18,6 +18,8 @@ const envSchema = z.object({
     FRONTEND_URL: z.string().default('http://localhost:5173').transform(s => s.split(',')),
     RAZORPAY_KEY_ID: z.string().min(1, 'RAZORPAY_KEY_ID is required'),
     RAZORPAY_KEY_SECRET: z.string().min(1, 'RAZORPAY_KEY_SECRET is required'),
+    SMTP_EMAIL: z.string().email().optional(),
+    SMTP_APP_PASSWORD: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

@@ -72,6 +72,12 @@ export const authAPI = {
         IS_MOCK
             ? mockResponse({ ...initialCustomers[0], ...data })
             : api.patch('/auth/me', data),
+
+    forgotPassword: (email: string) =>
+        api.post('/auth/forgot-password', { email }),
+
+    resetPassword: (token: string, password: string) =>
+        api.post(`/auth/reset-password/${token}`, { password }),
 };
 
 export const productsAPI = {

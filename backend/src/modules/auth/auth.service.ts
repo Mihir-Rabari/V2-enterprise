@@ -3,6 +3,9 @@ import { hashPassword, comparePassword } from '../../utils/hash';
 import { signToken } from '../../utils/jwt';
 import { env } from '../../config/env';
 import { RegisterInput, LoginInput } from './auth.schema';
+import { sendMail } from '../../utils/mailer';
+import { forgotPasswordTemplate } from '../../utils/emailTemplates';
+import crypto from 'crypto';
 
 export const registerService = async (input: RegisterInput) => {
     const existing = await User.findOne({ email: input.email });
@@ -49,18 +52,61 @@ export const getMeService = async (userId: string) => {
 };
 
 export const updateMeService = async (userId: string, data: { name?: string; firstName?: string; lastName?: string; phone?: string }) => {
-    // console.log('[Auth] Updating user:', userId, 'with data:', JSON.stringify(data, null, 2));
     try {
         const user = await User.findByIdAndUpdate(userId, data, { new: true }).select('-password');
         if (!user) {
             console.warn('[Auth] User not found for update:', userId);
             throw new Error('User not found.');
         }
-        // console.log('[Auth] User updated successfully');
         const userObj = user.toObject();
         return { ...userObj, id: user._id.toString() };
     } catch (err: any) {
         console.error('[Auth] Error in updateMeService:', err.message);
         throw err;
     }
+};
+
+// ── Forgot Password ────────────────────────────────────────────────────────────
+export const forgotPasswordService = async (email: string) => {
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    // Always return success to prevent email enumeration attacks
+    if (!user) return { message: 'If an account with that email exists, a reset link has been sent.' };
+
+    // Generate a secure random token
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const hashed = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+    user.resetPasswordToken = hashed;
+    user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await user.save();
+
+    // Build reset URL — use the first FRONTEND_URL in the array
+    const frontendBase = Array.isArray(env.FRONTEND_URL)
+        ? env.FRONTEND_URL[0]
+        : env.FRONTEND_URL;
+    const resetUrl = `${frontendBase}/reset-password/${rawToken}`;
+
+    const html = forgotPasswordTemplate(user.name, resetUrl);
+    await sendMail(user.email, 'Reset Your V2 Password', html);
+
+    return { message: 'If an account with that email exists, a reset link has been sent.' };
+};
+
+// ── Reset Password ─────────────────────────────────────────────────────────────
+export const resetPasswordService = async (rawToken: string, newPassword: string) => {
+    const hashed = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+    const user = await User.findOne({
+        resetPasswordToken: hashed,
+        resetPasswordExpires: { $gt: new Date() },
+    });
+
+    if (!user) throw new Error('This password reset link is invalid or has expired.');
+
+    user.password = await hashPassword(newPassword);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    return { message: 'Password reset successfully. You can now log in with your new password.' };
 };

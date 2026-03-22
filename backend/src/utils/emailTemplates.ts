@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-//  V2 Fashion — Luxury Email Templates
+//  V2 Enterprise — Luxury Email Templates
 //  Design target: clean, monochrome, typographically premium.
 //  All fonts are web-safe or system. No external CDN dependencies.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -17,7 +17,7 @@ const wrapper = (content: string) => `
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>V2 Fashion</title>
+  <title>V2 Enterprise</title>
   <style>${BASE_STYLES}</style>
 </head>
 <body>
@@ -29,7 +29,7 @@ const wrapper = (content: string) => `
         <tr>
           <td style="background:#0A0A0B; padding:36px 48px; text-align:center;">
             <div style="font-family:Georgia,serif; letter-spacing:0.6em; font-size:22px; color:#C9A96E; font-weight:400;">V2</div>
-            <div style="font-family:Arial,sans-serif; letter-spacing:0.35em; font-size:9px; color:#666; text-transform:uppercase; margin-top:4px;">Fashion House</div>
+            <div style="font-family:Arial,sans-serif; letter-spacing:0.35em; font-size:9px; color:#666; text-transform:uppercase; margin-top:4px;">Enterprise</div>
           </td>
         </tr>
 
@@ -44,7 +44,7 @@ const wrapper = (content: string) => `
         <tr>
           <td style="background:#0A0A0B; padding:28px 48px; text-align:center;">
             <p style="margin:0; font-family:Arial,sans-serif; font-size:9px; letter-spacing:0.25em; text-transform:uppercase; color:#555;">
-              © 2026 V2 Fashion · <a href="mailto:hello@v2fashion.com" style="color:#C9A96E;">hello@v2fashion.com</a>
+              © 2026 V2 Enterprise · <a href="mailto:nikraykangor1996@gmail.com" style="color:#C9A96E;">nikraykangor1996@gmail.com</a>
             </p>
             <p style="margin:8px 0 0; font-family:Arial,sans-serif; font-size:8px; letter-spacing:0.15em; text-transform:uppercase; color:#444;">
               Ground Floor, Bhavnagar, Gujarat
@@ -78,7 +78,7 @@ export const forgotPasswordTemplate = (name: string, resetUrl: string) => {
       Hello ${name},
     </p>
     <p style="margin:0 0 32px; font-family:Arial,sans-serif; font-size:14px; line-height:1.7; color:#555;">
-      We received a request to reset the password for your V2 account. Click the button below to create a new password. This link expires in <strong>1 hour</strong>.
+      We received a request to reset the password for your V2 Enterprise account. Click the button below to create a new password. This link expires in <strong>1 hour</strong>.
     </p>
 
     <table width="100%" cellpadding="0" cellspacing="0">
@@ -206,7 +206,7 @@ export const orderPlacedTemplate = (data: OrderEmailData) => {
 
     ${divider()}
     <p style="margin:0; font-family:Arial,sans-serif; font-size:12px; line-height:1.7; color:#888; text-align:center;">
-      Questions? Reply to this email or contact us at <a href="mailto:hello@v2fashion.com" style="color:#C9A96E;">hello@v2fashion.com</a>
+      Questions? Reply to this email or contact us at <a href="mailto:nikraykangor1996@gmail.com" style="color:#C9A96E;">nikraykangor1996@gmail.com</a>
     </p>
   `;
     return wrapper(content);
@@ -298,7 +298,7 @@ export const orderStatusTemplate = (
 
     ${divider()}
     <p style="margin:0; font-family:Arial,sans-serif; font-size:12px; line-height:1.7; color:#888; text-align:center;">
-      Questions? Contact us at <a href="mailto:hello@v2fashion.com" style="color:#C9A96E;">hello@v2fashion.com</a>
+      Questions? Contact us at <a href="mailto:nikraykangor1996@gmail.com" style="color:#C9A96E;">nikraykangor1996@gmail.com</a>
     </p>
   `;
     return wrapper(content);
@@ -311,7 +311,7 @@ export const welcomeTemplate = (name: string) => {
     const content = `
     ${sectionLabel('Welcome')}
     <h1 style="margin:0 0 20px; font-family:Georgia,serif; font-size:32px; font-weight:400; color:#0A0A0B; letter-spacing:0.02em; line-height:1.2;">
-      Welcome to<br/>V2 Fashion.
+      Welcome to<br/>V2 Enterprise.
     </h1>
     <p style="margin:0 0 16px; font-family:Arial,sans-serif; font-size:14px; line-height:1.8; color:#555;">
       Hello ${name},
@@ -322,7 +322,7 @@ export const welcomeTemplate = (name: string) => {
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
         <td align="center" style="padding:8px 0 40px;">
-          <a href="https://v2fashion.com/shop" style="display:inline-block; background:#0A0A0B; color:#C9A96E; font-family:Arial,sans-serif; font-size:10px; letter-spacing:0.35em; text-transform:uppercase; padding:18px 48px; text-decoration:none; border:1px solid #C9A96E;">
+          <a href="https://v2enterprise.com/shop" style="display:inline-block; background:#0A0A0B; color:#C9A96E; font-family:Arial,sans-serif; font-size:10px; letter-spacing:0.35em; text-transform:uppercase; padding:18px 48px; text-decoration:none; border:1px solid #C9A96E;">
             Explore Now
           </a>
         </td>

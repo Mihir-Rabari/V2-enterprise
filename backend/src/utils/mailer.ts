@@ -25,7 +25,7 @@ export const sendMail = async (to: string, subject: string, html: string) => {
     try {
         const transporter = getTransporter();
         await transporter.sendMail({
-            from: `"V2 Fashion" <${SMTP_EMAIL}>`,
+            from: `"V2 Enterprise" <${SMTP_EMAIL}>`,
             to,
             subject,
             html,

@@ -43,7 +43,7 @@ ok "Repository updated"
 # ── Step 2: Install backend dependencies ───────────────────────────────────────
 log "Installing backend dependencies..."
 cd "$BACKEND_DIR"
-npm ci --omit=dev=false
+npm ci
 ok "Backend dependencies installed"
 
 # ── Step 3: Install frontend dependencies ──────────────────────────────────────
@@ -73,16 +73,17 @@ fi
 ok ".env file found"
 
 # ── Step 7: Start / Restart with PM2 ───────────────────────────────────────────
+# Always use ecosystem.config.js so cwd + env_production are honoured on every deploy
 log "Starting server with PM2..."
 cd "$REPO_DIR"
 
 if pm2 list | grep -q "v2-app"; then
-    pm2 restart v2-app --update-env
-    ok "PM2 app 'v2-app' restarted"
-else
-    pm2 start ecosystem.config.js --env production
-    ok "PM2 app 'v2-app' started"
+    pm2 delete v2-app
+    ok "Removed old PM2 instance"
 fi
+
+pm2 start ecosystem.config.js --env production
+ok "PM2 app 'v2-app' started"
 
 # ── Step 8: Save PM2 process list ──────────────────────────────────────────────
 pm2 save

@@ -65,17 +65,18 @@ if (-not (Test-Path $envFile)) {
 ok ".env file found"
 
 # ── Step 7: Start / Restart with PM2 ───────────────────────────────────────────
+# Always use ecosystem.config.js so cwd + env_production are honoured on every deploy
 Set-Location $RepoDir
 log "Starting server with PM2..."
 
 $pm2List = pm2 list 2>&1
 if ($pm2List -match "v2-app") {
-    pm2 restart v2-app --update-env
-    ok "PM2 app 'v2-app' restarted"
-} else {
-    pm2 start ecosystem.config.js --env production
-    ok "PM2 app 'v2-app' started"
+    pm2 delete v2-app
+    ok "Removed old PM2 instance"
 }
+
+pm2 start ecosystem.config.js --env production
+ok "PM2 app 'v2-app' started"
 
 # ── Step 8: Save PM2 process list ──────────────────────────────────────────────
 pm2 save

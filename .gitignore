@@ -14,6 +14,9 @@ build/
 .next/
 out/
 
+# Frontend build output served by Express (rebuilt by deploy script)
+backend/public/
+
 # IDE / Editor logs
 .vscode/
 .idea/
@@ -21,22 +24,30 @@ out/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+seed_output.txt
+seed_error.log
 
 # OS files
 .DS_Store
 Thumbs.db
 
-# Large binaries / Backups
+# Large binaries / Backups / Temp files
 *.zip
 *.rar
 *.7z
 *.tar.gz
+*.py
 temp/
 tmp/
+
+# JSON data dumps (only seed.ts should be source of truth)
+categories.json
+rawProducts.json
 
 # App data
 .gemini/
 brain/
+
 # Generated Files
 backend/src/**/*.js
 backend/src/**/*.js.map

@@ -68,10 +68,11 @@ app.use('/api', (_req, res) => {
 
 // ── Serve Frontend (Production) ──────────────────────────────────────────────
 if (env.NODE_ENV === 'production') {
-    // In production (dist/app.js), __dirname is backend/dist. We go up twice to reach the root public_html/new_website/build.
-    const frontendPath = path.join(__dirname, '../../build');
+    // In production, __dirname = backend/dist/ → ../public = backend/public/
+    const frontendPath = path.join(__dirname, '../public');
     app.use(express.static(frontendPath));
 
+    // SPA fallback — all non-API routes serve index.html
     app.get('*', (req, res) => {
         res.sendFile(path.join(frontendPath, 'index.html'));
     });
@@ -81,6 +82,7 @@ if (env.NODE_ENV === 'production') {
         res.status(404).json({ success: false, message: 'Route not found' });
     });
 }
+
 
 // ── Global Error Handler ──────────────────────────────────────────────────────
 app.use(errorHandler);

@@ -6,9 +6,12 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
+    "build:full": "cd ../frontend && npm run build && cd ../backend && tsc",
     "start": "node dist/server.js",
+    "start:prod": "NODE_ENV=production node dist/server.js",
     "seed": "ts-node src/scripts/seed.ts"
   },
+
   "dependencies": {
     "@types/nodemailer": "^7.0.11",
     "axios": "^1.13.6",

@@ -13,7 +13,7 @@ import axios from 'axios';
 import { env } from '../../config/env';
 
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 
 // ImageKit credentials from env
 const IK_PRIVATE_KEY = env.IMAGEKIT_PRIVATE_KEY;

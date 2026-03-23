@@ -171,62 +171,10 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
     );
 };
 
-const MarqueeSection: React.FC<{ items: MarqueeItem[] }> = ({ items }) => {
-    return (
-        <div className="bg-luxury-black py-4 md:py-8 border-y border-white/10 overflow-hidden flex relative z-20">
-            <motion.div
-                className="flex whitespace-nowrap gap-8 md:gap-32"
-                animate={{ x: [0, -1000] }}
-                transition={{ repeat: Infinity, ease: "linear", duration: 20 }}
-            >
-                {[...items, ...items, ...items, ...items].map((item, i) => (
-                    <span key={i} className="text-white text-base sm:text-lg md:text-xl lg:text-xl font-medium uppercase tracking-tighter opacity-80 font-serif italic">
-                        {item.text} <span className="text-luxury-gold mx-4 md:mx-8">•</span>
-                    </span>
-                ))}
-            </motion.div>
-        </div>
-    );
-};
+const MarqueeSection = React.lazy(() => import('../components/home/MarqueeSection'));
+const ClientVoicesSection = React.lazy(() => import('../components/home/ClientVoicesSection'));
 
-const ClientVoicesSection: React.FC<{ reviews: any[] }> = ({ reviews }) => (
-    <section className="py-24 md:py-40 bg-white">
-        <div className="max-w-[1800px] mx-auto px-6 lg:px-12">
-            <div className="flex flex-col md:flex-row justify-between items-center md:items-end mb-16 md:mb-24 gap-8">
-                <div className="space-y-4 text-center md:text-left w-full md:w-auto">
-                    <span className="text-luxury-gold text-[10px] font-bold uppercase tracking-[0.4em] flex items-center justify-center md:justify-start gap-2"><Star size={10} strokeWidth={2} className="text-luxury-gold" />Testimonials</span>
-                    <h2 className="font-serif text-4xl md:text-7xl italic text-luxury-black tracking-tighter">Client Voices</h2>
-                </div>
-            </div>
 
-            <div className="flex overflow-x-auto gap-6 pb-8 -mx-6 px-6 md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-8 md:overflow-visible md:mx-0 md:px-0 scrollbar-hide snap-x">
-                {reviews.map((review, i) => (
-                    <div key={review.id} className="min-w-[85vw] md:min-w-0 bg-zinc-50 p-8 md:p-12 space-y-6 flex flex-col justify-between snap-center">
-                        <div className="space-y-4">
-                            <div className="flex gap-1">
-                                {[...Array(review.rating)].map((_, i) => (
-                                    <span key={i} className="text-luxury-gold text-xs">★</span>
-                                ))}
-                            </div>
-                            <p className="font-serif text-xl md:text-2xl italic leading-relaxed text-luxury-black">
-                                "{review.reviewText}"
-                            </p>
-                        </div>
-                        <div className="flex items-center gap-4 pt-4 border-t border-gray-200">
-                            <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
-                                <img src={review.product?.photo || review.productPhoto} alt="Product" className="w-full h-full object-cover" />
-                            </div>
-                            <div>
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-luxury-black">{review.customerName}</p>
-                                <p className="text-[9px] text-gray-500 uppercase tracking-wider">Verified Client</p>
-                            </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    </section>
-);
 
 
 
@@ -317,84 +265,66 @@ const Home: React.FC = () => {
 
     useEffect(() => {
         const fetchData = async () => {
-            // Fetch Reviews
-            reviewsAPI.getHomepage()
-                .then(res => {
-                    setAllReviews(res.data.data ?? []);
-                    setReviewsLoading(false);
-                })
-                .catch(() => setReviewsLoading(false));
-
-            // Fetch Hero Slides
-            sliderAPI.getHero()
-                .then(res => {
-                    if (res.data.success && res.data.data.length > 0) {
-                        setHeroSlides(res.data.data);
-                    }
-                })
-                .catch(err => console.error('Error fetching hero slides:', err));
-
-            // Fetch Promotional Sliders
             try {
-                const promoRes = await sliderAPI.getPromotional();
-                if (promoRes.data.success && promoRes.data.data.length > 0) {
-                    const activePromoSlides = promoRes.data.data.filter((s: any) => s.type === 'PROMOTIONAL' && s.status?.toUpperCase() === 'ACTIVE');
-                    setPromotionalSlides(activePromoSlides);
-                    const bottomPromoSlidesData = promoRes.data.data.filter((s: any) => s.type === 'BOTTOM_PROMOTIONAL' && s.status?.toUpperCase() === 'ACTIVE');
-                    setBottomPromoSlides(bottomPromoSlidesData);
+                // Batch 1: Critical Above/Near Fold Data
+                const [heroRes, categoriesRes, settingsRes] = await Promise.allSettled([
+                    sliderAPI.getHero(),
+                    categoriesAPI.getAll(),
+                    settingsAPI.get()
+                ]);
+
+                if (heroRes.status === 'fulfilled' && heroRes.value.data.success) {
+                    setHeroSlides(heroRes.value.data.data);
+                }
+                
+                if (categoriesRes.status === 'fulfilled' && categoriesRes.value.data.success) {
+                    const sortedCats = categoriesRes.value.data.data;
+                    setAllCategories(sortedCats);
+                    setCategories(sortedCats.filter((c: any) => !c.parentId || c.parentId === "" || c.parentId === null));
+                }
+
+                if (settingsRes.status === 'fulfilled' && settingsRes.value.data.success) {
+                    const s = settingsRes.value.data.data;
+                    setSiteSettings(s);
+                    if (s.homeSections) setHomeSections(s.homeSections);
+                    if (s.commitment) setCommitment(s.commitment);
+                }
+
+                // Batch 2: Below Fold Data (Non-blocking to initial render speed)
+                const [reviewsRes, promoRes, marqueeRes, filtersRes, lookbookRes] = await Promise.allSettled([
+                    reviewsAPI.getHomepage(),
+                    sliderAPI.getPromotional(),
+                    sliderAPI.getMarquee(),
+                    filtersAPI.getSuggestions(),
+                    contentAPI.getByType('LOOKBOOK_ITEM')
+                ]);
+
+                if (reviewsRes.status === 'fulfilled') {
+                    setAllReviews(reviewsRes.value.data.data ?? []);
+                }
+                setReviewsLoading(false);
+
+                if (promoRes.status === 'fulfilled' && promoRes.value.data.success) {
+                    const pData = promoRes.value.data.data;
+                    setPromotionalSlides(pData.filter((s: any) => s.type === 'PROMOTIONAL' && s.status?.toUpperCase() === 'ACTIVE'));
+                    setBottomPromoSlides(pData.filter((s: any) => s.type === 'BOTTOM_PROMOTIONAL' && s.status?.toUpperCase() === 'ACTIVE'));
+                }
+
+                if (marqueeRes.status === 'fulfilled' && marqueeRes.value.data.success) {
+                    setMarqueeItems(marqueeRes.value.data.data);
+                }
+
+                if (filtersRes.status === 'fulfilled' && filtersRes.value.data.success) {
+                    setFilterSuggestions(filtersRes.value.data.data);
+                }
+
+                if (lookbookRes.status === 'fulfilled' && lookbookRes.value.data.success) {
+                    setLookbookItems(lookbookRes.value.data.data);
                 }
             } catch (err) {
-                console.error('Error fetching promotional sliders:', err);
+                console.error("Home Data Fetch Error:", err);
+                setReviewsLoading(false);
             }
-
-            // Fetch Marquee Items
-            sliderAPI.getMarquee()
-                .then(res => {
-                    if (res.data.success && res.data.data.length > 0) {
-                        setMarqueeItems(res.data.data);
-                    }
-                })
-                .catch(err => console.error('Error fetching marquee items:', err));
-
-            // Fetch Categories
-            categoriesAPI.getAll()
-                .then(res => {
-                    if (res.data.success && res.data.data) {
-                        setAllCategories(res.data.data);
-                        // ONLY show categories that don't have a parentId (Main Categories)
-                        setCategories(res.data.data.filter((c: any) => !c.parentId || c.parentId === "" || c.parentId === null));
-                    }
-                })
-                .catch(err => console.error('Error fetching categories:', err));
-
-            // Fetch filter suggestions globally
-            filtersAPI.getSuggestions()
-                .then(res => {
-                    if (res.data.success && res.data.data) {
-                        setFilterSuggestions(res.data.data);
-                    }
-                })
-                .catch(err => console.error('Error fetching filters:', err));
-
-            // Fetch Site Settings
-            settingsAPI.get()
-                .then(res => {
-                    if (res.data.success && res.data.data) {
-                        setSiteSettings(res.data.data);
-                        if (res.data.data.homeSections) setHomeSections(res.data.data.homeSections);
-                        if (res.data.data.commitment) setCommitment(res.data.data.commitment);
-                    }
-                })
-                .catch(err => console.error('Error fetching settings:', err));
-
-
-            contentAPI.getByType('LOOKBOOK_ITEM')
-                .then(res => {
-                    if (res.data.success && res.data.data) {
-                        setLookbookItems(res.data.data);
-                    }
-                })
-                .catch(err => console.error('Error fetching lookbook items:', err));
         };
 
         fetchData();
@@ -494,7 +424,11 @@ const Home: React.FC = () => {
                     case 'hero':
                         return <Hero key="hero" slides={heroSlides} />;
                     case 'marquee':
-                        return <MarqueeSection key="marquee" items={marqueeItems} />;
+                        return (
+                             <React.Suspense key="marquee" fallback={<div className="h-16 md:h-24 bg-luxury-black animate-pulse" />}>
+                                 <MarqueeSection items={marqueeItems} />
+                             </React.Suspense>
+                        );
                     case 'new-standard':
                         if (homeSections.newStandard && !homeSections.newStandard.isVisible) return null;
                         const ns = homeSections.newStandard || { tagline: '', title: '', description: '', link: '', buttonText: '' };
@@ -846,7 +780,11 @@ const Home: React.FC = () => {
                             </section>
                         );
                     case 'testimonials':
-                        return <ClientVoicesSection key="testimonials" reviews={reviews} />;
+                        return (
+                            <React.Suspense key="testimonials" fallback={<div className="h-96 bg-zinc-50 animate-pulse" />}>
+                                <ClientVoicesSection reviews={reviews} />
+                            </React.Suspense>
+                        );
                     case 'social':
                         return null;
                     case 'commitment':

@@ -96,6 +96,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ id, name, price, image, hover
                             src={image}
                             alt={name}
                             className="w-full h-full object-cover"
+                            loading="lazy"
+                            decoding="async"
                         />
 
                         {/* Secondary/Hover Image */}
@@ -110,6 +112,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ id, name, price, image, hover
                                 src={hoverImage}
                                 alt={`${name} hover`}
                                 className="absolute inset-0 w-full h-full object-cover"
+                                loading="lazy"
+                                decoding="async"
                             />
                         )}
                     </div>

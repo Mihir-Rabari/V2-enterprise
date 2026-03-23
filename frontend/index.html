@@ -4,19 +4,47 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>V2 Enterprise Admin</title>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Inter:wght@300;400;500;600;700&display=swap"
-    rel="stylesheet">
 
-  <!-- Suppress React DevTools warning -->
+  <!-- ── Primary SEO ────────────────────────────────────────────────────── -->
+  <title>V2 Enterprise — Premium Luxury Fashion</title>
+  <meta name="description" content="Discover V2 Enterprise's exclusive collection of premium menswear and luxury fashion. Crafted with care in Bhavnagar, Gujarat. Shop kurtas, shirts, and more." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://v2enterprise.in/" />
+
+  <!-- ── Open Graph (Facebook, WhatsApp, LinkedIn) ─────────────────────── -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="V2 Enterprise" />
+  <meta property="og:title" content="V2 Enterprise — Premium Luxury Fashion" />
+  <meta property="og:description" content="Exclusive premium menswear and luxury fashion from Bhavnagar, Gujarat. Shop V2 Enterprise's curated collections." />
+  <meta property="og:image" content="/og-image.jpg" />
+  <meta property="og:url" content="https://v2enterprise.in/" />
+
+  <!-- ── Twitter / X Card ──────────────────────────────────────────────── -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="V2 Enterprise — Premium Luxury Fashion" />
+  <meta name="twitter:description" content="Exclusive premium menswear and luxury fashion, crafted with care." />
+  <meta name="twitter:image" content="/og-image.jpg" />
+
+  <!-- ── Brand & PWA ───────────────────────────────────────────────────── -->
+  <meta name="theme-color" content="#0A0A0B" />
+  <link rel="icon" type="image/webp" href="/v2_logo.webp" />
+
+  <!-- ── Google Fonts — preconnect first, then slimmed weights ─────────── -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- ── Suppress React DevTools warning in production ─────────────────── -->
   <script>
     if (typeof window !== 'undefined') {
       window.__REACT_DEVTOOLS_GLOBAL_HOOK__ = { isDisabled: true };
     }
   </script>
 
-  <!-- Meta Pixel Code -->
+  <!-- ── Meta Pixel ────────────────────────────────────────────────────── -->
   <script>
     !function (f, b, e, v, n, t, s) {
       if (f.fbq) return; n = f.fbq = function () {
@@ -38,12 +66,10 @@
       fbq('track', 'PageView');
     }
   </script>
-  <!-- End Meta Pixel Code -->
-
-  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <!-- NOTE: Razorpay is now loaded lazily inside Checkout.tsx only -->
 </head>
 
-<body class="bg-gray-100 text-gray-800">
+<body class="bg-white text-gray-900">
   <!-- Meta Pixel noscript fallback -->
   <noscript><img height="1" width="1" style="display:none"
       src="https://www.facebook.com/tr?id=1887679655474555&ev=PageView&noscript=1" /></noscript>

@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+# Block admin and private areas
+Disallow: /admin
+Disallow: /account
+Disallow: /checkout
+Disallow: /cart
+
+# Sitemap location
+Sitemap: https://v2enterprise.in/sitemap.xml

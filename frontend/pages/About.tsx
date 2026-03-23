@@ -3,8 +3,14 @@ import { motion } from 'framer-motion';
 import { AboutPageContent } from '../types';
 import { initialAboutContent } from '../data/initialData';
 import { settingsAPI } from '../lib/apiClient';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 const About: React.FC = () => {
+    usePageMeta({
+        title: 'Our Heritage | V2 Enterprise',
+        description: 'Discover the story behind V2 Enterprise. A legacy of premium craftsmanship, luxury fabrics, and timeless menswear from Bhavnagar.',
+        canonical: '/about',
+    });
     const [content, setContent] = useState<AboutPageContent>(initialAboutContent);
 
     useEffect(() => {

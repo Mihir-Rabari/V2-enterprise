@@ -7,8 +7,14 @@ import { SiteSettings } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { contactsAPI, settingsAPI } from '../lib/apiClient';
 import { validateEmail, validateRequired } from '../lib/validation';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 const Contact: React.FC = () => {
+    usePageMeta({
+        title: 'Contact Us | V2 Enterprise',
+        description: 'Get in touch with V2 Enterprise. Visit our Smart Fashion Hub in Bhavnagar, or reach out to our team of style experts.',
+        canonical: '/contact',
+    });
     const { user } = useAuth();
     const [siteSettings, setSiteSettings] = useState<SiteSettings>(initialSiteSettings);
 

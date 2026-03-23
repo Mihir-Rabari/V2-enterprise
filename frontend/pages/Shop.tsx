@@ -9,10 +9,16 @@ import { settingsAPI, categoriesAPI, filtersAPI } from '../lib/apiClient';
 import { initialSiteSettings } from '../data/initialData';
 import { SiteSettings, Category } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 
 
 const Shop: React.FC = () => {
+    usePageMeta({
+        title: 'Shop All | V2 Enterprise',
+        description: 'Browse the full V2 Enterprise collection — premium kurtas, shirts, and luxury menswear. Filter by category, fabric, size, and more.',
+        canonical: '/shop',
+    });
     const { category, subcategory } = useParams<{ category: string, subcategory: string }>();
     const [searchParams, setSearchParams] = useSearchParams();
     const queryTerm = searchParams.get('q') || '';

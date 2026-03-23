@@ -21,10 +21,17 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 type CheckoutStep = 'summary' | 'shipping' | 'payment' | 'confirmation';
 
 const Checkout: React.FC = () => {
+    usePageMeta({
+        title: 'Checkout | V2 Enterprise',
+        description: 'Securely complete your V2 Enterprise order.',
+        canonical: '/checkout',
+    });
+    
     const navigate = useNavigate();
     const location = useLocation();
     const { user, isAuthenticated } = useAuth();
@@ -33,6 +40,18 @@ const Checkout: React.FC = () => {
     const [orderLoading, setOrderLoading] = useState(false);
     const [orderError, setOrderError] = useState('');
     const [placedOrderId, setPlacedOrderId] = useState('');
+
+    // Load Razorpay dynamically ONLY on the checkout page
+    useEffect(() => {
+        const scriptId = 'razorpay-checkout-js';
+        if (!document.getElementById(scriptId)) {
+            const script = document.createElement('script');
+            script.id = scriptId;
+            script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+            script.async = true;
+            document.body.appendChild(script);
+        }
+    }, []);
 
     // Sync shippingData when user changes (after login or address update)
     useEffect(() => {

@@ -13,6 +13,7 @@ import { useState, useEffect, useCallback } from 'react';
 import FilterAccordion from '../components/FilterAccordion';
 import { useProducts } from '../hooks/useProducts';
 import { reviewsAPI, sliderAPI, settingsAPI, categoriesAPI, contentAPI, filtersAPI } from '../lib/apiClient';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 interface HeroProps {
     slides: HeroSlide[];
@@ -20,7 +21,10 @@ interface HeroProps {
 
 const Hero: React.FC<HeroProps> = ({ slides }) => {
     const [index, setIndex] = React.useState(0);
-    const [width, setWidth] = React.useState(window.innerWidth);
+    // SSR-safe lazy initializer — avoids window access before hydration
+    const [width, setWidth] = React.useState(() =>
+        typeof window !== 'undefined' ? window.innerWidth : 1024
+    );
     const activeSlides = slides.filter(s => s.status.toUpperCase() === 'ACTIVE');
     const current = activeSlides[index] || activeSlides[0];
 
@@ -70,6 +74,7 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
                                 muted
                                 playsInline
                                 key={videoUrl}
+                                preload="auto"
                                 className="w-full h-full object-cover opacity-60 scale-105"
                             >
                                 <source src={videoUrl} type="video/mp4" />
@@ -78,6 +83,8 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
                             <img
                                 src={current.url}
                                 alt={current.title}
+                                fetchPriority="high"
+                                decoding="sync"
                                 className="w-full h-full object-cover opacity-60 scale-105"
                             />
                         )}

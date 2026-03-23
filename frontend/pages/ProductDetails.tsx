@@ -8,6 +8,7 @@ import { useCart } from '../context/CartContext';
 import { useProduct, useProducts } from '../hooks/useProducts';
 import { reviewsAPI, wishlistAPI } from '../lib/apiClient';
 import { useAuth } from '../context/AuthContext';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 const RelatedProducts: React.FC<{ currentId: string | number; categoryName?: string }> = ({ currentId, categoryName }) => {
     const { products, loading } = useProducts({
@@ -48,6 +49,14 @@ const ProductDetails: React.FC = () => {
 
     const [selectedSize, setSelectedSize] = useState<string | null>(null);
     const [selectedColor, setSelectedColor] = useState<string | null>(null);
+
+    usePageMeta({
+        title: product ? `${product.name} | V2 Enterprise` : 'Product Details | V2 Enterprise',
+        description: product?.description?.slice(0, 160) || 'Premium luxury fashion from V2 Enterprise.',
+        ogImage: product?.photo,
+        ogType: 'product',
+        canonical: `/product/${id}`,
+    });
     const [activeImage, setActiveImage] = useState<number>(0);
     const [isVideoActive, setIsVideoActive] = useState(false);
     const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });

@@ -75,6 +75,8 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
                                 playsInline
                                 key={videoUrl}
                                 preload="auto"
+                                width="1920"
+                                height="1080"
                                 className="w-full h-full object-cover opacity-60 scale-105"
                             >
                                 <source src={videoUrl} type="video/mp4" />
@@ -85,6 +87,8 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
                                 alt={current.title}
                                 fetchPriority="high"
                                 decoding="sync"
+                                width="1920"
+                                height="1080"
                                 className="w-full h-full object-cover opacity-60 scale-105"
                             />
                         )}

@@ -25,7 +25,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     value,
     onChange,
     label,
-    accept = 'image/*',
+    accept = 'image/*,video/*',
     folder = 'v2-uploads',
     compact = false,
     isVideo = false,

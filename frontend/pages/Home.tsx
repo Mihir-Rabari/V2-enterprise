@@ -67,7 +67,7 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
                     className="absolute inset-0"
                 >
                     <div className="absolute inset-0">
-                        {current.type === 'video' ? (
+                        {current.type === 'video' || (videoUrl && videoUrl.match(/\.(mp4|mov|webm|ogg)$/i)) ? (
                             <video
                                 autoPlay
                                 loop

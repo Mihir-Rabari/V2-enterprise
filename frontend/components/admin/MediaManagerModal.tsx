@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Upload, Search, Check, Grid, List, Loader2, Image as ImageIcon } from 'lucide-react';
 import { adminAPI } from '../../lib/apiClient';
 import { IMedia } from '../../types';
+import toast from 'react-hot-toast';
 
 interface MediaManagerModalProps {
     isOpen: boolean;
@@ -96,8 +97,16 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
         if (!file) return;
 
         setUploading(true);
+        const uploadPromise = adminAPI.uploadImage(file);
+        
+        toast.promise(uploadPromise, {
+            loading: 'Uploading media to ImageKit...',
+            success: 'Media uploaded successfully!',
+            error: 'Upload failed. File might be too large.',
+        });
+
         try {
-            const res = await adminAPI.uploadImage(file);
+            const res = await uploadPromise;
             if (res.data.success) {
                 const newMedia = res.data.data;
                 // Add to list and select it
@@ -107,7 +116,6 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
             }
         } catch (err) {
             console.error('Upload failed:', err);
-            alert('Upload failed. Please try again.');
         } finally {
             setUploading(false);
         }

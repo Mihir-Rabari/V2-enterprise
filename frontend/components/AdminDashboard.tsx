@@ -853,7 +853,7 @@ const AdminDashboard: React.FC = () => {
 
 
     const sliderColumns: TableColumn<Slider>[] = [
-        { header: 'Preview', accessor: (row) => <img src={row.image} alt="Slider" className="w-24 h-12 object-cover rounded border border-gray-200" /> },
+        { header: 'Preview', accessor: (row) => row.image?.match(/\.(mp4|mov|webm|ogg)$/i) ? <video src={row.image} className="w-24 h-12 object-cover rounded border border-gray-200" muted autoPlay loop playsInline /> : <img src={row.image} alt="Slider" className="w-24 h-12 object-cover rounded border border-gray-200" /> },
         { header: 'Title', accessor: 'title' },
         { header: 'Link', accessor: 'link' },
         { header: 'Status', accessor: (row) => <StatusBadge status={row.status} /> },
@@ -2029,8 +2029,8 @@ const AdminDashboard: React.FC = () => {
                         {
                             header: 'Preview', accessor: (row: HeroSlide) => (
                                 <div className="w-20 aspect-video rounded-lg overflow-hidden border border-gray-100 bg-gray-50 relative group">
-                                    {row.type === 'video' ? (
-                                        <video src={row.laptopUrl || row.url} className="w-full h-full object-cover" muted />
+                                    {row.type === 'video' || (row.url && row.url.match(/\.(mp4|mov|webm|ogg)$/i)) ? (
+                                        <video src={row.laptopUrl || row.url} className="w-full h-full object-cover" autoPlay loop muted playsInline />
                                     ) : (
                                         <img src={row.url} alt={row.title} className="w-full h-full object-cover" />
                                     )}
@@ -2071,8 +2071,8 @@ const AdminDashboard: React.FC = () => {
                         {
                             header: 'Preview', accessor: (row: Slider) => (
                                 <div className="w-20 aspect-video rounded-lg overflow-hidden border border-gray-100 bg-gray-50 relative group">
-                                    {row.mediaType === 'video' ? (
-                                        <video src={row.image} className="w-full h-full object-cover" muted />
+                                    {row.mediaType === 'video' || (row.image && row.image.match(/\.(mp4|mov|webm|ogg)$/i)) ? (
+                                        <video src={row.image} className="w-full h-full object-cover" autoPlay loop muted playsInline />
                                     ) : (
                                         <img src={row.image} alt={row.title} className="w-full h-full object-cover" />
                                     )}

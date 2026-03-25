@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Upload, Trash2, Loader2, Link2, Image as ImageIcon, Video } from 'lucide-react';
 import { uploadToImageKit } from '../../lib/imagekit';
 import { MediaManagerModal } from './MediaManagerModal';
+import toast from 'react-hot-toast';
 import { adminAPI } from '../../lib/apiClient';
 
 interface ImageUploaderProps {
@@ -41,8 +42,17 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         if (!file) return;
         setError('');
         setUploading(true);
+        
+        const uploadPromise = uploadToImageKit(file, folder);
+        
+        toast.promise(uploadPromise, {
+            loading: 'Uploading to ImageKit Cloud...',
+            success: 'Upload complete!',
+            error: 'Upload failed. Check file size.',
+        });
+
         try {
-            const url = await uploadToImageKit(file, folder);
+            const url = await uploadPromise;
             onChange(url);
         } catch (err: any) {
             setError(err?.message || 'Upload failed. Try pasting a URL instead.');

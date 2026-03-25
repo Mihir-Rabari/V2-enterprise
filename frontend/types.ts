@@ -110,7 +110,7 @@ export interface Color {
   id: string | number;
   name: string;
   hex: string;
-  status: 'Active' | 'Inactive';
+  status: 'Active' | 'Inactive' | 'ACTIVE' | 'INACTIVE';
 }
 
 export interface ContactMessage {
@@ -207,7 +207,7 @@ export interface AboutPageContent {
 export interface PromotionalSlide {
   id: string | number;
   type: 'image' | 'video';
-  mediaType?: 'image' | 'video';
+  mediaType: 'image' | 'video';
   image: string;
   title: string;
   subtitle?: string;
@@ -256,20 +256,20 @@ export interface HomeSectionContent {
 export interface Tagline {
   id: string | number;
   text: string;
-  status: 'Active' | 'Inactive';
+  status: 'Active' | 'Inactive' | 'ACTIVE' | 'INACTIVE';
 }
 
 export interface BestsellerHeading {
   id: string | number;
   heading: string;
-  status: 'Active' | 'Inactive';
+  status: 'Active' | 'Inactive' | 'ACTIVE' | 'INACTIVE';
 }
 
 export interface Logo {
   id: string | number;
   image: string;
   location: 'Header' | 'Footer' | 'Invoice';
-  status: 'Active' | 'Inactive';
+  status: 'Active' | 'Inactive' | 'ACTIVE' | 'INACTIVE';
 }
 
 export interface SiteSettings {
@@ -368,7 +368,7 @@ export interface HeroSlide {
   ctaLink: string;
   duration?: number;
   order: number;
-  status: 'Active' | 'Inactive';
+  status: 'Active' | 'Inactive' | 'ACTIVE' | 'INACTIVE';
 }
 
 export interface IMedia {

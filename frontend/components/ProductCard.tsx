@@ -6,6 +6,7 @@ import { useCart } from '../context/CartContext';
 import { useQuickView } from '../context/QuickViewContext';
 import { useAuth } from '../context/AuthContext';
 import { wishlistAPI } from '../lib/apiClient';
+import { getOptimizedImageUrl } from '../src/utils/mediaUtils';
 
 interface ProductCardProps {
     id: string | number;
@@ -93,7 +94,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ id, name, price, image, hover
                             }}
                             transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
                             onLoad={() => setImageLoaded(true)}
-                            src={image}
+                            src={getOptimizedImageUrl(image, { width: 400, quality: 70 })}
                             alt={name}
                             className="w-full h-full object-cover"
                             loading="lazy"
@@ -111,7 +112,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ id, name, price, image, hover
                                     scale: isHovered ? 1.05 : 1
                                 }}
                                 transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
-                                src={hoverImage}
+                                src={getOptimizedImageUrl(hoverImage, { width: 400, quality: 70 })}
                                 alt={`${name} hover`}
                                 className="absolute inset-0 w-full h-full object-cover"
                                 loading="lazy"

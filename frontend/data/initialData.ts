@@ -100,11 +100,10 @@ export const initialProducts: Product[] = [
         mainCategory: "MENSWEAR",
         subCategory: "Tailoring",
         description: "Crafted from a refined linen blend, this shirt offers unparalleled breathability and a sophisticated drape. Perfect for both casual outings and evening events.",
-        colors: ["White", "Beige", "Navy"],
         color: "White",
         styleCode: "V2-001",
-        sizes: ['S', 'M', 'L', 'XL'],
-        variants: [],
+        size: 'M',
+        quantity: 10,
         materialCare: '100% Egyptian Cotton. Machine wash cold.',
         isNewArrival: true,
         isTrending: true,
@@ -120,11 +119,10 @@ export const initialProducts: Product[] = [
         mainCategory: "MENSWEAR",
         subCategory: "Denim",
         description: "Our signature selvedge denim is woven on vintage looms and tailored for a modern slim fit that breaks in beautifully over time.",
-        colors: ["Indigo", "Black"],
         color: "Indigo",
         styleCode: "V2-002",
-        sizes: ["30", "32", "34", "36"],
-        variants: [],
+        size: '32',
+        quantity: 10,
         materialCare: 'Raw Selvedge Denim. Wash sparingly, inside out.',
         isTrending: true,
         tags: ["Denim", "Selvedge", "Classic"],
@@ -139,11 +137,10 @@ export const initialProducts: Product[] = [
         mainCategory: "WOMENSWEAR",
         subCategory: "Essentials",
         description: "A timeless wardrobe staple made from 100% organic Peruvian cotton. Features a semi-relaxed fit and a soft-touch finish.",
-        colors: ["White", "Sage", "Charcoal"],
         color: "White",
         styleCode: "V2-003",
-        sizes: ["XS", "S", "M", "L"],
-        variants: [],
+        size: 'M',
+        quantity: 10,
         materialCare: '100% Organic Cotton. Machine wash cold.',
         tags: ["Organic", "Cotton", "Basic"],
         status: "ACTIVE"
@@ -156,11 +153,10 @@ export const initialProducts: Product[] = [
         mainCategory: "WOMENSWEAR",
         subCategory: "Outerwear",
         description: "Luxuriously soft merino wool knitted into an oversized silhouette. Ideal for layering during transitional seasons.",
-        colors: ["Oatmeal", "Stone"],
         color: "Oatmeal",
         styleCode: "V2-004",
-        sizes: ["S", "M", "L"],
-        variants: [],
+        size: 'M',
+        quantity: 10,
         materialCare: '100% Merino Wool. Hand wash cold or dry clean.',
         isNewArrival: true,
         isTrending: true,
@@ -174,11 +170,10 @@ export const initialProducts: Product[] = [
         mainCategory: "MENSWEAR",
         subCategory: "Outerwear",
         description: "A tailored coat made from premium Italian wool. clean lines and a structured fit define this winter essential.",
-        colors: ["Charcoal", "Black"],
         color: "Charcoal",
         styleCode: "V2-005",
-        sizes: ["M", "L", "XL"],
-        variants: [],
+        size: 'L',
+        quantity: 10,
         materialCare: 'Italian wool blend. Dry clean only.',
         status: "ACTIVE"
     },
@@ -190,11 +185,10 @@ export const initialProducts: Product[] = [
         mainCategory: "WOMENSWEAR",
         subCategory: "Tailoring",
         description: "High-waisted trousers with deep pleats for a relaxed yet elegant silhouette. Made from a fluid viscose blend.",
-        colors: ["Black", "Cream"],
         color: "Black",
         styleCode: "V2-006",
-        sizes: ["XS", "S", "M", "L"],
-        variants: [],
+        size: 'M',
+        quantity: 10,
         materialCare: 'Viscose blend. Dry clean recommended.',
         status: "ACTIVE"
     },
@@ -206,11 +200,10 @@ export const initialProducts: Product[] = [
         mainCategory: "ACCESSORIES",
         subCategory: "Bags",
         description: "Full-grain leather weekender bag. Vegetable-tanned and built to last a lifetime.",
-        colors: ["Tan", "Brown"],
         color: "Tan",
         styleCode: "V2-007",
-        sizes: ["One Size"],
-        variants: [],
+        size: 'One Size',
+        quantity: 10,
         materialCare: 'Premium Italian Leather. Wipe clean with damp cloth.',
         status: "ACTIVE"
     },
@@ -222,11 +215,10 @@ export const initialProducts: Product[] = [
         mainCategory: "ACCESSORIES",
         subCategory: "Scarves",
         description: "100% Mulberry silk scarf with hand-rolled edges. Adds a touch of luxury to any outfit.",
-        colors: ["Patterned"],
         color: "Patterned",
         styleCode: "V2-008",
-        sizes: ["One Size"],
-        variants: [],
+        size: 'One Size',
+        quantity: 10,
         materialCare: '100% Mulberry Silk. Dry clean only.',
         status: "ACTIVE"
     }
@@ -234,19 +226,19 @@ export const initialProducts: Product[] = [
 
 export const initialMainCategories: Category[] = [
     { id: 1, name: "MENSWEAR", slug: "menswear", image: "https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=800", status: "ACTIVE" },
-    { id: 2, name: "WOMENSWEAR", slug: "womenswear", image: "https://images.pexels.com/photos/4066293/pexels-photo-4066293.jpeg?auto=compress&cs=tinysrgb&w=800", status: "Active" }
+    { id: 2, name: "WOMENSWEAR", slug: "womenswear", image: "https://images.pexels.com/photos/4066293/pexels-photo-4066293.jpeg?auto=compress&cs=tinysrgb&w=800", status: "ACTIVE" }
 ];
 
 export const initialSubCategories: Category[] = [
-    { id: 1, name: "Tailoring", slug: "tailoring", parentCategory: "MENSWEAR", status: "Active" },
-    { id: 2, name: "Denim", slug: "denim", parentCategory: "MENSWEAR", status: "Active" },
-    { id: 3, name: "Essentials", slug: "essentials", parentCategory: "WOMENSWEAR", status: "Active" },
-    { id: 4, name: "Outerwear", slug: "outerwear", parentCategory: "WOMENSWEAR", status: "Active" },
-    { id: 5, name: 'Trousers', slug: 'trousers', parentCategory: 'WOMENSWEAR', status: 'Active' },
-    { id: 6, name: 'Jackets', slug: 'jackets', parentCategory: 'MENSWEAR', status: 'Active' },
-    { id: 7, name: 'Bags', slug: 'bags', parentCategory: 'ACCESSORIES', status: 'Active' },
-    { id: 8, name: 'Scarves', slug: 'scarves', parentCategory: 'ACCESSORIES', status: 'Active' },
-    { id: 9, name: 'Footwear', slug: 'footwear', parentCategory: 'ACCESSORIES', status: 'Active' }
+    { id: 1, name: "Tailoring", slug: "tailoring", parentCategory: "MENSWEAR", status: "ACTIVE" },
+    { id: 2, name: "Denim", slug: "denim", parentCategory: "MENSWEAR", status: "ACTIVE" },
+    { id: 3, name: "Essentials", slug: "essentials", parentCategory: "WOMENSWEAR", status: "ACTIVE" },
+    { id: 4, name: "Outerwear", slug: "outerwear", parentCategory: "WOMENSWEAR", status: "ACTIVE" },
+    { id: 5, name: 'Trousers', slug: 'trousers', parentCategory: 'WOMENSWEAR', status: 'ACTIVE' },
+    { id: 6, name: 'Jackets', slug: 'jackets', parentCategory: 'MENSWEAR', status: 'ACTIVE' },
+    { id: 7, name: 'Bags', slug: 'bags', parentCategory: 'ACCESSORIES', status: 'ACTIVE' },
+    { id: 8, name: 'Scarves', slug: 'scarves', parentCategory: 'ACCESSORIES', status: 'ACTIVE' },
+    { id: 9, name: 'Footwear', slug: 'footwear', parentCategory: 'ACCESSORIES', status: 'ACTIVE' }
 ];
 
 export const initialReviews: Review[] = [
@@ -259,7 +251,7 @@ export const initialReviews: Review[] = [
         customerEmail: "arjun@example.com",
         rating: 5,
         reviewText: "The quality of the linen shirt is exceptional. Fits perfectly and feels tailored.",
-        status: "Active",
+        status: "ACTIVE",
         homepageVisible: true,
         date: "2026-02-14",
         photos: []
@@ -273,7 +265,7 @@ export const initialReviews: Review[] = [
         customerEmail: "priya@example.com",
         rating: 5,
         reviewText: "Beautiful fabric and fast delivery. The unboxing experience was pure luxury.",
-        status: "Active",
+        status: "ACTIVE",
         homepageVisible: true,
         date: "2026-02-15",
         photos: []
@@ -287,7 +279,7 @@ export const initialReviews: Review[] = [
         customerEmail: "vikram@example.com",
         rating: 5,
         reviewText: "Finally, a brand that understands understated elegance. The denim is world-class.",
-        status: "Active",
+        status: "ACTIVE",
         homepageVisible: false,
         date: "2026-02-10",
         photos: []
@@ -301,7 +293,7 @@ export const initialReviews: Review[] = [
         customerEmail: "aisha@example.com",
         rating: 4,
         reviewText: "The structured coat is a masterpiece. Worth every rupee.",
-        status: "Active",
+        status: "ACTIVE",
         homepageVisible: false,
         date: "2026-02-08",
         photos: []
@@ -315,28 +307,28 @@ export const initialPages: StaticPage[] = [
 ];
 
 export const initialColors: Color[] = [
-    { id: 1, name: "Gold", hex: "#D4AF37", status: "Active" },
-    { id: 2, name: "Black", hex: "#000000", status: "Active" },
-    { id: 3, name: "Chalk", hex: "#F5F5F5", status: "Active" }
+    { id: 1, name: "Gold", hex: "#D4AF37", status: "ACTIVE" },
+    { id: 2, name: "Black", hex: "#000000", status: "ACTIVE" },
+    { id: 3, name: "Chalk", hex: "#F5F5F5", status: "ACTIVE" }
 ];
 
 export const initialLogos: Logo[] = [
-    { id: 1, image: "/v2_logo.webp", location: "Header", status: "Active" }
+    { id: 1, image: "/v2_logo.webp", location: "Header", status: "ACTIVE" }
 ];
 
 export const initialTaglines: Tagline[] = [
-    { id: 1, text: "Complimentary Shipping on all orders above ₹999 | 14 Day Returns", status: "Active" },
-    { id: 2, text: "Exclusive Winter Collection Now Live | Shop the Archive", status: "Active" },
-    { id: 3, text: "Join the Collective for Early Access to Private Sales", status: "Active" },
-    { id: 4, text: "Sustainably Crafted Luxury Essentials for the Modern Wardrobe", status: "Active" }
+    { id: 1, text: "Complimentary Shipping on all orders above ₹999 | 14 Day Returns", status: "ACTIVE" },
+    { id: 2, text: "Exclusive Winter Collection Now Live | Shop the Archive", status: "ACTIVE" },
+    { id: 3, text: "Join the Collective for Early Access to Private Sales", status: "ACTIVE" },
+    { id: 4, text: "Sustainably Crafted Luxury Essentials for the Modern Wardrobe", status: "ACTIVE" }
 ];
 
 export const initialBestsellers: BestsellerHeading[] = [
-    { id: 1, heading: "Curated Excellence", status: "Active" }
+    { id: 1, heading: "Curated Excellence", status: "ACTIVE" }
 ];
 
 export const initialSliders: Slider[] = [
-    { id: 1, title: "Summer Sale", image: "https://picsum.photos/1200/600", link: "/shop", type: "PROMOTIONAL", status: "Active" }
+    { id: 1, title: "Summer Sale", image: "https://picsum.photos/1200/600", link: "/shop", type: "PROMOTIONAL", status: "ACTIVE", mediaType: 'image' }
 ];
 
 
@@ -386,19 +378,23 @@ export const initialHomeSections: HomeSectionContent = {
     promotionalSliders: [
         {
             id: 1,
+            type: 'image',
+            mediaType: 'image',
             image: 'https://images.pexels.com/photos/298863/pexels-photo-298863.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',
-            title: 'Mid-Season Event',
-            subtitle: 'UP TO 50% OFF SELECT PIECES',
+            title: 'AUTUMN\nCOLLECTION',
+            subtitle: 'THE SEASON OF LAYERING',
             link: '/shop',
-            buttonText: 'Discover Sale'
+            buttonText: 'Shop the Collection'
         },
         {
             id: 2,
-            image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&q=80&w=2000',
-            title: 'Lunar New Year',
-            subtitle: 'EXCLUSIVE RED COLLECTION',
-            link: '/shop?category=Red',
-            buttonText: 'Shop Collection'
+            type: 'image',
+            mediaType: 'image',
+            image: 'https://images.pexels.com/photos/1536619/pexels-photo-1536619.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',
+            title: 'PREMIUM\nESSENTIALS',
+            subtitle: 'CRAFTED FOR COMFORT',
+            link: '/shop',
+            buttonText: 'Discover More'
         }
     ],
     promotionalBanner: {
@@ -470,7 +466,7 @@ export const initialHeroSlides: HeroSlide[] = [
         ctaLink: '/new-arrivals',
         duration: 7000,
         order: 1,
-        status: 'Active'
+        status: 'ACTIVE'
     },
     {
         id: 2,
@@ -483,7 +479,7 @@ export const initialHeroSlides: HeroSlide[] = [
         ctaLink: '/shop?category=Tailoring',
         duration: 5000,
         order: 2,
-        status: 'Active'
+        status: 'ACTIVE'
     },
     {
         id: 3,
@@ -496,7 +492,7 @@ export const initialHeroSlides: HeroSlide[] = [
         ctaLink: '/shop?category=Essentials',
         duration: 6000,
         order: 3,
-        status: 'Active'
+        status: 'ACTIVE'
     }
 ];
 

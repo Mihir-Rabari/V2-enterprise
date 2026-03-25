@@ -67,13 +67,31 @@ app.use('/api', (_req, res) => {
 });
 
 // ── Serve Frontend (Production) ──────────────────────────────────────────────
+// ── Serve Frontend (Production) ──────────────────────────────────────────────
 if (env.NODE_ENV === 'production') {
-    // In production, __dirname = backend/dist/ → ../public = backend/public/
     const frontendPath = path.join(__dirname, '../public');
-    app.use(express.static(frontendPath));
+    
+    // 1. Immutable caching for hashed assets (Vite specific)
+    app.use('/assets', express.static(path.join(frontendPath, 'assets'), {
+        maxAge: '1y',
+        immutable: true,
+        fallthrough: false // If not found in assets, don't try root public
+    }));
+
+    // 2. Standard caching for other static files (icons, logos, etc.)
+    app.use(express.static(frontendPath, {
+        maxAge: '1d', // 1 day for non-hashed assets
+        setHeaders: (res, filePath) => {
+            if (filePath.endsWith('.html')) {
+                // NEVER cache index.html to ensure users get latest JS bundle references
+                res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            }
+        }
+    }));
 
     // SPA fallback — all non-API routes serve index.html
     app.get('*', (req, res) => {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
         res.sendFile(path.join(frontendPath, 'index.html'));
     });
 } else {

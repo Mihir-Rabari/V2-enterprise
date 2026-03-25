@@ -221,10 +221,13 @@ const AdminDashboard: React.FC = () => {
                 if (heroRes.data.success) setHeroSlides(heroRes.data.data);
                 if (promoRes.data.success) {
                     const allPromo = promoRes.data.data as Slider[];
-                    setMainSliders(allPromo.filter(s => s.type === 'PROMOTIONAL' || s.type === 'BOTTOM_PROMOTIONAL'));
-                    setCategorySliders(allPromo.filter(s => s.type === 'CATEGORY'));
-                    setBestCategorySliders(allPromo.filter(s => s.type === 'BEST_CATEGORY'));
-                    setNewArrivalSliders(allPromo.filter(s => s.type === 'NEW_ARRIVAL'));
+                    setMainSliders(allPromo.filter(s => {
+                        const t = String(s.type || '').toUpperCase();
+                        return t === 'PROMOTIONAL' || t === 'BOTTOM_PROMOTIONAL';
+                    }));
+                    setCategorySliders(allPromo.filter(s => String(s.type || '').toUpperCase() === 'CATEGORY'));
+                    setBestCategorySliders(allPromo.filter(s => String(s.type || '').toUpperCase() === 'BEST_CATEGORY'));
+                    setNewArrivalSliders(allPromo.filter(s => String(s.type || '').toUpperCase() === 'NEW_ARRIVAL'));
                 }
                 if (settingsRes.data.success && settingsRes.data.data) {
                     const s = settingsRes.data.data;

@@ -10,7 +10,9 @@ const router = Router();
 // Get all active hero slides
 router.get('/hero', async (_req: Request, res: Response) => {
     try {
-        const slides = await HeroSlide.find({ status: { $regex: /^active$/i } }).sort({ order: 1 });
+        const slides = await HeroSlide.find({ 
+            $or: [{ status: { $regex: /^active$/i } }, { status: { $exists: false } }] 
+        }).sort({ order: 1 });
         const slidesWithId = slides.map(s => ({ ...s.toObject(), id: s._id.toString() }));
         return sendSuccess(res, slidesWithId);
     } catch (err: unknown) {
@@ -21,8 +23,14 @@ router.get('/hero', async (_req: Request, res: Response) => {
 // Get all active promotional sliders (excluding Marquee)
 router.get('/promotional', async (_req: Request, res: Response) => {
     try {
-        const marquee = await Slider.find({ type: 'MARQUEE',  status: { $regex: /^active$/i } });
-        const sliders = await Slider.find({  status: { $regex: /^active$/i }, type: { $ne: 'MARQUEE' } });
+        const marquee = await Slider.find({ 
+            type: 'MARQUEE', 
+            $or: [{ status: { $regex: /^active$/i } }, { status: { $exists: false } }] 
+        });
+        const sliders = await Slider.find({  
+            type: { $ne: 'MARQUEE' },
+            $or: [{ status: { $regex: /^active$/i } }, { status: { $exists: false } }] 
+        });
         const slidersWithId = sliders.map(s => ({ ...s.toObject(), id: s._id.toString() }));
         return sendSuccess(res, slidersWithId);
     } catch (err: unknown) {

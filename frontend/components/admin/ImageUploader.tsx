@@ -136,8 +136,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
                     </div>
                 ) : value ? (
                     <>
-                        {(isVideo || (value.match(/\.(mp4|mov|webm|ogg)$/i))) ? (
-                            <video src={value} className="w-full h-full object-cover" muted playsInline />
+                        {(isVideo || (value && value.match(/\.(mp4|mov|webm|ogg)$/i))) ? (
+                            <video src={value} className="w-full h-full object-cover" autoPlay loop muted playsInline />
                         ) : (
                             <img src={value} alt="Preview" className="w-full h-full object-cover" />
                         )}

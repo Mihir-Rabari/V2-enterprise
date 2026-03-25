@@ -112,7 +112,7 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
                 // Add to list and select it
                 setMedia(prev => [newMedia, ...prev]);
                 onSelect(newMedia.url);
-                onClose();
+                toast.success('Media uploaded and selected!');
             }
         } catch (err) {
             console.error('Upload failed:', err);

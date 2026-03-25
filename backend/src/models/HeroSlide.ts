@@ -29,7 +29,7 @@ const HeroSlideSchema = new Schema<IHeroSlide>({
     ctaLink: { type: String, default: '/shop' },
     duration: { type: Number, default: 5000 },
     order: { type: Number, default: 0 },
-    status: { type: String, enum: ['ACTIVE', 'INACTIVE'], default: 'ACTIVE' },
+    status: { type: String, enum: ['ACTIVE', 'INACTIVE', 'Active', 'Inactive'], default: 'ACTIVE' },
 });
 
 export const HeroSlide = mongoose.model<IHeroSlide>('HeroSlide', HeroSlideSchema);

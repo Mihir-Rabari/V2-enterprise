@@ -70,7 +70,7 @@ const ProductSchema = new Schema<IProduct>(
         isNewArrival: { type: Boolean, default: false },
         isTrending: { type: Boolean, default: false },
         tags: [{ type: String }],
-        status: { type: String, enum: ['ACTIVE', 'INACTIVE'], default: 'ACTIVE' },
+        status: { type: String, enum: ['ACTIVE', 'INACTIVE', 'Active', 'Inactive'], default: 'ACTIVE' },
     },
     { timestamps: true }
 );

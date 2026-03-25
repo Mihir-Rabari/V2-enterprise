@@ -23,7 +23,7 @@ const SliderSchema = new Schema<ISlider>({
     text: { type: String },
     link: { type: String, default: '/shop' },
     duration: { type: Number, default: 5000 },
-    status: { type: String, enum: ['ACTIVE', 'INACTIVE'], default: 'ACTIVE' },
+    status: { type: String, enum: ['ACTIVE', 'INACTIVE', 'Active', 'Inactive'], default: 'ACTIVE' },
 });
 
 export const Slider = mongoose.model<ISlider>('Slider', SliderSchema);

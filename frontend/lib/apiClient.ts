@@ -2,7 +2,8 @@ import axios from 'axios';
 import {
     initialProducts, initialOrders, initialReviews,
     initialMainCategories, initialSubCategories, initialCustomers,
-    initialContacts, initialSiteSettings
+    initialContacts, initialSiteSettings, initialHeroSlides,
+    initialHomeSections, initialMarquee
 } from '../data/initialData';
 
 const mockResponse = (data: any) => Promise.resolve({ data: { success: true, data } });
@@ -14,7 +15,16 @@ const mockResponse = (data: any) => Promise.resolve({ data: { success: true, dat
 // In development, fall back to localhost:5000 where the backend runs separately.
 const BASE_URL = import.meta.env.VITE_API_URL ||
     (import.meta.env.DEV ? 'http://localhost:5000/api/v1' : '/api/v1');
-const IS_MOCK = import.meta.env.VITE_USE_MOCK_API === 'true';
+const IS_MOCK_ENV = import.meta.env.VITE_USE_MOCK_API === 'true';
+const IS_LOCALHOST = typeof window !== 'undefined' && 
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.includes('192.168.'));
+
+// Only allow mock mode on localhost to prevent production from accidentally showing mock data
+export const IS_MOCK = IS_MOCK_ENV && IS_LOCALHOST;
+
+if (typeof window !== 'undefined') {
+    console.log(`[V2-API] Base URL: ${BASE_URL} | Mock Mode: ${IS_MOCK ? 'ENABLED' : 'DISABLED'}`);
+}
 
 export const api = axios.create({
     baseURL: BASE_URL,
@@ -179,13 +189,16 @@ export const reviewsAPI = {
 export const sliderAPI = {
     getHero: () =>
         IS_MOCK
-            ? mockResponse([{ id: 1, image: 'https://via.placeholder.com/1920x600/FF5733/FFFFFF?text=Hero+Slide+1', title: 'Mock Hero Slide 1', subtitle: 'Amazing products await!', link: '/products' }])
+            ? mockResponse(initialHeroSlides)
             : api.get('/sliders/hero'),
     getPromotional: () =>
         IS_MOCK
-            ? mockResponse([{ id: 1, image: 'https://via.placeholder.com/800x400/33FF57/FFFFFF?text=Promo+Slide+1', title: 'Mock Promo Slide 1', link: '/products' }])
+            ? mockResponse(initialHomeSections.promotionalSliders || [])
             : api.get('/sliders/promotional'),
-    getMarquee: () => contentAPI.getByType('MARQUEE'),
+    getMarquee: () =>
+        IS_MOCK
+            ? mockResponse(initialMarquee)
+            : contentAPI.getByType('MARQUEE'),
 
     // Admin
     createHero: (data: any) => api.post('/sliders/hero', data),

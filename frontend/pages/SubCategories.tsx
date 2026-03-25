@@ -4,13 +4,13 @@ import { Link, useParams, Navigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { categoriesAPI, settingsAPI } from '../lib/apiClient';
 import { SiteSettings } from '../types';
-import { initialSiteSettings } from '../data/initialData';
+// No initialData imports allowed. 100% dynamic.
 
 const SubCategories: React.FC = () => {
     const { category } = useParams<{ category: string }>();
     const [subCategories, setSubCategories] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [siteSettings, setSiteSettings] = useState<SiteSettings>(initialSiteSettings);
+    const [siteSettings, setSiteSettings] = useState<SiteSettings>({} as SiteSettings);
 
     const decodedCategory = decodeURIComponent(category || '');
 

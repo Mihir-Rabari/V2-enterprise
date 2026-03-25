@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, ChevronDown, Heart, ShoppingBag, User, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SiteSettings, Product } from '../types';
-import { initialSiteSettings, initialProducts } from '../data/initialData';
+// No initialData imports allowed. 100% dynamic.
 import { useCart } from '../context/CartContext';
 import { settingsAPI } from '../lib/apiClient';
 import { useProducts } from '../hooks/useProducts';
@@ -18,7 +18,7 @@ const Navbar: React.FC<NavbarProps> = ({ onSwitchToAdmin }) => {
     const location = useLocation();
     const navigate = useNavigate();
 
-    const [siteSettings, setSiteSettings] = useState<SiteSettings>(initialSiteSettings);
+    const [siteSettings, setSiteSettings] = useState<SiteSettings>({} as SiteSettings);
     const isAdmin = localStorage.getItem('v2_admin_session') === 'true';
 
     useEffect(() => {

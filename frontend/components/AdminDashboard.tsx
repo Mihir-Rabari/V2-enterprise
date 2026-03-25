@@ -91,24 +91,7 @@ import {
     SocialPost,
     LookbookItem
 } from '../types';
-import {
-    initialColors,
-    initialRefundOrders,
-    initialSliders,
-    initialMainCategories,
-    initialSubCategories,
-    initialTaglines,
-    initialBestsellers,
-    initialLogos,
-    initialPages,
-    initialSiteSettings,
-    initialHeroContent,
-    initialFeatures,
-    initialCommitment,
-    initialAboutContent,
-    initialHomeSections,
-    initialHeroSlides
-} from '../data/initialData';
+// No initialData imports allowed. 100% dynamic.
 
 // Initial data moved to ../data/initialData.ts
 
@@ -153,7 +136,7 @@ const AdminDashboard: React.FC = () => {
     const [socialPosts, setSocialPosts] = useState<SocialPost[]>([]);
     const [lookbookItems, setLookbookItems] = useState<LookbookItem[]>([]);
     const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
-    const [mainSliders, setMainSliders] = useState<Slider[]>([]); // Using promotional slider routes
+    const [mainSliders, setMainSliders] = useState<Slider[]>([]);
     const [categorySliders, setCategorySliders] = useState<Slider[]>([]);
     const [bestCategorySliders, setBestCategorySliders] = useState<Slider[]>([]);
     const [newArrivalSliders, setNewArrivalSliders] = useState<Slider[]>([]);
@@ -163,12 +146,12 @@ const AdminDashboard: React.FC = () => {
     const [logos, setLogos] = useState<Logo[]>([]);
     const [pages, setPages] = useState<StaticPage[]>([]);
     const [heroSlides, setHeroSlides] = useState<HeroSlide[]>([]);
-    const [heroContent, setHeroContent] = useState<HeroContent>(initialHeroContent);
-    const [features, setFeatures] = useState<FeatureItem[]>(initialFeatures);
-    const [commitment, setCommitment] = useState<CommitmentContent>(initialCommitment);
-    const [aboutContent, setAboutContent] = useState<AboutPageContent>(initialAboutContent);
-    const [homeSections, setHomeSections] = useState<HomeSectionContent>(initialHomeSections);
-    const [siteSettings, setSiteSettings] = useState<SiteSettings>(initialSiteSettings);
+    const [heroContent, setHeroContent] = useState<HeroContent | null>(null);
+    const [features, setFeatures] = useState<any[]>([]);
+    const [commitment, setCommitment] = useState<CommitmentContent>({} as CommitmentContent);
+    const [aboutContent, setAboutContent] = useState<any>(null);
+    const [homeSections, setHomeSections] = useState<HomeSectionContent>({} as HomeSectionContent);
+    const [siteSettings, setSiteSettings] = useState<SiteSettings>({} as SiteSettings);
     const [waybillData, setWaybillData] = useState<Record<string, { awbNumber: string; trackingLink: string }>>({});
     const [filterSuggestions, setFilterSuggestions] = useState<any>({});
     const [productModalTab, setProductModalTab] = useState<'basic' | 'variants' | 'media' | 'attributes'>('basic');

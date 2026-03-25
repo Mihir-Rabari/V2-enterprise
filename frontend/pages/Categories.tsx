@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
-import { initialHomeSections, initialSiteSettings } from '../data/initialData';
+// No initialData imports allowed. 100% dynamic.
 import { SiteSettings } from '../types';
 import { categoriesAPI, settingsAPI } from '../lib/apiClient';
 import { useState, useEffect } from 'react';
@@ -10,7 +10,7 @@ import { useState, useEffect } from 'react';
 const Categories: React.FC = () => {
     const [categories, setCategories] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [siteSettings, setSiteSettings] = useState<SiteSettings>(initialSiteSettings);
+    const [siteSettings, setSiteSettings] = useState<SiteSettings>({} as SiteSettings);
 
     useEffect(() => {
         categoriesAPI.getAll()

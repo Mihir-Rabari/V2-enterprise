@@ -5,7 +5,7 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Mail, Lock, ArrowRight, Shield, ChevronLeft } from 'lucide-react';
 import { settingsAPI } from '../lib/apiClient';
 import { SiteSettings } from '../types';
-import { initialSiteSettings } from '../data/initialData';
+// No initialData imports allowed. 100% dynamic.
 import { useEffect } from 'react';
 import { validateEmail } from '../lib/validation';
 
@@ -21,7 +21,7 @@ const Login: React.FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
-    const [siteSettings, setSiteSettings] = useState<SiteSettings>(initialSiteSettings);
+    const [siteSettings, setSiteSettings] = useState<SiteSettings>({} as SiteSettings);
 
     useEffect(() => {
         settingsAPI.get().then(res => {

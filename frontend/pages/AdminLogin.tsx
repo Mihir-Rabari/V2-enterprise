@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, ArrowRight, ShieldCheck, ChevronLeft, AlertTriangle } from 'lucide-react';
 import { authAPI, settingsAPI } from '../lib/apiClient';
 import { SiteSettings } from '../types';
-import { initialSiteSettings } from '../data/initialData';
+// No initialData imports allowed. 100% dynamic.
 import { useEffect } from 'react';
 import { validateEmail } from '../lib/validation';
 
@@ -13,7 +13,7 @@ const AdminLogin: React.FC = () => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const [siteSettings, setSiteSettings] = useState<SiteSettings>(initialSiteSettings);
+    const [siteSettings, setSiteSettings] = useState<SiteSettings>({} as SiteSettings);
     const navigate = useNavigate();
 
     useEffect(() => {

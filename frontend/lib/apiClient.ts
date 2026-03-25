@@ -1,11 +1,7 @@
 import axios from 'axios';
-import {
-    initialProducts, initialOrders, initialReviews,
-    initialMainCategories, initialSubCategories, initialCustomers,
-    initialContacts, initialSiteSettings, initialHeroSlides,
-    initialHomeSections, initialMarquee
-} from '../data/initialData';
+// No initialData imports needed for a 100% dynamic model
 
+// Mock Responses
 const mockResponse = (data: any) => Promise.resolve({ data: { success: true, data } });
 
 // ─── Base Config ─────────────────────────────────────────────────────────────
@@ -68,23 +64,19 @@ export const authAPI = {
 
     login: (data: { email: string; password: string }) => {
         if (IS_MOCK) {
-            const user = initialCustomers.find(c => c.email === data.email);
-            if (user) {
-                return mockResponse({ user, token: 'mock-jwt-token', message: 'Mock login successful' });
-            }
-            return Promise.reject({ response: { data: { message: 'Invalid credentials' }, status: 401 } });
+            return mockResponse({ user: { id: 999, email: data.email }, token: 'mock-jwt-token', message: 'Mock login successful' });
         }
         return api.post('/auth/login', data);
     },
 
     getMe: () =>
         IS_MOCK
-            ? mockResponse(initialCustomers[0])
+            ? mockResponse(null)
             : api.get('/auth/me'),
 
     updateMe: (data: { name?: string; firstName?: string; lastName?: string; phone?: string }) =>
         IS_MOCK
-            ? mockResponse({ ...initialCustomers[0], ...data })
+            ? mockResponse({ id: 999, ...data })
             : api.patch('/auth/me', data),
 
     forgotPassword: (email: string) =>
@@ -97,12 +89,12 @@ export const authAPI = {
 export const productsAPI = {
     getAll: (params?: Record<string, string | number | boolean>) =>
         IS_MOCK
-            ? mockResponse({ products: initialProducts })
+            ? mockResponse({ products: [] })
             : api.get('/products', { params }),
 
     getById: (id: string | number) =>
         IS_MOCK
-            ? mockResponse(initialProducts.find(p => p.id === id))
+            ? mockResponse(null)
             : api.get(`/products/${id}`),
 
     create: (data: FormData | Record<string, unknown>) =>
@@ -133,13 +125,13 @@ export const ordersAPI = {
 
     getMyOrders: () =>
         IS_MOCK
-            ? mockResponse(initialOrders)
+            ? mockResponse([])
             : api.get('/orders/my'),
 
     // Admin
     getAll: (params?: Record<string, number>) =>
         IS_MOCK
-            ? mockResponse({ orders: initialOrders })
+            ? mockResponse({ orders: [] })
             : api.get('/orders', { params }),
 
     update: (id: string | number, data: any) =>
@@ -156,12 +148,12 @@ export const ordersAPI = {
 export const reviewsAPI = {
     getForProduct: (productId: string | number) =>
         IS_MOCK
-            ? mockResponse(initialReviews.filter(r => r.productId === productId))
+            ? mockResponse([])
             : api.get(`/reviews/product/${productId}`),
 
     getHomepage: () =>
         IS_MOCK
-            ? mockResponse(initialReviews.filter(r => r.homepageVisible))
+            ? mockResponse([])
             : api.get('/reviews/homepage'),
 
     submit: (data: any) =>
@@ -172,7 +164,7 @@ export const reviewsAPI = {
     // Admin
     getAll: () =>
         IS_MOCK
-            ? mockResponse(initialReviews)
+            ? mockResponse([])
             : api.get('/reviews'),
 
     update: (id: string | number, data: Record<string, unknown>) =>
@@ -189,16 +181,16 @@ export const reviewsAPI = {
 export const sliderAPI = {
     getHero: () =>
         IS_MOCK
-            ? mockResponse(initialHeroSlides)
+            ? mockResponse([])
             : api.get('/sliders/hero'),
     getPromotional: () =>
         IS_MOCK
-            ? mockResponse(initialHomeSections.promotionalSliders || [])
+            ? mockResponse([])
             : api.get('/sliders/promotional'),
     getMarquee: () =>
         IS_MOCK
-            ? mockResponse(initialMarquee)
-            : contentAPI.getByType('MARQUEE'),
+            ? mockResponse([])
+            : api.get('/content/MARQUEE'),
 
     // Admin
     createHero: (data: any) => api.post('/sliders/hero', data),
@@ -220,12 +212,12 @@ export const contentAPI = {
 export const settingsAPI = {
     get: () =>
         IS_MOCK
-            ? mockResponse(initialSiteSettings)
+            ? mockResponse({})
             : api.get('/settings'),
 
     update: (data: Record<string, unknown>) =>
         IS_MOCK
-            ? mockResponse({ ...initialSiteSettings, ...data })
+            ? mockResponse({ ...data })
             : api.patch('/settings', data),
 };
 
@@ -238,7 +230,7 @@ export const contactsAPI = {
     // Admin
     getAll: () =>
         IS_MOCK
-            ? mockResponse(initialContacts)
+            ? mockResponse([])
             : api.get('/contacts'),
 
     markRead: (id: string | number, data: any) =>
@@ -255,7 +247,7 @@ export const adminAPI = {
 
     getCustomers: (params?: Record<string, number>) =>
         IS_MOCK
-            ? mockResponse(initialCustomers)
+            ? mockResponse([])
             : api.get('/admin/customers', { params }),
 
     uploadImage: (file: File) => {
@@ -276,7 +268,7 @@ export const adminAPI = {
 export const categoriesAPI = {
     getAll: () =>
         IS_MOCK
-            ? mockResponse([...initialMainCategories, ...initialSubCategories])
+            ? mockResponse([])
             : api.get('/categories'),
 
     create: (data: { name: string; slug: string; parentId?: number }) =>

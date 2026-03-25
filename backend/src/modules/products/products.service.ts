@@ -3,8 +3,8 @@ import mongoose from 'mongoose';
 import { syncFiltersFromProducts } from '../filters/filters.service';
 
 export interface ProductFilters {
-    mainCategory?: string;
-    subCategory?: string;
+    mainCategories?: string[];
+    subCategories?: string[];
     isTrending?: boolean;
     isNewArrival?: boolean;
     tag?: string;
@@ -13,19 +13,52 @@ export interface ProductFilters {
     limit?: number;
     status?: 'ACTIVE' | 'INACTIVE' | 'ALL';
     groupByColor?: boolean;
+    // Dynamic Filters
+    minPrice?: number;
+    maxPrice?: number;
+    colors?: string[];
+    sizes?: string[];
+    fabrics?: string[];
+    collars?: string[];
+    sleeves?: string[];
+    necks?: string[];
+    pockets?: string[];
+    lengths?: string[];
+    patternTypes?: string[];
 }
 
 export const getProductsService = async (filters: ProductFilters) => {
-    const { mainCategory, subCategory, isTrending, isNewArrival, tag, search, status, page = 1, limit = 12, groupByColor } = filters;
+    const { 
+        mainCategories, subCategories, isTrending, isNewArrival, tag, search, status, 
+        page = 1, limit = 12, groupByColor,
+        minPrice, maxPrice, colors, sizes, fabrics, collars, sleeves, necks, pockets, lengths, patternTypes
+    } = filters;
     const skip = (page - 1) * limit;
 
     const query: Record<string, unknown> = {
-        ...(mainCategory && { mainCategory }),
-        ...(subCategory && { subCategory }),
+        ...(mainCategories && mainCategories.length > 0 && { mainCategory: { $in: mainCategories } }),
+        ...(subCategories && subCategories.length > 0 && { subCategory: { $in: subCategories } }),
         ...(isTrending !== undefined && { isTrending }),
         ...(isNewArrival !== undefined && { isNewArrival }),
         ...(status === 'ALL' ? {} : status ? { status } : { status: 'ACTIVE' }),
         ...(tag && { tags: tag }),
+        // Price Range
+        ...((minPrice !== undefined || maxPrice !== undefined) && {
+            price: {
+                ...(minPrice !== undefined && { $gte: minPrice }),
+                ...(maxPrice !== undefined && { $lte: maxPrice }),
+            }
+        }),
+        // Multi-select Filters
+        ...(colors && colors.length > 0 && { color: { $in: colors } }),
+        ...(sizes && sizes.length > 0 && { size: { $in: sizes } }),
+        ...(fabrics && fabrics.length > 0 && { fabric: { $in: fabrics } }),
+        ...(collars && collars.length > 0 && { collar: { $in: collars } }),
+        ...(sleeves && sleeves.length > 0 && { sleeve: { $in: sleeves } }),
+        ...(necks && necks.length > 0 && { neck: { $in: necks } }),
+        ...(pockets && pockets.length > 0 && { pocket: { $in: pockets } }),
+        ...(lengths && lengths.length > 0 && { length: { $in: lengths } }),
+        ...(patternTypes && patternTypes.length > 0 && { patternType: { $in: patternTypes } }),
         ...(search && {
             $or: [
                 { name: { $regex: search, $options: 'i' } },

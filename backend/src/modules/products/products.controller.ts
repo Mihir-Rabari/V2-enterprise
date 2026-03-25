@@ -7,10 +7,21 @@ import {
 
 export const getProducts = async (req: Request, res: Response) => {
     try {
-        const { mainCategory, subCategory, isTrending, isNew, tag, search, page, limit, status, groupByColor } = req.query;
+        const { 
+            mainCategories, subCategories, isTrending, isNew, tag, search, 
+            page, limit, status, groupByColor,
+            minPrice, maxPrice, colors, sizes, fabrics, collars, sleeves, necks, pockets, lengths, patternTypes
+        } = req.query;
+
+        const toArray = (val: any): string[] | undefined => {
+            if (!val) return undefined;
+            if (Array.isArray(val)) return val as string[];
+            return [val as string];
+        };
+
         const result = await getProductsService({
-            mainCategory: mainCategory as string,
-            subCategory: subCategory as string,
+            mainCategories: toArray(mainCategories || req.query.mainCategory),
+            subCategories: toArray(subCategories || req.query.subCategory),
             isTrending: isTrending === 'true' ? true : isTrending === 'false' ? false : undefined,
             isNewArrival: isNew === 'true' ? true : isNew === 'false' ? false : undefined,
             tag: tag as string,
@@ -19,6 +30,18 @@ export const getProducts = async (req: Request, res: Response) => {
             page: page ? parseInt(page as string) : 1,
             limit: limit ? parseInt(limit as string) : 12,
             groupByColor: groupByColor === 'true',
+            // Dynamic Filters
+            minPrice: minPrice ? parseFloat(minPrice as string) : undefined,
+            maxPrice: maxPrice ? parseFloat(maxPrice as string) : undefined,
+            colors: toArray(colors),
+            sizes: toArray(sizes),
+            fabrics: toArray(fabrics),
+            collars: toArray(collars),
+            sleeves: toArray(sleeves),
+            necks: toArray(necks),
+            pockets: toArray(pockets),
+            lengths: toArray(lengths),
+            patternTypes: toArray(patternTypes),
         });
         return sendSuccess(res, result);
     } catch (err: unknown) {

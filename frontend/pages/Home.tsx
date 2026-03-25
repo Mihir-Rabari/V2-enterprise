@@ -5,8 +5,12 @@ import { ArrowRight, ArrowUpRight, TrendingUp, Sparkles, Star, ShieldCheck, Zap,
 import { Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import { HeroContent, CommitmentContent, Product, HomeSectionContent, MarqueeItem, JournalPost, LookbookItem, Review, HeroSlide, Slider, Category, SiteSettings, PromotionalSlide } from '../types';
-import { initialHeroContent, initialCommitment, initialProducts, initialHomeSections, initialMarquee, initialJournal, initialLookbook, initialReviews, initialHeroSlides, initialSiteSettings } from '../data/initialData';
+import { 
+    HeroContent, CommitmentContent, Product, HomeSectionContent, 
+    MarqueeItem, JournalPost, LookbookItem, Review, 
+    HeroSlide, Slider, Category, SiteSettings, PromotionalSlide 
+} from '../types';
+// No initialData imports allowed. 100% dynamic.
 import { AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import FilterAccordion from '../components/FilterAccordion';
@@ -249,12 +253,12 @@ const Home: React.FC = () => {
     };
 
     // Configuration States
-    const [homeSections, setHomeSections] = useState<HomeSectionContent>(initialHomeSections);
-    const [marqueeItems, setMarqueeItems] = useState<MarqueeItem[]>(initialMarquee || []);
+    const [homeSections, setHomeSections] = useState<HomeSectionContent>({} as HomeSectionContent);
+    const [marqueeItems, setMarqueeItems] = useState<MarqueeItem[]>([]);
     const [lookbookItems, setLookbookItems] = useState<LookbookItem[]>([]);
-    const [commitment, setCommitment] = useState<CommitmentContent>(initialCommitment);
-    const [siteSettings, setSiteSettings] = useState<SiteSettings>(initialSiteSettings);
-    const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(initialHeroSlides);
+    const [commitment, setCommitment] = useState<CommitmentContent>({} as CommitmentContent);
+    const [siteSettings, setSiteSettings] = useState<SiteSettings>({} as SiteSettings);
+    const [heroSlides, setHeroSlides] = useState<HeroSlide[]>([]);
     const [promotionalSlides, setPromotionalSlides] = useState<PromotionalSlide[]>([]);
     const [bottomPromoSlides, setBottomPromoSlides] = useState<PromotionalSlide[]>([]);
     const [categorySlides, setCategorySlides] = useState<PromotionalSlide[]>([]);
@@ -305,11 +309,14 @@ const Home: React.FC = () => {
 
                 if (promoRes.status === 'fulfilled' && promoRes.value.data.success) {
                     const pData = promoRes.value.data.data || [];
-                    setPromotionalSlides(pData.filter((s: any) => (s.type === 'PROMOTIONAL' || !s.type) && String(s.status || '').toUpperCase() === 'ACTIVE'));
-                    setBottomPromoSlides(pData.filter((s: any) => s.type === 'BOTTOM_PROMOTIONAL' && String(s.status || '').toUpperCase() === 'ACTIVE'));
-                    setCategorySlides(pData.filter((s: any) => s.type === 'CATEGORY' && String(s.status || '').toUpperCase() === 'ACTIVE'));
-                    setBestCategorySlides(pData.filter((s: any) => s.type === 'BEST_CATEGORY' && String(s.status || '').toUpperCase() === 'ACTIVE'));
-                    setNewArrivalSlides(pData.filter((s: any) => s.type === 'NEW_ARRIVAL' && String(s.status || '').toUpperCase() === 'ACTIVE'));
+                    setPromotionalSlides(pData.filter((s: any) => {
+                        const t = String(s.type || '').toUpperCase();
+                        return (t === 'PROMOTIONAL' || !s.type) && String(s.status || '').toUpperCase() === 'ACTIVE';
+                    }));
+                    setBottomPromoSlides(pData.filter((s: any) => String(s.type || '').toUpperCase() === 'BOTTOM_PROMOTIONAL' && String(s.status || '').toUpperCase() === 'ACTIVE'));
+                    setCategorySlides(pData.filter((s: any) => String(s.type || '').toUpperCase() === 'CATEGORY' && String(s.status || '').toUpperCase() === 'ACTIVE'));
+                    setBestCategorySlides(pData.filter((s: any) => String(s.type || '').toUpperCase() === 'BEST_CATEGORY' && String(s.status || '').toUpperCase() === 'ACTIVE'));
+                    setNewArrivalSlides(pData.filter((s: any) => String(s.type || '').toUpperCase() === 'NEW_ARRIVAL' && String(s.status || '').toUpperCase() === 'ACTIVE'));
                 }
 
                 if (marqueeRes.status === 'fulfilled' && marqueeRes.value.data.success) {
@@ -411,8 +418,8 @@ const Home: React.FC = () => {
                 image: c.image || 'https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=800',
                 link: `/${encodeURIComponent(c.name)}`
             }))
-            : (homeSections.categories || []);
-    }, [categories, homeSections.categories]);
+            : [];
+    }, [categories]);
 
     const renderEssentialsSidebarContent = useCallback(() => (
         <div className="w-full">
@@ -494,7 +501,7 @@ const Home: React.FC = () => {
                         case 'promotional_slider':
                             return (
                                 <React.Suspense key="promotional_slider" fallback={<div className="h-96 bg-white animate-pulse" />}>
-                                    <PromotionalSlider slides={promotionalSlides.length > 0 ? promotionalSlides : (homeSections.promotionalSliders || [])} />
+                                    <PromotionalSlider slides={promotionalSlides} />
                                 </React.Suspense>
                             );
                         case 'category-slider':
@@ -523,7 +530,7 @@ const Home: React.FC = () => {
                                 <section key="promotional" className="py-24 bg-white overflow-hidden">
                                     <div className="max-w-[1800px] mx-auto px-6 lg:px-12">
                                         <React.Suspense fallback={<div className="h-96 bg-white animate-pulse" />}>
-                                            <PromotionalSlider slides={bottomPromoSlides.length > 0 ? bottomPromoSlides : []} />
+                                            <PromotionalSlider slides={bottomPromoSlides} />
                                         </React.Suspense>
                                     </div>
                                 </section>

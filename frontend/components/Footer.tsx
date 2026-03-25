@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Instagram, Twitter, Facebook, ArrowRight, Youtube, MessageCircle, Truck, CreditCard, RefreshCw, Headphones, MapPin, Phone, Mail, LucideIcon } from 'lucide-react';
 import { SiteSettings, FeatureItem } from '../types';
-import { initialSiteSettings, initialFeatures } from '../data/initialData';
+// No initialData imports allowed. 100% dynamic.
 import { settingsAPI, contentAPI } from '../lib/apiClient';
 import { useState, useEffect } from 'react';
 
@@ -11,8 +11,8 @@ interface FooterProps {
 }
 
 const Footer: React.FC<FooterProps> = ({ onSwitchToAdmin }) => {
-    const [siteSettings, setSiteSettings] = useState<SiteSettings>(initialSiteSettings);
-    const [features, setFeatures] = useState<FeatureItem[]>(initialFeatures);
+    const [siteSettings, setSiteSettings] = useState<SiteSettings>({} as SiteSettings);
+    const [features, setFeatures] = useState<FeatureItem[]>([]);
 
     useEffect(() => {
         settingsAPI.get().then(res => {

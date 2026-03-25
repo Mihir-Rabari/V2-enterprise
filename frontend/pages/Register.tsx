@@ -5,7 +5,7 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Mail, Lock, User, Phone, ArrowRight, ChevronLeft } from 'lucide-react';
 import { settingsAPI } from '../lib/apiClient';
 import { SiteSettings } from '../types';
-import { initialSiteSettings } from '../data/initialData';
+// No initialData imports allowed. 100% dynamic.
 import { useEffect } from 'react';
 import { validateEmail, validateRequired } from '../lib/validation';
 
@@ -21,7 +21,7 @@ const Register: React.FC = () => {
     const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirm: '' });
     const [loading, setLoading] = useState(false);
     const [localError, setLocalError] = useState('');
-    const [siteSettings, setSiteSettings] = useState<SiteSettings>(initialSiteSettings);
+    const [siteSettings, setSiteSettings] = useState<SiteSettings>({} as SiteSettings);
 
     useEffect(() => {
         settingsAPI.get().then(res => {

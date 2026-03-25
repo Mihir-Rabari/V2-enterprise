@@ -28,21 +28,51 @@ export interface ApiProduct {
     photo2?: string;
 }
 
-export function useProducts(params?: Record<string, string | number | boolean>) {
+export function useProducts(params?: Record<string, any>) {
     const [products, setProducts] = useState<ApiProduct[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [error, setError] = useState('');
+    const [hasMore, setHasMore] = useState(true);
+    const [total, setTotal] = useState(0);
+
+    const page = params?.page || 1;
 
     useEffect(() => {
-        setLoading(true);
+        if (page === 1) {
+            setLoading(true);
+            // Reset products when starting a new filtered search
+            // setProducts([]); // Optional: clear immediately for UI feedback
+        } else {
+            setLoadingMore(true);
+        }
+
         productsAPI.getAll(params)
-            .then(res => setProducts(res.data.data?.products ?? []))
+            .then(res => {
+                const data = res.data.data;
+                const newProducts = data?.products ?? [];
+                const totalCount = data?.total ?? 0;
+                const limitCount = data?.limit ?? 20;
+                
+                if (page === 1) {
+                    setProducts(newProducts);
+                } else {
+                    setProducts(prev => [...prev, ...newProducts]);
+                }
+                
+                setTotal(totalCount);
+                // Simple hasMore logic: if we got less than the limit, there's no more
+                setHasMore(newProducts.length >= limitCount);
+            })
             .catch(() => setError('Failed to load products'))
-            .finally(() => setLoading(false));
+            .finally(() => {
+                setLoading(false);
+                setLoadingMore(false);
+            });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [JSON.stringify(params)]);
 
-    return { products, loading, error };
+    return { products, loading, loadingMore, error, hasMore, total };
 }
 
 export function useProduct(id: string | number | undefined) {

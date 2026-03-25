@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Mail, Phone, MapPin, Instagram, Facebook, Twitter, ArrowRight, Youtube, MessageCircle, Clock, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import { initialSiteSettings } from '../data/initialData';
+// No initialData imports allowed. 100% dynamic.
 import { SiteSettings } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { contactsAPI, settingsAPI } from '../lib/apiClient';
@@ -16,7 +16,7 @@ const Contact: React.FC = () => {
         canonical: '/contact',
     });
     const { user } = useAuth();
-    const [siteSettings, setSiteSettings] = useState<SiteSettings>(initialSiteSettings);
+    const [siteSettings, setSiteSettings] = useState<SiteSettings>({} as SiteSettings);
 
     const [submitted, setSubmitted] = useState(false);
     const [localError, setLocalError] = useState('');

@@ -9,7 +9,7 @@ import QuickView from './QuickView';
 import { useCart } from '../context/CartContext';
 import { contentAPI, settingsAPI } from '../lib/apiClient';
 import { SiteSettings } from '../types';
-import { initialSiteSettings } from '../data/initialData';
+// No initialData imports allowed. 100% dynamic.
 
 interface CustomerLayoutProps {
     onSwitchToAdmin: () => void;
@@ -19,7 +19,7 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ onSwitchToAdmin }) => {
     const location = useLocation();
     const { toast, hideToast } = useCart();
     const [isInitialLoad, setIsInitialLoad] = React.useState(true);
-    const [siteSettings, setSiteSettings] = React.useState<SiteSettings>(initialSiteSettings);
+    const [siteSettings, setSiteSettings] = React.useState<SiteSettings>({} as SiteSettings);
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -41,12 +41,12 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ onSwitchToAdmin }) => {
                 if (res.data.success && res.data.data && res.data.data.length > 0) {
                     setTaglines(res.data.data.map((t: any) => ({ text: t.text || t.title || "V2 Enterprise — Defining Modern Heritage" })));
                 } else {
-                    setTaglines([{ text: "Complimentary Shipping on all orders above ₹999 | 14 Day Returns" }]);
+                    setTaglines([{ text: "" }]);
                 }
             })
             .catch(err => {
                 console.error('Error fetching taglines:', err);
-                setTaglines([{ text: "Complimentary Shipping on all orders above ₹999 | 14 Day Returns" }]);
+                setTaglines([{ text: "" }]);
             });
 
         settingsAPI.get().then(res => {

@@ -22,6 +22,10 @@ interface ImageUploaderProps {
     isVideo?: boolean;
     /** If true, hides the Media Manager/Library option and uses backend direct upload for videos */
     directUploadOnly?: boolean;
+    /** Optional dimension hint (e.g. 1920x1080) */
+    sizeHint?: string;
+    /** Which backend endpoint to use for direct upload (if directUploadOnly=true) */
+    uploadType?: 'slider' | 'video' | 'default';
 }
 
 export const ImageUploader: React.FC<ImageUploaderProps> = ({
@@ -33,6 +37,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     compact = false,
     isVideo = false,
     directUploadOnly = false,
+    sizeHint,
+    uploadType = 'default',
 }) => {
     const inputRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
@@ -48,9 +54,18 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         
         const isLocalVideo = (isVideo || file.type.startsWith('video/')) && directUploadOnly;
         
-        const uploadPromise = isLocalVideo 
-            ? adminAPI.uploadLocalVideo(file).then(res => res.data.data.url)
-            : uploadToImageKit(file, folder);
+        let uploadPromise;
+        if (directUploadOnly) {
+            if (uploadType === 'slider') {
+                uploadPromise = adminAPI.uploadSliderMedia(file).then(res => res.data.data.url);
+            } else if (uploadType === 'video' || isLocalVideo) {
+                uploadPromise = adminAPI.uploadLocalVideo(file).then(res => res.data.data.url);
+            } else {
+                uploadPromise = uploadToImageKit(file, folder);
+            }
+        } else {
+            uploadPromise = uploadToImageKit(file, folder);
+        }
         
         toast.promise(uploadPromise, {
             loading: isLocalVideo ? 'Uploading to local server...' : 'Uploading to ImageKit Cloud...',
@@ -199,6 +214,11 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
                             {accept.includes('video') ? 'Images & Videos • ' : 'Images • '}
                             {directUploadOnly ? 'Stored on Local Server' : 'Stored on ImageKit CDN'}
                         </p>
+                        {sizeHint && (
+                            <p className="text-[9px] text-luxury-gold font-bold bg-luxury-gold/5 px-2 py-0.5 rounded-full mt-1">
+                                Rec: {sizeHint}
+                            </p>
+                        )}
                     </div>
                 )}
             </div>

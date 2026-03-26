@@ -28,9 +28,26 @@ const adminStorage = multer.diskStorage({
     }
 });
 
+// Dedicated Storage for Slider Media (Permanent on Server)
+const sliderStorage = multer.diskStorage({
+    destination: (_req, _file, cb) => {
+        const dest = path.join(__dirname, '../../../uploads/sliders');
+        if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
+        cb(null, dest);
+    },
+    filename: (_req, file, cb) => {
+        cb(null, `v2-slider-${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`);
+    }
+});
+
 const upload = multer({ 
     storage: adminStorage, 
-    limits: { fileSize: 100 * 1024 * 1024 } // 100MB standard limit
+    limits: { fileSize: 100 * 1024 * 1024 } 
+});
+
+const uploadSliderMedia = multer({ 
+    storage: sliderStorage, 
+    limits: { fileSize: 500 * 1024 * 1024 } // 500MB for High-Res Hero Videos
 });
 
 // ImageKit credentials from env
@@ -388,6 +405,35 @@ router.post('/upload-video', protect, adminOnly, uploadVideo.single('file'), asy
     } catch (err: any) {
         console.error('Local video upload error:', err.message);
         return sendError(res, err.message, 500);
+    }
+});
+
+// Dedicated route for Slider Media (Images or Videos - saved permanently to /uploads/sliders)
+router.post('/upload-slider-media', protect, adminOnly, uploadSliderMedia.single('file'), async (req: Request, res: Response) => {
+    try {
+        if (!req.file) return sendError(res, 'No file uploaded', 400);
+        
+        // Construct the local URL (relative to public /sliders)
+        const fileUrl = `/sliders/${req.file.filename}`;
+        
+        // Optional: Save to Media library as a local reference
+        await Media.create({
+            url: fileUrl,
+            fileId: `local_slider_${req.file.filename}`,
+            name: req.file.originalname,
+            size: req.file.size,
+            mimeType: req.file.mimetype,
+            folder: '/sliders-local',
+        });
+
+        return sendSuccess(res, {
+            url: fileUrl,
+            name: req.file.originalname,
+            filename: req.file.filename
+        }, 'Slider media uploaded successfully');
+    } catch (error: any) {
+        console.error('Slider media upload error:', error.message);
+        return sendError(res, error.message, 500);
     }
 });
 

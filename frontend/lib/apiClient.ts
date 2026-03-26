@@ -285,6 +285,14 @@ export const adminAPI = {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
     },
+
+    uploadSliderMedia: (file: File) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return api.post('/admin/upload-slider-media', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
+    },
 };
 
 export const categoriesAPI = {

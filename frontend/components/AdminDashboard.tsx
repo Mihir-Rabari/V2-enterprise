@@ -1492,39 +1492,61 @@ const AdminDashboard: React.FC = () => {
                         </div>
                         {formData.mediaType === 'video' ? (
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                    <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Laptop Video</label>
-                                    <ImageUploader
-                                        value={formData.laptopUrl || formData.image || ''}
-                                        onChange={url => setFormData({ ...formData, laptopUrl: url, image: url })}
-                                        accept="video/*"
-                                        folder="v2-sliders"
-                                        isVideo={true}
-                                        directUploadOnly={true}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Tablet Video</label>
-                                    <ImageUploader
-                                        value={formData.tabletUrl || ''}
-                                        onChange={url => setFormData({ ...formData, tabletUrl: url })}
-                                        accept="video/*"
-                                        folder="v2-sliders"
-                                        isVideo={true}
-                                        directUploadOnly={true}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Mobile Video</label>
-                                    <ImageUploader
-                                        value={formData.mobileUrl || ''}
-                                        onChange={url => setFormData({ ...formData, mobileUrl: url })}
-                                        accept="video/*"
-                                        folder="v2-sliders"
-                                        isVideo={true}
-                                        directUploadOnly={true}
-                                    />
-                                </div>
+                                {(() => {
+                                    const type = (formData.type || 'PROMOTIONAL').toUpperCase();
+                                    const hints = {
+                                        HERO: { l: '1920x1080', t: '1024x1366', m: '750x1334' },
+                                        PROMOTIONAL: { l: '1920x600', t: '1024x450', m: '750x800' },
+                                        BOTTOM_PROMOTIONAL: { l: '1920x800', t: '1024x600', m: '750x1000' },
+                                        CATEGORY: { l: '1920x600', t: '1024x450', m: '750x800' },
+                                        BEST_CATEGORY: { l: '1920x600', t: '1024x450', m: '750x800' },
+                                        NEW_ARRIVAL: { l: '1920x600', t: '1024x450', m: '750x800' }
+                                    }[type as keyof typeof hints] || { l: '1920x800', t: '1024x600', m: '750x1000' };
+
+                                    return (
+                                        <>
+                                            <div>
+                                                <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1 text-center">Laptop View</label>
+                                                <ImageUploader
+                                                    value={formData.laptopUrl || formData.image || ''}
+                                                    onChange={url => setFormData({ ...formData, laptopUrl: url, image: url })}
+                                                    accept="video/*"
+                                                    folder="v2-sliders"
+                                                    isVideo={true}
+                                                    directUploadOnly={true}
+                                                    uploadType="slider"
+                                                    sizeHint={hints.l}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1 text-center">Tablet View</label>
+                                                <ImageUploader
+                                                    value={formData.tabletUrl || ''}
+                                                    onChange={url => setFormData({ ...formData, tabletUrl: url })}
+                                                    accept="video/*"
+                                                    folder="v2-sliders"
+                                                    isVideo={true}
+                                                    directUploadOnly={true}
+                                                    uploadType="slider"
+                                                    sizeHint={hints.t}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1 text-center">Mobile View</label>
+                                                <ImageUploader
+                                                    value={formData.mobileUrl || ''}
+                                                    onChange={url => setFormData({ ...formData, mobileUrl: url })}
+                                                    accept="video/*"
+                                                    folder="v2-sliders"
+                                                    isVideo={true}
+                                                    directUploadOnly={true}
+                                                    uploadType="slider"
+                                                    sizeHint={hints.m}
+                                                />
+                                            </div>
+                                        </>
+                                    );
+                                })()}
                             </div>
                         ) : (
                             <ImageUploader
@@ -1534,7 +1556,9 @@ const AdminDashboard: React.FC = () => {
                                 folder="v2-sliders"
                                 isVideo={false}
                                 directUploadOnly={true}
+                                uploadType="slider"
                                 accept="image/*"
+                                sizeHint={modalType === 'category-slider' ? '1920x600' : '1920x800'}
                             />
                         )}
                         <p className="text-[10px] text-gray-400 mt-1 italic font-medium tracking-wider">Recommended: 1920x600px (3.2:1 Aspect Ratio)</p>

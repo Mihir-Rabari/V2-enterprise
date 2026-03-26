@@ -27,6 +27,7 @@ const app = express();
 const uploadDirs = [
     path.join(__dirname, '../uploads'),
     path.join(__dirname, '../uploads/videos'),
+    path.join(__dirname, '../uploads/sliders'),
 ];
 uploadDirs.forEach(dir => {
     if (!fs.existsSync(dir)) {
@@ -76,6 +77,11 @@ app.use(`${API}/filters`, filtersRoutes);
 // ── Serve Videos Locally (Persistent) ────────────────────────────────────────
 // This ensures /videos/filename.mp4 works in both dev and prod
 app.use('/videos', express.static(path.join(__dirname, '../uploads/videos'), {
+    maxAge: '1y',
+    immutable: true
+}));
+
+app.use('/sliders', express.static(path.join(__dirname, '../uploads/sliders'), {
     maxAge: '1y',
     immutable: true
 }));

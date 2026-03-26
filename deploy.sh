@@ -29,7 +29,10 @@ LOG_DIR="$REPO_DIR/logs"
 # ── Step 0: Create necessary directories ───────────────────────────────────────
 mkdir -p "$LOG_DIR"
 mkdir -p "$BACKEND_DIR/uploads/videos"
+mkdir -p "$BACKEND_DIR/uploads/sliders"
+mkdir -p "$BACKEND_DIR/uploads/v2-temp"
 mkdir -p "$BACKEND_DIR/public"
+chmod -R 775 "$BACKEND_DIR/uploads"
 
 echo ""
 echo "╔══════════════════════════════════════════════╗"

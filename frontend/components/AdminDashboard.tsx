@@ -1787,6 +1787,7 @@ const AdminDashboard: React.FC = () => {
                                         accept="video/*"
                                         folder="v2-hero-slides"
                                         isVideo={true}
+                                        directUploadOnly={true}
                                     />
                                     <p className="text-[10px] text-gray-400 mt-0.5 italic tracking-wider">1920x1080 (16:9) or 2560x1080 (21:9)</p>
                                 </div>
@@ -1798,6 +1799,7 @@ const AdminDashboard: React.FC = () => {
                                         accept="video/*"
                                         folder="v2-hero-slides"
                                         isVideo={true}
+                                        directUploadOnly={true}
                                     />
                                     <p className="text-[10px] text-gray-400 mt-0.5 italic tracking-wider">1024x1024 (Square) or 1024x768 (4:3)</p>
                                 </div>
@@ -1809,6 +1811,7 @@ const AdminDashboard: React.FC = () => {
                                         accept="video/*"
                                         folder="v2-hero-slides"
                                         isVideo={true}
+                                        directUploadOnly={true}
                                     />
                                     <p className="text-[10px] text-gray-400 mt-0.5 italic tracking-wider">1080x1920 (9:16 Vertical Content)</p>
                                 </div>

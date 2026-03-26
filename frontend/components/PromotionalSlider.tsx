@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PromotionalSlide } from '../types';
+import { getOptimizedImageUrl } from '../src/utils/mediaUtils';
 
 interface PromotionalSliderProps {
     slides: PromotionalSlide[];
@@ -48,12 +49,19 @@ const PromotionalSlider: React.FC<PromotionalSliderProps> = ({ slides }) => {
                                 loop
                                 muted
                                 playsInline
+                                preload="metadata"
+                                width={1920}
+                                height={1080}
                                 className="h-full w-full object-cover"
                             />
                         ) : (
                             <img
-                                src={currentSlide.image}
+                                src={getOptimizedImageUrl(currentSlide.image, { width: 1600, quality: 72 })}
                                 alt={currentSlide.title}
+                                loading="lazy"
+                                decoding="async"
+                                width={1600}
+                                height={900}
                                 className="h-full w-full object-cover"
                             />
                         )}

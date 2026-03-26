@@ -28,7 +28,7 @@ export interface ApiProduct {
     photo2?: string;
 }
 
-export function useProducts(params?: Record<string, any>) {
+export function useProducts(params?: Record<string, any> & { enabled?: boolean }) {
     const [products, setProducts] = useState<ApiProduct[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -39,6 +39,11 @@ export function useProducts(params?: Record<string, any>) {
     const page = params?.page || 1;
 
     useEffect(() => {
+        if (params?.enabled === false) {
+            setLoading(false);
+            setLoadingMore(false);
+            return;
+        }
         if (page === 1) {
             setLoading(true);
             // Reset products when starting a new filtered search

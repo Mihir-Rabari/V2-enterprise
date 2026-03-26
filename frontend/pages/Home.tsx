@@ -188,7 +188,7 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
 
 const Home: React.FC = () => {
     // API Hooks
-    const { products, loading: productsLoading } = useProducts({ limit: 300, groupByColor: true });
+    const { products, loading: productsLoading } = useProducts({ limit: 120, groupByColor: true });
     const [allReviews, setAllReviews] = useState<Review[]>([]);
     const [reviewsLoading, setReviewsLoading] = useState(true);
     const [essentialsSearchQuery, setEssentialsSearchQuery] = useState('');

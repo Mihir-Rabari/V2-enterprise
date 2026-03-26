@@ -44,9 +44,9 @@ const Navbar: React.FC<NavbarProps> = ({ onSwitchToAdmin }) => {
                     {/* Logo - Left */}
                     <Link to="/" className="flex items-center group">
                         {siteSettings.logoImage ? (
-                            <img src={siteSettings.logoImage} alt={siteSettings.logoText} className="h-8 w-auto object-contain" />
+                            <img src={siteSettings.logoImage} alt={siteSettings.logoText} className="h-8 w-auto object-contain" width={128} height={32} />
                         ) : (
-                            <img src="/v2_logo.webp" alt="V2 Logo" className="h-8 w-auto object-contain" />
+                            <img src="/v2_logo.webp" alt="V2 Logo" className="h-8 w-auto object-contain" width={128} height={32} />
                         )}
                     </Link>
                 </div>
@@ -101,9 +101,9 @@ const Navbar: React.FC<NavbarProps> = ({ onSwitchToAdmin }) => {
                         <div className="flex flex-col h-full p-12 space-y-8 overflow-y-auto">
                             <div className="flex justify-between items-center mb-12">
                                 {siteSettings.logoImage ? (
-                                    <img src={siteSettings.logoImage} alt={siteSettings.logoText} className="h-7 w-auto object-contain" />
+                                    <img src={siteSettings.logoImage} alt={siteSettings.logoText} className="h-7 w-auto object-contain" width={120} height={28} />
                                 ) : (
-                                    <img src="/v2_logo.webp" alt="V2 Logo" className="h-7 w-auto object-contain" />
+                                    <img src="/v2_logo.webp" alt="V2 Logo" className="h-7 w-auto object-contain" width={120} height={28} />
                                 )}
                                 <button onClick={() => setMobileMenuOpen(false)} className="p-2 -mr-2">
                                     <X size={28} strokeWidth={1} />
@@ -156,7 +156,7 @@ const MobileNavLink: React.FC<{ to: string; children: React.ReactNode }> = ({ to
 const SearchBar: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [query, setQuery] = useState('');
-    const { products } = useProducts({ limit: 500, groupByColor: true }); // Fetch all for search
+    const { products } = useProducts({ limit: 250, groupByColor: true, enabled: isOpen && query.length > 1 });
     const [results, setResults] = useState<Product[]>([]);
     const location = useLocation();
     const navigate = useNavigate();
@@ -238,7 +238,7 @@ const SearchBar: React.FC = () => {
                                             to={`/product/${product.id}`}
                                             className="flex items-center gap-4 p-2 hover:bg-luxury-gray rounded-xl transition-colors group"
                                         >
-                                            <img src={product.photo} alt={product.name} className="w-12 h-12 object-cover rounded-lg" />
+                                            <img src={product.photo} alt={product.name} className="w-12 h-12 object-cover rounded-lg" width={48} height={48} loading="lazy" decoding="async" />
                                             <div className="flex-1">
                                                 <p className="text-sm font-bold text-luxury-black group-hover:text-luxury-gold transition-colors">{product.name}</p>
                                                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{product.subCategory}</p>

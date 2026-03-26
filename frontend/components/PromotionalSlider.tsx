@@ -5,6 +5,12 @@ import { Link } from 'react-router-dom';
 import { PromotionalSlide } from '../types';
 import { getOptimizedImageUrl } from '../src/utils/mediaUtils';
 
+const PROMOTIONAL_IMAGE_WIDTH = 1600;
+const PROMOTIONAL_IMAGE_QUALITY = 72;
+const PROMOTIONAL_IMAGE_HEIGHT = 900;
+const PROMOTIONAL_VIDEO_WIDTH = 1920;
+const PROMOTIONAL_VIDEO_HEIGHT = 1080;
+
 interface PromotionalSliderProps {
     slides: PromotionalSlide[];
 }
@@ -29,6 +35,7 @@ const PromotionalSlider: React.FC<PromotionalSliderProps> = ({ slides }) => {
     const prevSlide = () => setCurrentIndex((prev) => (prev - 1 + slides.length) % slides.length);
 
     const currentSlide = slides[currentIndex];
+    const slideImage = currentSlide?.image || '';
 
     return (
         <section className="relative h-[450px] sm:h-[550px] lg:h-[600px] w-full overflow-hidden bg-luxury-gray">
@@ -42,26 +49,26 @@ const PromotionalSlider: React.FC<PromotionalSliderProps> = ({ slides }) => {
                     className="absolute inset-0"
                 >
                     <div className="relative h-full w-full">
-                        {currentSlide.type === 'video' || currentSlide.mediaType === 'video' || currentSlide.image.toLowerCase().endsWith('.mp4') || currentSlide.image.toLowerCase().endsWith('.webm') ? (
+                        {currentSlide.type === 'video' || currentSlide.mediaType === 'video' || slideImage.toLowerCase().endsWith('.mp4') || slideImage.toLowerCase().endsWith('.webm') ? (
                             <video
-                                src={currentSlide.image}
+                                src={slideImage}
                                 autoPlay
                                 loop
                                 muted
                                 playsInline
-                                preload="metadata"
-                                width={1920}
-                                height={1080}
+                                preload={currentIndex === 0 ? "metadata" : "none"}
+                                width={PROMOTIONAL_VIDEO_WIDTH}
+                                height={PROMOTIONAL_VIDEO_HEIGHT}
                                 className="h-full w-full object-cover"
                             />
                         ) : (
                             <img
-                                src={getOptimizedImageUrl(currentSlide.image, { width: 1600, quality: 72 })}
+                                src={getOptimizedImageUrl(slideImage, { width: PROMOTIONAL_IMAGE_WIDTH, quality: PROMOTIONAL_IMAGE_QUALITY })}
                                 alt={currentSlide.title}
-                                loading="lazy"
+                                loading={currentIndex === 0 ? 'eager' : 'lazy'}
                                 decoding="async"
-                                width={1600}
-                                height={900}
+                                width={PROMOTIONAL_IMAGE_WIDTH}
+                                height={PROMOTIONAL_IMAGE_HEIGHT}
                                 className="h-full w-full object-cover"
                             />
                         )}

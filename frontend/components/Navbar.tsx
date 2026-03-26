@@ -135,6 +135,10 @@ const Navbar: React.FC<NavbarProps> = ({ onSwitchToAdmin }) => {
     );
 };
 
+const MIN_SEARCH_QUERY_LENGTH = 2;
+const SEARCH_FETCH_DEBOUNCE_MS = 150;
+const SEARCH_PRODUCT_LIMIT = 120;
+
 const NavLink: React.FC<{ to: string; children: React.ReactNode }> = ({ to, children }) => {
     const location = useLocation();
     const isActive = location.pathname === to;
@@ -156,7 +160,8 @@ const MobileNavLink: React.FC<{ to: string; children: React.ReactNode }> = ({ to
 const SearchBar: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [query, setQuery] = useState('');
-    const { products } = useProducts({ limit: 250, groupByColor: true, enabled: isOpen && query.length > 1 });
+    const [canFetchSearch, setCanFetchSearch] = useState(false);
+    const { products } = useProducts({ limit: SEARCH_PRODUCT_LIMIT, groupByColor: true, enabled: canFetchSearch });
     const [results, setResults] = useState<Product[]>([]);
     const location = useLocation();
     const navigate = useNavigate();
@@ -167,17 +172,27 @@ const SearchBar: React.FC = () => {
     }, [location.pathname]);
 
     useEffect(() => {
-        if (query.length > 1) {
-            const filtered = products.filter(p =>
-                p.name?.toLowerCase().includes(query.toLowerCase()) ||
-                p.subCategory?.toLowerCase().includes(query.toLowerCase()) ||
-                p.styleCode?.toLowerCase().includes(query.toLowerCase()) ||
-                p.tags?.some(tag => tag.toLowerCase().includes(query.toLowerCase()))
-            ).slice(0, 5);
-            setResults(filtered);
-        } else {
-            setResults([]);
+        if (!isOpen || query.length < MIN_SEARCH_QUERY_LENGTH) {
+            setCanFetchSearch(false);
+            return;
         }
+        const timer = setTimeout(() => setCanFetchSearch(true), SEARCH_FETCH_DEBOUNCE_MS);
+        return () => clearTimeout(timer);
+    }, [isOpen, query]);
+
+    useEffect(() => {
+        if (!products.length || query.length < MIN_SEARCH_QUERY_LENGTH) {
+            setResults([]);
+            return;
+        }
+
+        const filtered = products.filter(p =>
+            p.name?.toLowerCase().includes(query.toLowerCase()) ||
+            p.subCategory?.toLowerCase().includes(query.toLowerCase()) ||
+            p.styleCode?.toLowerCase().includes(query.toLowerCase()) ||
+            p.tags?.some(tag => tag.toLowerCase().includes(query.toLowerCase()))
+        ).slice(0, 5);
+        setResults(filtered);
     }, [query, products]);
 
     const handleSearch = (e: React.FormEvent) => {
@@ -238,7 +253,7 @@ const SearchBar: React.FC = () => {
                                             to={`/product/${product.id}`}
                                             className="flex items-center gap-4 p-2 hover:bg-luxury-gray rounded-xl transition-colors group"
                                         >
-                                            <img src={product.photo} alt={product.name} className="w-12 h-12 object-cover rounded-lg" width={48} height={48} loading="lazy" decoding="async" />
+                                            <img src={product.photo} alt={product.name} className="w-12 h-12 object-cover rounded-lg" width={48} height={48} decoding="async" />
                                             <div className="flex-1">
                                                 <p className="text-sm font-bold text-luxury-black group-hover:text-luxury-gold transition-colors">{product.name}</p>
                                                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{product.subCategory}</p>

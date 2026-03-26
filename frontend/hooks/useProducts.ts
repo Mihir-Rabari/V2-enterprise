@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { productsAPI } from '../lib/apiClient';
 
 export interface ApiProduct {
@@ -38,12 +38,24 @@ export function useProducts(params?: Record<string, any> & { enabled?: boolean }
 
     const page = params?.page || 1;
 
+    const previouslyEnabledRef = useRef(false);
+
     useEffect(() => {
-        if (params?.enabled === false) {
+        const isEnabled = params?.enabled !== false;
+
+        // `enabled` defaults to true to preserve existing callers; opt out with enabled: false
+        if (!isEnabled) {
+            if (previouslyEnabledRef.current) {
+                setProducts([]);
+                setHasMore(false);
+                setTotal(0);
+            }
+            previouslyEnabledRef.current = false;
             setLoading(false);
             setLoadingMore(false);
             return;
         }
+        previouslyEnabledRef.current = true;
         if (page === 1) {
             setLoading(true);
             // Reset products when starting a new filtered search

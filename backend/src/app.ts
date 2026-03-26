@@ -23,10 +23,10 @@ import fs from 'fs';
 
 const app = express();
 
-// ── Ensure Upload Directories Exist ──────────────────────────────────────────
+// ── Ensure Persistent Upload Directories Exist ──────────────────────────────
 const uploadDirs = [
-    path.join(__dirname, '../public'),
-    path.join(__dirname, '../public/videos'),
+    path.join(__dirname, '../uploads'),
+    path.join(__dirname, '../uploads/videos'),
 ];
 uploadDirs.forEach(dir => {
     if (!fs.existsSync(dir)) {
@@ -73,9 +73,9 @@ app.use(`${API}/payments`, paymentRoutes);
 app.use(`${API}/addresses`, addressRoutes);
 app.use(`${API}/filters`, filtersRoutes);
 
-// ── Serve Videos Locally ─────────────────────────────────────────────────────
+// ── Serve Videos Locally (Persistent) ────────────────────────────────────────
 // This ensures /videos/filename.mp4 works in both dev and prod
-app.use('/videos', express.static(path.join(__dirname, '../public/videos'), {
+app.use('/videos', express.static(path.join(__dirname, '../uploads/videos'), {
     maxAge: '1y',
     immutable: true
 }));
@@ -94,8 +94,13 @@ if (env.NODE_ENV === 'production') {
     app.use('/assets', express.static(path.join(frontendPath, 'assets'), {
         maxAge: '1y',
         immutable: true,
-        fallthrough: false // If not found in assets, don't try root public
+        fallthrough: true // Allow for clean 404s or error handling
     }));
+
+    // Specific 404 for missing assets to avoid SPA fallback for .js/.css
+    app.use('/assets', (_req, res) => {
+        res.status(404).json({ success: false, message: 'Asset not found' });
+    });
 
     // 2. Standard caching for other static files (icons, logos, etc.)
     app.use(express.static(frontendPath, {

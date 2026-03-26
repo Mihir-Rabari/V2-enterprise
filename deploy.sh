@@ -26,8 +26,10 @@ BACKEND_DIR="$REPO_DIR/backend"
 FRONTEND_DIR="$REPO_DIR/frontend"
 LOG_DIR="$REPO_DIR/logs"
 
-# ── Step 0: Create logs directory ──────────────────────────────────────────────
+# ── Step 0: Create necessary directories ───────────────────────────────────────
 mkdir -p "$LOG_DIR"
+mkdir -p "$BACKEND_DIR/uploads/videos"
+mkdir -p "$BACKEND_DIR/public"
 
 echo ""
 echo "╔══════════════════════════════════════════════╗"

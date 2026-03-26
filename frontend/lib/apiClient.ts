@@ -37,7 +37,7 @@ export const resolveLocalAssetUrl = (path: string) => {
 export const api = axios.create({
     baseURL: BASE_URL,
     headers: { 'Content-Type': 'application/json' },
-    timeout: 30000,
+    timeout: 60000,
 });
 
 // ─── Request Interceptor: Attach JWT ─────────────────────────────────────────

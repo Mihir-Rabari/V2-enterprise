@@ -334,7 +334,7 @@ router.post('/upload', protect, adminOnly, upload.single('file'), async (req: Re
 // Admin: Local video upload (Multer disk storage)
 const videoStorage = multer.diskStorage({
     destination: (_req, _file, cb) => {
-        cb(null, path.join(__dirname, '../../../public/videos'));
+        cb(null, path.join(__dirname, '../../../uploads/videos'));
     },
     filename: (_req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);

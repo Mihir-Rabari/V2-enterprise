@@ -18,7 +18,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ apiStats, apiContacts }) 
     const [chartsMounted, setChartsMounted] = useState(false);
 
     useEffect(() => {
-        const timer = setTimeout(() => setChartsMounted(true), 500);
+        // Increase delay to 1.5s to ensure layouts are stable on slower production devices
+        const timer = setTimeout(() => setChartsMounted(true), 1500);
         return () => clearTimeout(timer);
     }, []);
 
@@ -122,7 +123,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ apiStats, apiContacts }) 
                     </div>
                     <div className="h-[250px] sm:h-[300px] w-full">
                         {chartsMounted && (
-                            <ResponsiveContainer width="100%" height="100%" minHeight={1} minWidth={1}>
+                            <ResponsiveContainer width="100%" height="100%" minHeight={1} minWidth={1} debounce={100}>
                                 <AreaChart data={revenueData}>
                                     <defs>
                                         <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
@@ -149,7 +150,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ apiStats, apiContacts }) 
                         </div>
                         <div className="h-[200px] sm:h-[250px] w-full flex items-center">
                             {chartsMounted && (
-                                <ResponsiveContainer width="100%" height="100%" minHeight={1} minWidth={1}>
+                                <ResponsiveContainer width="100%" height="100%" minHeight={1} minWidth={1} debounce={100}>
                                     <PieChart>
                                         <Pie data={categoryData} innerRadius={50} outerRadius={70} paddingAngle={5} dataKey="value">
                                             {categoryData.map((_entry: any, index: number) => (
@@ -170,7 +171,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ apiStats, apiContacts }) 
                         </div>
                         <div className="h-[200px] sm:h-[250px] w-full">
                             {chartsMounted && (
-                                <ResponsiveContainer width="100%" height="100%" minHeight={1} minWidth={1}>
+                                <ResponsiveContainer width="100%" height="100%" minHeight={1} minWidth={1} debounce={100}>
                                     <LineChart data={customerData}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" opacity={0.1} />
                                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#6B7280', fontWeight: 600 }} />

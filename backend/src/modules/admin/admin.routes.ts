@@ -12,9 +12,26 @@ import multer from 'multer';
 import FormData from 'form-data';
 import axios from 'axios';
 import { env } from '../../config/env';
+import fs from 'fs';
 
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
+
+// Standard Disk Storage for all Admin Uploads (Hardened against memory issues)
+const adminStorage = multer.diskStorage({
+    destination: (_req, _file, cb) => {
+        const dest = path.join(__dirname, '../../../uploads/v2-temp');
+        if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
+        cb(null, dest);
+    },
+    filename: (_req, file, cb) => {
+        cb(null, `admin-upload-${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`);
+    }
+});
+
+const upload = multer({ 
+    storage: adminStorage, 
+    limits: { fileSize: 100 * 1024 * 1024 } // 100MB standard limit
+});
 
 // ImageKit credentials from env
 const IK_PRIVATE_KEY = env.IMAGEKIT_PRIVATE_KEY;
@@ -286,9 +303,9 @@ router.post('/upload', protect, adminOnly, upload.single('file'), async (req: Re
         const folder = (req.body.folder as string) || '/v2-uploads';
         const fileName = (req.body.fileName as string) || `upload_${Date.now()}_${req.file.originalname}`;
 
-        // Build multipart form for ImageKit
+        // Build multipart form for ImageKit (Reading from temporary disk file)
         const form = new FormData();
-        form.append('file', req.file.buffer, {
+        form.append('file', fs.createReadStream(req.file.path), {
             filename: fileName,
             contentType: req.file.mimetype,
         });
@@ -296,16 +313,15 @@ router.post('/upload', protect, adminOnly, upload.single('file'), async (req: Re
         form.append('folder', folder);
         form.append('useUniqueFileName', 'true');
 
-        // Upload to ImageKit using HTTP Basic Auth (private_key as username, empty password)
-        // This is exactly how the old PHP system worked: CURLOPT_USERPWD => 'private_key:'
+        // Upload to ImageKit
         const response = await axios.post(IK_UPLOAD_URL, form, {
-            headers: {
-                ...form.getHeaders(),
-            },
-            auth: {
-                username: IK_PRIVATE_KEY as string,
-                password: '',
-            },
+            headers: { ...form.getHeaders() },
+            auth: { username: IK_PRIVATE_KEY as string, password: '' },
+        });
+
+        // Delete temporary file after successful upload
+        fs.unlink(req.file.path, (err) => {
+            if (err) console.error('Failed to delete temp file:', err);
         });
 
         // Save to Media collection for the Cloud Library
@@ -343,7 +359,7 @@ const videoStorage = multer.diskStorage({
 });
 const uploadVideo = multer({ 
     storage: videoStorage, 
-    limits: { fileSize: 100 * 1024 * 1024 } // 100MB limit for local videos
+    limits: { fileSize: 200 * 1024 * 1024 } // Boosted to 200MB for 4K sliders
 });
 
 router.post('/upload-video', protect, adminOnly, uploadVideo.single('file'), async (req: Request, res: Response) => {

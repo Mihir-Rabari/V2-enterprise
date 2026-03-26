@@ -121,9 +121,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ apiStats, apiContacts }) 
                             <p className="text-[9px] sm:text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Last 6 Months</p>
                         </div>
                     </div>
-                    <div className="h-[250px] sm:h-[300px] w-full">
-                        {chartsMounted && (
-                            <ResponsiveContainer width="100%" height="100%" minHeight={1} minWidth={1} debounce={100}>
+                    <div className="h-[250px] sm:h-[300px] w-full relative overflow-hidden">
+                        {chartsMounted ? (
+                            <ResponsiveContainer width="99%" height="100%" debounce={50}>
                                 <AreaChart data={revenueData}>
                                     <defs>
                                         <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
@@ -138,7 +138,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ apiStats, apiContacts }) 
                                     <Area type="monotone" dataKey="revenue" stroke="#D4AF37" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
                                 </AreaChart>
                             </ResponsiveContainer>
-                        )}
+                        ) : null}
                     </div>
                 </div>
 
@@ -148,9 +148,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ apiStats, apiContacts }) 
                         <div className="flex justify-between items-center mb-4 sm:mb-6">
                             <h3 className="text-xs sm:text-sm font-bold text-slate-800 uppercase tracking-widest">Category Balance</h3>
                         </div>
-                        <div className="h-[200px] sm:h-[250px] w-full flex items-center">
-                            {chartsMounted && (
-                                <ResponsiveContainer width="100%" height="100%" minHeight={1} minWidth={1} debounce={100}>
+                        <div className="h-[200px] sm:h-[250px] w-full flex items-center relative overflow-hidden">
+                            {chartsMounted ? (
+                                <ResponsiveContainer width="99%" height="100%" debounce={50}>
                                     <PieChart>
                                         <Pie data={categoryData} innerRadius={50} outerRadius={70} paddingAngle={5} dataKey="value">
                                             {categoryData.map((_entry: any, index: number) => (
@@ -160,7 +160,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ apiStats, apiContacts }) 
                                         <Tooltip />
                                     </PieChart>
                                 </ResponsiveContainer>
-                            )}
+                            ) : null}
                         </div>
                     </div>
 
@@ -169,9 +169,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ apiStats, apiContacts }) 
                         <div className="flex justify-between items-center mb-4 sm:mb-6">
                             <h3 className="text-xs sm:text-sm font-bold text-white uppercase tracking-widest">Customer Pulse</h3>
                         </div>
-                        <div className="h-[200px] sm:h-[250px] w-full">
-                            {chartsMounted && (
-                                <ResponsiveContainer width="100%" height="100%" minHeight={1} minWidth={1} debounce={100}>
+                        <div className="h-[200px] sm:h-[250px] w-full relative overflow-hidden">
+                            {chartsMounted ? (
+                                <ResponsiveContainer width="99%" height="100%" debounce={50}>
                                     <LineChart data={customerData}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" opacity={0.1} />
                                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#6B7280', fontWeight: 600 }} />
@@ -179,7 +179,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ apiStats, apiContacts }) 
                                         <Line type="stepAfter" dataKey="count" stroke="#D4AF37" strokeWidth={3} dot={false} />
                                     </LineChart>
                                 </ResponsiveContainer>
-                            )}
+                            ) : null}
                         </div>
                     </div>
                 </div>

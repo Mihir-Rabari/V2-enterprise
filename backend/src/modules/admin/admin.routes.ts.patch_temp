@@ -1,0 +1,39 @@
+import { Router, Request, Response } from 'express';
+import path from 'path';
+import { Product } from '../../models/Product';
+import { Order } from '../../models/Order';
+import { User } from '../../models/User';
+import { ContactMessage } from '../../models/ContactMessage';
+import { Media } from '../../models/Media';
+import { sendSuccess, sendError } from '../../utils/response';
+import { protect } from '../../middlewares/auth.middleware';
+import { adminOnly } from '../../middlewares/admin.middleware';
+import multer from 'multer';
+import FormData from 'form-data';
+import axios from 'axios';
+import { env } from '../../config/env';
+import fs from 'fs';
+
+const router = Router();
+
+// Standard Disk Storage for all Admin Uploads (Hardened against memory issues)
+const adminStorage = multer.diskStorage({
+    destination: (_req, _file, cb) => {
+        const dest = path.join(__dirname, '../../../uploads/v2-temp');
+        if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
+        cb(null, dest);
+    },
+    filename: (_req, file, cb) => {
+        cb(null, `admin-upload-${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`);
+    }
+});
+
+const upload = multer({ 
+    storage: adminStorage, 
+    limits: { fileSize: 100 * 1024 * 1024 } // 100MB standard limit
+});
+
+// ImageKit credentials from env
+const IK_PRIVATE_KEY = env.IMAGEKIT_PRIVATE_KEY;
+const IK_UPLOAD_URL = 'https://upload.imagekit.io/api/v1/files/upload';
+const IK_LIST_URL = 'https://api.imagekit.io/v1/files';

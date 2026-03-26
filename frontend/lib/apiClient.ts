@@ -9,11 +9,13 @@ const mockResponse = (data: any) => Promise.resolve({ data: { success: true, dat
 // In production, Express serves both frontend and backend from the same origin,
 // so we use a relative path (/api/v1) — no CORS ever triggered.
 // In development, fall back to localhost:5000 where the backend runs separately.
-const BASE_URL = import.meta.env.VITE_API_URL ||
-    (import.meta.env.DEV ? 'http://localhost:5000/api/v1' : '/api/v1');
-const IS_MOCK_ENV = import.meta.env.VITE_USE_MOCK_API === 'true';
 const IS_LOCALHOST = typeof window !== 'undefined' && 
     (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.includes('192.168.'));
+
+const BASE_URL = import.meta.env.VITE_API_URL ||
+    (IS_LOCALHOST ? 'http://localhost:5000/api/v1' : '/api/v1');
+
+const IS_MOCK_ENV = import.meta.env.VITE_USE_MOCK_API === 'true';
 
 // Only allow mock mode on localhost to prevent production from accidentally showing mock data
 export const IS_MOCK = IS_MOCK_ENV && IS_LOCALHOST;
@@ -37,7 +39,7 @@ export const resolveLocalAssetUrl = (path: string) => {
 export const api = axios.create({
     baseURL: BASE_URL,
     headers: { 'Content-Type': 'application/json' },
-    timeout: 600000, // 10 minutes for large video uploads
+    timeout: 120000, // 120 seconds per user request
 });
 
 // ─── Request Interceptor: Attach JWT ─────────────────────────────────────────

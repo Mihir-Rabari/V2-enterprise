@@ -42,7 +42,7 @@ const sliderStorage = multer.diskStorage({
 
 const upload = multer({ 
     storage: adminStorage, 
-    limits: { fileSize: 100 * 1024 * 1024 } 
+    limits: { fileSize: 500 * 1024 * 1024 } 
 });
 
 const uploadSliderMedia = multer({ 
@@ -376,7 +376,7 @@ const videoStorage = multer.diskStorage({
 });
 const uploadVideo = multer({ 
     storage: videoStorage, 
-    limits: { fileSize: 200 * 1024 * 1024 } // Boosted to 200MB for 4K sliders
+    limits: { fileSize: 500 * 1024 * 1024 } 
 });
 
 router.post('/upload-video', protect, adminOnly, uploadVideo.single('file'), async (req: Request, res: Response) => {

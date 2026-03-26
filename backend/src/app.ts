@@ -19,8 +19,20 @@ import wishlistRoutes from './modules/wishlist/wishlist.routes';
 import paymentRoutes from './modules/payments/payments.routes';
 import addressRoutes from './modules/addresses/addresses.routes';
 import { filtersRoutes } from './modules/filters/filters.routes';
+import fs from 'fs';
 
 const app = express();
+
+// ── Ensure Upload Directories Exist ──────────────────────────────────────────
+const uploadDirs = [
+    path.join(__dirname, '../public'),
+    path.join(__dirname, '../public/videos'),
+];
+uploadDirs.forEach(dir => {
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+});
 
 // ── Core Middleware ──────────────────────────────────────────────────────────
 app.use(cors({
@@ -60,6 +72,13 @@ app.use(`${API}/wishlist`, wishlistRoutes);
 app.use(`${API}/payments`, paymentRoutes);
 app.use(`${API}/addresses`, addressRoutes);
 app.use(`${API}/filters`, filtersRoutes);
+
+// ── Serve Videos Locally ─────────────────────────────────────────────────────
+// This ensures /videos/filename.mp4 works in both dev and prod
+app.use('/videos', express.static(path.join(__dirname, '../public/videos'), {
+    maxAge: '1y',
+    immutable: true
+}));
 
 // ── API 404 Handler ──────────────────────────────────────────────────────────
 app.use('/api', (_req, res) => {

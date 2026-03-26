@@ -323,11 +323,54 @@ router.post('/upload', protect, adminOnly, upload.single('file'), async (req: Re
             name: response.data.name,
             id: newMedia._id.toString(),
         }, 'File uploaded to ImageKit and saved to library');
-
     } catch (err: any) {
         const msg = err?.response?.data?.message || err?.message || 'Upload failed';
         console.error('ImageKit upload error:', msg);
         return sendError(res, msg, 500);
+    }
+});
+
+// Admin: Local video upload (Multer disk storage)
+const videoStorage = multer.diskStorage({
+    destination: (_req, _file, cb) => {
+        cb(null, path.join(__dirname, '../../../public/videos'));
+    },
+    filename: (_req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, 'v2-video-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+const uploadVideo = multer({ 
+    storage: videoStorage, 
+    limits: { fileSize: 100 * 1024 * 1024 } // 100MB limit for local videos
+});
+
+router.post('/upload-video', protect, adminOnly, uploadVideo.single('file'), async (req: Request, res: Response) => {
+    try {
+        if (!req.file) return sendError(res, 'No video file provided.', 400);
+
+        // Construct the local URL (relative to public)
+        const videoUrl = `/videos/${req.file.filename}`;
+        
+        // Optional: Save to Media library as a local reference
+        await Media.create({
+            url: videoUrl,
+            fileId: `local_${req.file.filename}`,
+            name: req.file.originalname,
+            size: req.file.size,
+            mimeType: req.file.mimetype,
+            folder: '/videos-local',
+        });
+
+        return sendSuccess(res, {
+            url: videoUrl,
+            name: req.file.originalname,
+            filename: req.file.filename
+        }, 'Video uploaded locally successfully');
+
+    } catch (err: any) {
+        console.error('Local video upload error:', err.message);
+        return sendError(res, err.message, 500);
     }
 });
 

@@ -3,7 +3,7 @@ import { Upload, Trash2, Loader2, Link2, Image as ImageIcon, Video } from 'lucid
 import { uploadToImageKit } from '../../lib/imagekit';
 import { MediaManagerModal } from './MediaManagerModal';
 import toast from 'react-hot-toast';
-import { adminAPI } from '../../lib/apiClient';
+import { adminAPI, resolveLocalAssetUrl } from '../../lib/apiClient';
 
 interface ImageUploaderProps {
     /** Current value of the URL (image or video URL) */
@@ -20,6 +20,8 @@ interface ImageUploaderProps {
     compact?: boolean;
     /** If true, shows a video player preview instead of img */
     isVideo?: boolean;
+    /** If true, hides the Media Manager/Library option and uses backend direct upload for videos */
+    directUploadOnly?: boolean;
 }
 
 export const ImageUploader: React.FC<ImageUploaderProps> = ({
@@ -30,6 +32,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     folder = 'v2-uploads',
     compact = false,
     isVideo = false,
+    directUploadOnly = false,
 }) => {
     const inputRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
@@ -43,10 +46,14 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         setError('');
         setUploading(true);
         
-        const uploadPromise = uploadToImageKit(file, folder);
+        const isLocalVideo = (isVideo || file.type.startsWith('video/')) && directUploadOnly;
+        
+        const uploadPromise = isLocalVideo 
+            ? adminAPI.uploadLocalVideo(file).then(res => res.data.data.url)
+            : uploadToImageKit(file, folder);
         
         toast.promise(uploadPromise, {
-            loading: 'Uploading to ImageKit Cloud...',
+            loading: isLocalVideo ? 'Uploading to local server...' : 'Uploading to ImageKit Cloud...',
             success: 'Upload complete!',
             error: 'Upload failed. Check file size.',
         });
@@ -86,16 +93,18 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         // Compact mode: used for gallery additions (horizontal strip)
         return (
             <div className="flex items-center gap-2">
-                <button
-                    type="button"
-                    onClick={() => setIsModalOpen(true)}
-                    disabled={uploading}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-luxury-black text-white rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-luxury-gold transition-colors disabled:opacity-50"
-                >
-                    {uploading ? <Loader2 size={12} className="animate-spin" /> : <ImageIcon size={12} />}
-                    {uploading ? 'Processing...' : 'Media Manager'}
-                </button>
-                <span className="text-[10px] text-gray-400 font-bold">or</span>
+                {!directUploadOnly && (
+                    <button
+                        type="button"
+                        onClick={() => setIsModalOpen(true)}
+                        disabled={uploading}
+                        className="flex items-center gap-1.5 px-3 py-2 bg-luxury-black text-white rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-luxury-gold transition-colors disabled:opacity-50"
+                    >
+                        {uploading ? <Loader2 size={12} className="animate-spin" /> : <ImageIcon size={12} />}
+                        {uploading ? 'Processing...' : 'Media Manager'}
+                    </button>
+                )}
+                {!directUploadOnly && <span className="text-[10px] text-gray-400 font-bold">or</span>}
                 <input
                     type="text"
                     className="flex-1 border-b border-gray-200 focus:border-luxury-black outline-none text-[11px] py-1"
@@ -137,18 +146,20 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
                 ) : value ? (
                     <>
                         {(isVideo || (value && value.match(/\.(mp4|mov|webm|ogg)$/i))) ? (
-                            <video src={value} className="w-full h-full object-cover" autoPlay loop muted playsInline />
+                            <video src={resolveLocalAssetUrl(value)} className="w-full h-full object-cover" autoPlay loop muted playsInline />
                         ) : (
-                            <img src={value} alt="Preview" className="w-full h-full object-cover" />
+                            <img src={resolveLocalAssetUrl(value)} alt="Preview" className="w-full h-full object-cover" />
                         )}
                         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                            <button
-                                type="button"
-                                onClick={e => { e.stopPropagation(); setIsModalOpen(true); }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-black rounded-lg text-[10px] font-bold hover:bg-luxury-gold hover:text-white transition-colors"
-                            >
-                                <ImageIcon size={12} /> Cloud Manager
-                            </button>
+                            {!directUploadOnly && (
+                                <button
+                                    type="button"
+                                    onClick={e => { e.stopPropagation(); setIsModalOpen(true); }}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-black rounded-lg text-[10px] font-bold hover:bg-luxury-gold hover:text-white transition-colors"
+                                >
+                                    <ImageIcon size={12} /> Cloud Manager
+                                </button>
+                            )}
                             <button
                                 type="button"
                                 onClick={e => { e.stopPropagation(); onChange(''); }}
@@ -174,15 +185,17 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
 
             {/* Action row */}
             <div className="flex items-center gap-2">
-                <button
-                    type="button"
-                    onClick={() => setIsModalOpen(true)}
-                    disabled={uploading}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-luxury-black text-white rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-luxury-gold transition-colors disabled:opacity-50 shrink-0"
-                >
-                    {uploading ? <Loader2 size={11} className="animate-spin" /> : <ImageIcon size={11} />}
-                    {uploading ? 'Processing...' : 'Media Manager'}
-                </button>
+                {!directUploadOnly && (
+                    <button
+                        type="button"
+                        onClick={() => setIsModalOpen(true)}
+                        disabled={uploading}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-luxury-black text-white rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-luxury-gold transition-colors disabled:opacity-50 shrink-0"
+                    >
+                        {uploading ? <Loader2 size={11} className="animate-spin" /> : <ImageIcon size={11} />}
+                        {uploading ? 'Processing...' : 'Media Manager'}
+                    </button>
+                )}
                 <button
                     type="button"
                     onClick={() => setShowUrlInput(v => !v)}

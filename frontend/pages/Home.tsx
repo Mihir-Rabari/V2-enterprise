@@ -15,7 +15,7 @@ import { AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import FilterAccordion from '../components/FilterAccordion';
 import { useProducts } from '../hooks/useProducts';
-import { reviewsAPI, sliderAPI, settingsAPI, categoriesAPI, contentAPI, filtersAPI } from '../lib/apiClient';
+import { reviewsAPI, sliderAPI, settingsAPI, categoriesAPI, contentAPI, filtersAPI, resolveLocalAssetUrl } from '../lib/apiClient';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { getOptimizedImageUrl } from '../src/utils/mediaUtils';
 
@@ -94,11 +94,11 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
                                 height="1080"
                                 className="w-full h-full object-cover opacity-60 scale-105"
                             >
-                                <source src={videoUrl} type="video/mp4" />
+                                 <source src={resolveLocalAssetUrl(videoUrl)} type="video/mp4" />
                             </video>
                         ) : (
                             <img
-                                src={getOptimizedImageUrl(current.url, { width: 1920, quality: 75 })}
+                                src={resolveLocalAssetUrl(getOptimizedImageUrl(current.url, { width: 1920, quality: 75 }))}
                                 alt={current.title}
                                 fetchPriority="high"
                                 decoding="sync"

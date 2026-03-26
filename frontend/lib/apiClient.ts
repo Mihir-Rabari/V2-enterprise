@@ -22,6 +22,18 @@ if (typeof window !== 'undefined') {
     console.log(`[V2-API] Base URL: ${BASE_URL} | Mock Mode: ${IS_MOCK ? 'ENABLED' : 'DISABLED'}`);
 }
 
+/**
+ * Resolves a local asset path (e.g. /videos/f.mp4) to a full URL in dev,
+ * or keeps it relative in production.
+ */
+export const resolveLocalAssetUrl = (path: string) => {
+    if (!path) return '';
+    if (path.startsWith('http')) return path; // Already full URL
+    
+    const rootUrl = import.meta.env.DEV ? 'http://localhost:5000' : '';
+    return `${rootUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+};
+
 export const api = axios.create({
     baseURL: BASE_URL,
     headers: { 'Content-Type': 'application/json' },
@@ -263,6 +275,14 @@ export const adminAPI = {
         IS_MOCK
             ? mockResponse({ media: [] })
             : api.get('/admin/media', { params }),
+
+    uploadLocalVideo: (file: File) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return api.post('/admin/upload-video', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
+    },
 };
 
 export const categoriesAPI = {

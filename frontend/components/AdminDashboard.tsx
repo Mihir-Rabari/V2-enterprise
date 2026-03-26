@@ -1485,6 +1485,7 @@ const AdminDashboard: React.FC = () => {
                             onChange={url => setFormData({ ...formData, image: url })}
                             folder="v2-sliders"
                             isVideo={formData.mediaType === 'video'}
+                            directUploadOnly={formData.mediaType === 'video'}
                             accept={formData.mediaType === 'video' ? 'video/*' : 'image/*'}
                         />
                         <p className="text-[10px] text-gray-400 mt-1 italic font-medium tracking-wider">Recommended: 1920x600px (3.2:1 Aspect Ratio)</p>

@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PromotionalSlide } from '../types';
+import { resolveLocalAssetUrl } from '../lib/apiClient';
+import { getOptimizedImageUrl } from '../src/utils/mediaUtils';
 
 interface PromotionalSliderProps {
     slides: PromotionalSlide[];
@@ -43,7 +45,7 @@ const PromotionalSlider: React.FC<PromotionalSliderProps> = ({ slides }) => {
                     <div className="relative h-full w-full">
                         {currentSlide.type === 'video' || currentSlide.mediaType === 'video' || currentSlide.image.toLowerCase().endsWith('.mp4') || currentSlide.image.toLowerCase().endsWith('.webm') ? (
                             <video
-                                src={currentSlide.image}
+                                src={resolveLocalAssetUrl(currentSlide.image)}
                                 autoPlay
                                 loop
                                 muted
@@ -52,7 +54,7 @@ const PromotionalSlider: React.FC<PromotionalSliderProps> = ({ slides }) => {
                             />
                         ) : (
                             <img
-                                src={currentSlide.image}
+                                src={resolveLocalAssetUrl(getOptimizedImageUrl(currentSlide.image, { width: 1200, quality: 75 }))}
                                 alt={currentSlide.title}
                                 className="h-full w-full object-cover"
                             />

@@ -38,11 +38,11 @@ export const getProductsService = async (filters: ProductFilters) => {
     const skip = (page - 1) * limit;
 
     const query: Record<string, unknown> = {
-        ...(mainCategories && mainCategories.length > 0 && { mainCategory: { $in: mainCategories } }),
-        ...(subCategories && subCategories.length > 0 && { subCategory: { $in: subCategories } }),
+        ...(mainCategories && mainCategories.length > 0 && { mainCategory: { $in: mainCategories.map(c => new RegExp(`^${c}$`, 'i')) } }),
+        ...(subCategories && subCategories.length > 0 && { subCategory: { $in: subCategories.map(c => new RegExp(`^${c}$`, 'i')) } }),
         ...(isTrending !== undefined && { isTrending }),
         ...(isNewArrival !== undefined && { isNewArrival }),
-        ...(status === 'ALL' ? {} : status ? { status } : { status: 'ACTIVE' }),
+        ...(status === 'ALL' ? {} : { status: { $regex: new RegExp(`^${status || 'ACTIVE'}$`, 'i') } }),
         ...(tag && { tags: tag }),
         // Price Range
         ...((minPrice !== undefined || maxPrice !== undefined) && {

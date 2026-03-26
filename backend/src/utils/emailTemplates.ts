@@ -1,8 +1,7 @@
-// ─────────────────────────────────────────────────────────────────────────────
-//  V2 Enterprise — Luxury Email Templates
 //  Design target: clean, monochrome, typographically premium.
 //  All fonts are web-safe or system. No external CDN dependencies.
 // ─────────────────────────────────────────────────────────────────────────────
+import { getAbsoluteUrl, getFrontendAbsoluteUrl } from './url';
 
 const BASE_STYLES = `
   body { margin: 0; padding: 0; background: #F5F4F0; font-family: Georgia, 'Times New Roman', serif; }
@@ -130,7 +129,12 @@ export const orderPlacedTemplate = (data: OrderEmailData) => {
 
     const itemRows = data.items.map(item => `
     <tr style="border-bottom:1px solid #F0EDE6;">
-      <td style="padding:16px 0;">
+      <td style="padding:16px 0; width:64px;">
+        ${item.productPhoto ? `
+          <img src="${getAbsoluteUrl(item.productPhoto)}" width="48" height="64" style="width:48px; height:64px; object-cover: cover; background:#F5F4F0; border:1px solid #F0EDE6;" alt="${item.productName}"/>
+        ` : ''}
+      </td>
+      <td style="padding:16px 16px;">
         <p style="margin:0; font-family:Georgia,serif; font-size:14px; color:#0A0A0B;">${item.productName}</p>
         <p style="margin:4px 0 0; font-family:Arial,sans-serif; font-size:11px; color:#888; letter-spacing:0.1em;">
           ${[item.size && `SIZE: ${item.size}`, item.color && `COLOR: ${item.color}`].filter(Boolean).join(' · ')}
@@ -322,7 +326,7 @@ export const welcomeTemplate = (name: string) => {
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
         <td align="center" style="padding:8px 0 40px;">
-          <a href="https://v2enterprise.com/shop" style="display:inline-block; background:#0A0A0B; color:#C9A96E; font-family:Arial,sans-serif; font-size:10px; letter-spacing:0.35em; text-transform:uppercase; padding:18px 48px; text-decoration:none; border:1px solid #C9A96E;">
+          <a href="${getFrontendAbsoluteUrl('/shop')}" style="display:inline-block; background:#0A0A0B; color:#C9A96E; font-family:Arial,sans-serif; font-size:10px; letter-spacing:0.35em; text-transform:uppercase; padding:18px 48px; text-decoration:none; border:1px solid #C9A96E;">
             Explore Now
           </a>
         </td>

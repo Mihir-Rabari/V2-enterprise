@@ -25,13 +25,15 @@ export interface ProductFilters {
     pockets?: string[];
     lengths?: string[];
     patternTypes?: string[];
+    sort?: string;
 }
 
 export const getProductsService = async (filters: ProductFilters) => {
     const { 
         mainCategories, subCategories, isTrending, isNewArrival, tag, search, status, 
         page = 1, limit = 12, groupByColor,
-        minPrice, maxPrice, colors, sizes, fabrics, collars, sleeves, necks, pockets, lengths, patternTypes
+        minPrice, maxPrice, colors, sizes, fabrics, collars, sleeves, necks, pockets, lengths, patternTypes,
+        sort = 'Newest'
     } = filters;
     const skip = (page - 1) * limit;
 
@@ -71,6 +73,19 @@ export const getProductsService = async (filters: ProductFilters) => {
         }),
     };
 
+    let sortOptions: Record<string, 1 | -1> = { createdAt: -1 };
+    switch (sort) {
+        case 'Price: Low to High': sortOptions = { price: 1 }; break;
+        case 'Price: High to Low': sortOptions = { price: -1 }; break;
+        case 'A - Z': sortOptions = { name: 1 }; break;
+        case 'Trending': sortOptions = { isTrending: -1, createdAt: -1 }; break;
+        case 'Relevance':
+        case 'Newest': 
+        default: 
+            sortOptions = { createdAt: -1 }; 
+            break;
+    }
+
     if (groupByColor) {
         // Group by (styleCode, color) so only one product per color variant is returned.
         // Products without a styleCode are treated as unique (grouped by their own _id).
@@ -84,7 +99,7 @@ export const getProductsService = async (filters: ProductFilters) => {
 
         const pipeline: any[] = [
             { $match: query },
-            { $sort: { createdAt: -1 as const } },
+            { $sort: sortOptions },
             { 
                 $group: { 
                     _id: colorGroupKey, 
@@ -99,7 +114,7 @@ export const getProductsService = async (filters: ProductFilters) => {
                     } 
                 } 
             },
-            { $sort: { createdAt: -1 as const } },
+            { $sort: sortOptions },
         ];
 
         const countPipeline: any[] = [

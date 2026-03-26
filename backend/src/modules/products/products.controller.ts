@@ -7,11 +7,7 @@ import {
 
 export const getProducts = async (req: Request, res: Response) => {
     try {
-        const { 
-            mainCategories, subCategories, isTrending, isNew, tag, search, 
-            page, limit, status, groupByColor,
-            minPrice, maxPrice, colors, sizes, fabrics, collars, sleeves, necks, pockets, lengths, patternTypes
-        } = req.query;
+        const getParam = (key: string) => req.query[key] || req.query[`${key}[]`];
 
         const toArray = (val: any): string[] | undefined => {
             if (!val) return undefined;
@@ -20,28 +16,29 @@ export const getProducts = async (req: Request, res: Response) => {
         };
 
         const result = await getProductsService({
-            mainCategories: toArray(mainCategories || req.query.mainCategory),
-            subCategories: toArray(subCategories || req.query.subCategory),
-            isTrending: isTrending === 'true' ? true : isTrending === 'false' ? false : undefined,
-            isNewArrival: isNew === 'true' ? true : isNew === 'false' ? false : undefined,
-            tag: tag as string,
-            search: search as string,
-            status: status as 'ACTIVE' | 'INACTIVE' | 'ALL',
-            page: page ? parseInt(page as string) : 1,
-            limit: limit ? parseInt(limit as string) : 12,
-            groupByColor: groupByColor === 'true',
+            mainCategories: toArray(getParam('mainCategories') || getParam('mainCategory')),
+            subCategories: toArray(getParam('subCategories') || getParam('subCategory')),
+            isTrending: getParam('isTrending') === 'true' ? true : getParam('isTrending') === 'false' ? false : undefined,
+            isNewArrival: getParam('isNew') === 'true' ? true : getParam('isNew') === 'false' ? false : undefined,
+            tag: getParam('tag') as string,
+            search: getParam('search') as string,
+            status: getParam('status') as 'ACTIVE' | 'INACTIVE' | 'ALL',
+            page: getParam('page') ? parseInt(getParam('page') as string) : 1,
+            limit: getParam('limit') ? parseInt(getParam('limit') as string) : 12,
+            groupByColor: getParam('groupByColor') === 'true',
+            sort: getParam('sort') as string,
             // Dynamic Filters
-            minPrice: minPrice ? parseFloat(minPrice as string) : undefined,
-            maxPrice: maxPrice ? parseFloat(maxPrice as string) : undefined,
-            colors: toArray(colors),
-            sizes: toArray(sizes),
-            fabrics: toArray(fabrics),
-            collars: toArray(collars),
-            sleeves: toArray(sleeves),
-            necks: toArray(necks),
-            pockets: toArray(pockets),
-            lengths: toArray(lengths),
-            patternTypes: toArray(patternTypes),
+            minPrice: getParam('minPrice') ? parseFloat(getParam('minPrice') as string) : undefined,
+            maxPrice: getParam('maxPrice') ? parseFloat(getParam('maxPrice') as string) : undefined,
+            colors: toArray(getParam('colors')),
+            sizes: toArray(getParam('sizes')),
+            fabrics: toArray(getParam('fabrics')),
+            collars: toArray(getParam('collars')),
+            sleeves: toArray(getParam('sleeves')),
+            necks: toArray(getParam('necks')),
+            pockets: toArray(getParam('pockets')),
+            lengths: toArray(getParam('lengths')),
+            patternTypes: toArray(getParam('patternTypes')),
         });
         return sendSuccess(res, result);
     } catch (err: unknown) {

@@ -55,7 +55,7 @@ const Shop: React.FC = () => {
             limit: 20,
             status: 'ACTIVE',
             groupByColor: true,
-            isNew: isNewArrivalsPage ? 'true' : undefined,
+            sort: sortBy,
             search: searchQuery,
             // Map Sort
             ...(sortBy === 'Trending' && { isTrending: 'true' }),
@@ -63,8 +63,14 @@ const Shop: React.FC = () => {
 
         // Categories mapping
         if (selectedCategories.length > 0) {
-            const mainCats = selectedCategories.filter(name => allCategories.find(c => c.name === name && (!c.parentId || c.parentId === '0')));
-            const subCats = selectedCategories.filter(name => allCategories.find(c => c.name === name && c.parentId && c.parentId !== '0'));
+            const mainCats = selectedCategories.filter(name => {
+                const cat = allCategories.find(c => c.name === name);
+                return cat && !cat.parentId;
+            });
+            const subCats = selectedCategories.filter(name => {
+                const cat = allCategories.find(c => c.name === name);
+                return cat && cat.parentId;
+            });
             
             if (mainCats.length > 0) params.mainCategories = mainCats;
             if (subCats.length > 0) params.subCategories = subCats;

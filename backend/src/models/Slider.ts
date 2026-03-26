@@ -2,8 +2,11 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface ISlider extends Document {
     type: 'PROMOTIONAL' | 'CATEGORY' | 'BEST_CATEGORY' | 'NEW_ARRIVAL' | 'BOTTOM_PROMOTIONAL';
-    mediaType?: 'image' | 'video'; // Added
+    mediaType?: 'image' | 'video';
     image?: string;
+    laptopUrl?: string; // Added for responsiveness
+    tabletUrl?: string; // Added for responsiveness
+    mobileUrl?: string; // Added for responsiveness
     title?: string;
     subtitle?: string;
     buttonText?: string;
@@ -15,8 +18,11 @@ export interface ISlider extends Document {
 
 const SliderSchema = new Schema<ISlider>({
     type: { type: String, enum: ['PROMOTIONAL', 'CATEGORY', 'BEST_CATEGORY', 'NEW_ARRIVAL', 'BOTTOM_PROMOTIONAL'], default: 'PROMOTIONAL' },
-    mediaType: { type: String, enum: ['image', 'video'], default: 'image' }, // Added
+    mediaType: { type: String, enum: ['image', 'video'], default: 'image' },
     image: { type: String },
+    laptopUrl: { type: String },
+    tabletUrl: { type: String },
+    mobileUrl: { type: String },
     title: { type: String },
     subtitle: { type: String },
     buttonText: { type: String },

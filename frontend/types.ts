@@ -166,6 +166,9 @@ export interface Slider {
   type: 'PROMOTIONAL' | 'MARQUEE' | 'CATEGORY' | 'BEST_CATEGORY' | 'NEW_ARRIVAL' | 'BOTTOM_PROMOTIONAL';
   mediaType: 'image' | 'video';
   image: string;
+  laptopUrl?: string;
+  tabletUrl?: string;
+  mobileUrl?: string;
   title: string;
   subtitle?: string;
   buttonText?: string;
@@ -209,6 +212,9 @@ export interface PromotionalSlide {
   type: 'image' | 'video';
   mediaType: 'image' | 'video';
   image: string;
+  laptopUrl?: string;
+  tabletUrl?: string;
+  mobileUrl?: string;
   title: string;
   subtitle?: string;
   link: string;

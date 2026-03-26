@@ -839,7 +839,18 @@ const AdminDashboard: React.FC = () => {
 
 
     const sliderColumns: TableColumn<Slider>[] = [
-        { header: 'Preview', accessor: (row) => row.image?.match(/\.(mp4|mov|webm|ogg)$/i) ? <video src={row.image} className="w-24 h-12 object-cover rounded border border-gray-200" muted autoPlay loop playsInline /> : <img src={row.image} alt="Slider" className="w-24 h-12 object-cover rounded border border-gray-200" /> },
+        { 
+            header: 'Preview', 
+            accessor: (row) => {
+                const url = row.laptopUrl || row.image;
+                const isVideo = row.mediaType === 'video' || url?.match(/\.(mp4|mov|webm|ogg)$/i);
+                return isVideo ? (
+                    <video src={url} className="w-24 h-12 object-cover rounded border border-gray-200" muted autoPlay loop playsInline />
+                ) : (
+                    <img src={url} alt="Slider" className="w-24 h-12 object-cover rounded border border-gray-200" />
+                );
+            }
+        },
         { header: 'Title', accessor: 'title' },
         { header: 'Link', accessor: 'link' },
         { header: 'Status', accessor: (row) => <StatusBadge status={row.status} /> },
@@ -1479,15 +1490,53 @@ const AdminDashboard: React.FC = () => {
                                 </select>
                             </div>
                         </div>
-                        <ImageUploader
-                            label={formData.mediaType === 'video' ? 'Slider Video' : 'Slider Image'}
-                            value={formData.image || ''}
-                            onChange={url => setFormData({ ...formData, image: url })}
-                            folder="v2-sliders"
-                            isVideo={formData.mediaType === 'video'}
-                            directUploadOnly={formData.mediaType === 'video'}
-                            accept={formData.mediaType === 'video' ? 'video/*' : 'image/*'}
-                        />
+                        {formData.mediaType === 'video' ? (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Laptop Video</label>
+                                    <ImageUploader
+                                        value={formData.laptopUrl || formData.image || ''}
+                                        onChange={url => setFormData({ ...formData, laptopUrl: url, image: url })}
+                                        accept="video/*"
+                                        folder="v2-sliders"
+                                        isVideo={true}
+                                        directUploadOnly={true}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Tablet Video</label>
+                                    <ImageUploader
+                                        value={formData.tabletUrl || ''}
+                                        onChange={url => setFormData({ ...formData, tabletUrl: url })}
+                                        accept="video/*"
+                                        folder="v2-sliders"
+                                        isVideo={true}
+                                        directUploadOnly={true}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Mobile Video</label>
+                                    <ImageUploader
+                                        value={formData.mobileUrl || ''}
+                                        onChange={url => setFormData({ ...formData, mobileUrl: url })}
+                                        accept="video/*"
+                                        folder="v2-sliders"
+                                        isVideo={true}
+                                        directUploadOnly={true}
+                                    />
+                                </div>
+                            </div>
+                        ) : (
+                            <ImageUploader
+                                label="Slider Image"
+                                value={formData.image || ''}
+                                onChange={url => setFormData({ ...formData, image: url })}
+                                folder="v2-sliders"
+                                isVideo={false}
+                                directUploadOnly={true}
+                                accept="image/*"
+                            />
+                        )}
                         <p className="text-[10px] text-gray-400 mt-1 italic font-medium tracking-wider">Recommended: 1920x600px (3.2:1 Aspect Ratio)</p>
                         <div>
                             <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Title</label>
@@ -1825,6 +1874,7 @@ const AdminDashboard: React.FC = () => {
                                     accept="image/*"
                                     folder="v2-hero-slides"
                                     isVideo={false}
+                                    directUploadOnly={true}
                                 />
                                 <p className="text-[10px] text-gray-400 mt-1 italic tracking-wider">Recommended: 1920x1080px (16:9)</p>
                             </div>
@@ -2198,8 +2248,16 @@ const AdminDashboard: React.FC = () => {
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                                         {group.data.length > 0 ? group.data.map((slider) => (
                                             <div key={slider.id} className="group bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-all">
-                                                <div className="aspect-[21/9] relative overflow-hidden bg-gray-50">
-                                                    <img src={slider.image} alt={slider.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                                <div className="aspect-[21/9] relative overflow-hidden bg-gray-50 border-b border-gray-100">
+                                                    {slider.mediaType === 'video' || (slider.laptopUrl || slider.image)?.match(/\.(mp4|mov|webm|ogg)$/i) ? (
+                                                        <video 
+                                                            src={slider.laptopUrl || slider.image} 
+                                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                                                            muted autoPlay loop playsInline 
+                                                        />
+                                                    ) : (
+                                                        <img src={slider.image} alt={slider.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                                    )}
                                                     <div className="absolute top-2 right-2 flex gap-1 transform translate-y-[-10px] opacity-0 group-hover:opacity-100 transition-all">
                                                         <button onClick={() => handleEdit(group.type, slider)} className="p-2 bg-white/90 text-blue-600 rounded-lg hover:bg-white shadow-sm"><Edit size={14} /></button>
                                                         <button onClick={() => handleDelete(group.type, (slider as any).id || (slider as any)._id)} className="p-2 bg-white/90 text-red-600 rounded-lg hover:bg-white shadow-sm"><Trash2 size={14} /></button>

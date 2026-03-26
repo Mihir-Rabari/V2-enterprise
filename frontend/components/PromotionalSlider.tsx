@@ -12,6 +12,13 @@ interface PromotionalSliderProps {
 
 const PromotionalSlider: React.FC<PromotionalSliderProps> = ({ slides }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
+    const [width, setWidth] = useState(() => typeof window !== 'undefined' ? window.innerWidth : 1024);
+
+    useEffect(() => {
+        const handleResize = () => setWidth(window.innerWidth);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     useEffect(() => {
         if (slides.length <= 1) return;
@@ -31,6 +38,14 @@ const PromotionalSlider: React.FC<PromotionalSliderProps> = ({ slides }) => {
 
     const currentSlide = slides[currentIndex];
 
+    const videoUrl = (() => {
+        if (width < 640) return currentSlide.mobileUrl || currentSlide.image;
+        if (width < 1024) return currentSlide.tabletUrl || currentSlide.image;
+        return currentSlide.laptopUrl || currentSlide.image;
+    })();
+
+    const isVideo = currentSlide.mediaType === 'video' || videoUrl.toLowerCase().match(/\.(mp4|mov|webm|ogg)$/i);
+
     return (
         <section className="relative h-[450px] sm:h-[550px] lg:h-[600px] w-full overflow-hidden bg-luxury-gray">
             <AnimatePresence>
@@ -43,9 +58,9 @@ const PromotionalSlider: React.FC<PromotionalSliderProps> = ({ slides }) => {
                     className="absolute inset-0"
                 >
                     <div className="relative h-full w-full">
-                        {currentSlide.type === 'video' || currentSlide.mediaType === 'video' || currentSlide.image.toLowerCase().endsWith('.mp4') || currentSlide.image.toLowerCase().endsWith('.webm') ? (
+                        {isVideo ? (
                             <video
-                                src={resolveLocalAssetUrl(currentSlide.image)}
+                                src={resolveLocalAssetUrl(videoUrl)}
                                 autoPlay
                                 loop
                                 muted

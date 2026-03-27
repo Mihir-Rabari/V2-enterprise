@@ -26,6 +26,7 @@ const EssentialsSection: React.FC<EssentialsSectionProps> = ({
     setEssentialsSortBy,
     renderEssentialsSidebarContent
 }) => {
+
     return (
         <section key="essentials" className="py-24 md:py-32 bg-white min-h-[800px]">
             <div className="max-w-[1800px] mx-auto px-6 lg:px-12">
@@ -57,32 +58,33 @@ const EssentialsSection: React.FC<EssentialsSectionProps> = ({
                             </div>
                             <button
                                 onClick={() => setIsMobileFiltersOpen(true)}
-                                className="lg:hidden flex items-center gap-2 bg-luxury-black text-white px-6 py-4 text-[10px] font-bold uppercase tracking-widest hover:bg-luxury-gold transition-colors"
+                                className="lg:hidden flex items-center justify-center gap-2 bg-gray-50 text-luxury-black border border-gray-200 px-5 py-4 text-[10px] font-bold uppercase tracking-widest hover:border-luxury-gold transition-all"
                             >
                                 <Filter size={14} />
+                                <span className="hidden xs:inline">Filters</span>
                                 {activeEssentialsFilterCount > 0 && <span className="bg-luxury-gold text-white w-4 h-4 rounded-full flex items-center justify-center text-[8px]">{activeEssentialsFilterCount}</span>}
                             </button>
                         </div>
                     </div>
 
-                    <div className="hidden lg:flex items-center justify-between border-y border-gray-100 py-6">
+                    <div className="flex items-center justify-between border-y border-gray-100 py-6">
                         <div className="flex items-center gap-8">
                             <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-luxury-gold bg-luxury-gold/5 px-4 py-2 rounded-full">
                                 <span className="w-1.5 h-1.5 rounded-full bg-luxury-gold animate-pulse" />
                                 {displayFeatured.length} Pieces Available
                             </div>
                         </div>
-                        <div className="flex items-center gap-4">
+                        <div className="hidden lg:flex items-center gap-4">
                             <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Sort:</span>
                             <select
                                 className="bg-transparent border-none text-[10px] font-bold uppercase tracking-widest focus:ring-0 cursor-pointer text-luxury-black hover:text-luxury-gold transition-colors pr-8"
                                 value={essentialsSortBy}
                                 onChange={(e) => setEssentialsSortBy(e.target.value)}
                             >
-                                <option value="featured">Featured</option>
-                                <option value="newest">Newest First</option>
-                                <option value="price-low">Price: Low to High</option>
-                                <option value="price-high">Price: High to Low</option>
+                                <option value="Newest">Newest</option>
+                                <option value="Price: Low to High">Price: Low to High</option>
+                                <option value="Price: High to Low">Price: High to Low</option>
+                                <option value="Trending">Trending</option>
                             </select>
                         </div>
                     </div>
@@ -98,7 +100,7 @@ const EssentialsSection: React.FC<EssentialsSectionProps> = ({
                             {displayFeatured.length > 0 ? (
                                 <motion.div
                                     layout
-                                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-16"
+                                    className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 md:gap-10 gap-y-12 md:gap-y-16"
                                 >
                                     {displayFeatured.map((product) => (
                                         <ProductCard

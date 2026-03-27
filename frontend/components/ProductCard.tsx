@@ -136,23 +136,23 @@ const ProductCard: React.FC<ProductCardProps> = ({ id, name, price, image, hover
                     {/* Badge System — only one badge shown, Trending takes priority */}
                     <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
                         {isTrendingBadge ? (
-                            <motion.div
-                                initial={{ x: -20, opacity: 0 }}
-                                animate={{ x: 0, opacity: 1 }}
-                                className="bg-luxury-gold px-3 py-1.5 rounded-sm shadow-xl shadow-luxury-gold/20 flex items-center gap-1.5"
-                            >
-                                <TrendingUp size={9} strokeWidth={2.5} className="text-white" />
-                                <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-white">Trending</span>
-                            </motion.div>
+                                <motion.div
+                                    initial={{ x: -20, opacity: 0 }}
+                                    animate={{ x: 0, opacity: 1 }}
+                                    className="bg-luxury-gold px-2 sm:px-3 py-1.5 rounded-sm shadow-xl shadow-luxury-gold/20 flex items-center gap-0 sm:gap-1.5"
+                                >
+                                    <TrendingUp size={12} strokeWidth={2.5} className="text-white" />
+                                    <span className="hidden sm:inline text-[8px] font-bold uppercase tracking-[0.2em] text-white">Trending</span>
+                                </motion.div>
                         ) : isNewArrivalBadge ? (
-                            <motion.div
-                                initial={{ x: -20, opacity: 0 }}
-                                animate={{ x: 0, opacity: 1 }}
-                                className="bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-sm shadow-xl border border-black/5 flex items-center gap-1.5"
-                            >
-                                <Sparkles size={9} strokeWidth={2.5} className="text-luxury-gold" />
-                                <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-[#2A1E17]">New In</span>
-                            </motion.div>
+                                <motion.div
+                                    initial={{ x: -20, opacity: 0 }}
+                                    animate={{ x: 0, opacity: 1 }}
+                                    className="bg-white/90 backdrop-blur-md px-2 sm:px-3 py-1.5 rounded-sm shadow-xl border border-black/5 flex items-center gap-0 sm:gap-1.5"
+                                >
+                                    <Sparkles size={12} strokeWidth={2.5} className="text-luxury-gold" />
+                                    <span className="hidden sm:inline text-[8px] font-bold uppercase tracking-[0.2em] text-[#2A1E17]">New In</span>
+                                </motion.div>
                         ) : null}
                     </div>
                 </Link>

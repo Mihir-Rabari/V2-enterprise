@@ -5,6 +5,7 @@ import { env } from '../../config/env';
 import { RegisterInput, LoginInput } from './auth.schema';
 import { sendMail } from '../../utils/mailer';
 import { forgotPasswordTemplate } from '../../utils/emailTemplates';
+import { getFrontendAbsoluteUrl } from '../../utils/url';
 import crypto from 'crypto';
 
 export const registerService = async (input: RegisterInput) => {
@@ -80,11 +81,8 @@ export const forgotPasswordService = async (email: string) => {
     user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
     await user.save();
 
-    // Build reset URL — use the first FRONTEND_URL in the array
-    const frontendBase = Array.isArray(env.FRONTEND_URL)
-        ? env.FRONTEND_URL[0]
-        : env.FRONTEND_URL;
-    const resetUrl = `${frontendBase}/reset-password/${rawToken}`;
+    // Build reset URL using the standardized utility
+    const resetUrl = getFrontendAbsoluteUrl(`/reset-password/${rawToken}`);
 
     const html = forgotPasswordTemplate(user.name, resetUrl);
     await sendMail(user.email, 'Reset Your V2 Password', html);

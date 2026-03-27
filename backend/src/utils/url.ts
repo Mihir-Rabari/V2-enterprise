@@ -9,11 +9,8 @@ export const getAbsoluteUrl = (path: string): string => {
     if (!path) return '';
     if (path.startsWith('http')) return path;
 
-    const baseUrl = env.BACKEND_URL.endsWith('/') 
-        ? env.BACKEND_URL.slice(0, -1) 
-        : env.BACKEND_URL;
-        
-    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    const baseUrl = env.BACKEND_URL.replace(/\/+$/, '');
+    const cleanPath = '/' + path.replace(/^\/+/, '');
     
     return `${baseUrl}${cleanPath}`;
 };
@@ -30,11 +27,8 @@ export const getFrontendAbsoluteUrl = (path: string): string => {
         ? env.FRONTEND_URL[0]
         : env.FRONTEND_URL;
 
-    const baseUrl = frontendBase.endsWith('/') 
-        ? frontendBase.slice(0, -1) 
-        : frontendBase;
-        
-    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    const baseUrl = frontendBase.replace(/\/+$/, '');
+    const cleanPath = '/' + path.replace(/^\/+/, '');
     
     return `${baseUrl}${cleanPath}`;
 };

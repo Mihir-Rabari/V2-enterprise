@@ -192,7 +192,7 @@ const Home: React.FC = () => {
     const [allReviews, setAllReviews] = useState<Review[]>([]);
     const [reviewsLoading, setReviewsLoading] = useState(true);
     const [essentialsSearchQuery, setEssentialsSearchQuery] = useState('');
-    const [essentialsSortBy, setEssentialsSortBy] = useState('Relevance');
+    const [essentialsSortBy, setEssentialsSortBy] = useState('Newest');
     const [selectedEssentialsCategories, setSelectedEssentialsCategories] = useState<string[]>([]);
     const [selectedEssentialsPriceList, setSelectedEssentialsPriceList] = useState<string[]>([]);
     const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({});
@@ -210,10 +210,6 @@ const Home: React.FC = () => {
         { key: 'neck', label: 'Neck' },
         { key: 'pocket', label: 'Pocket' },
         { key: 'length', label: 'Length' },
-        { key: 'chest', label: 'Chest' },
-        { key: 'waist', label: 'Waist' },
-        { key: 'shoulder', label: 'Shoulder' },
-        { key: 'sleeveLength', label: 'Sleeve Length' },
     ];
 
     const getOptionsFor = (key: string) => {
@@ -403,6 +399,13 @@ const Home: React.FC = () => {
             const priceB = Number(b.price) || 0;
             if (essentialsSortBy === 'Price: Low to High') return priceA - priceB;
             if (essentialsSortBy === 'Price: High to Low') return priceB - priceA;
+            if (essentialsSortBy === 'Trending') {
+                if (a.isTrending && !b.isTrending) return -1;
+                if (!a.isTrending && b.isTrending) return 1;
+            }
+            if (essentialsSortBy === 'Newest') {
+                return String(b.id || b._id).localeCompare(String(a.id || a._id));
+            }
             return String(b.id || b._id).localeCompare(String(a.id || a._id));
         }).slice(0, 8);
     }, [products, essentialsSearchQuery, selectedEssentialsCategories, selectedEssentialsPriceList, selectedFilters, essentialsSortBy]);
@@ -452,15 +455,19 @@ const Home: React.FC = () => {
                 }}
                 options={[]}
             />
-            {dynamicFiltersList.map(filter => (
-                <FilterAccordion
-                    key={filter.key}
-                    title={filter.label}
-                    options={getOptionsFor(filter.key)}
-                    selected={selectedFilters[filter.key] || []}
-                    onToggle={(val: string) => toggleFilter(filter.key, val)}
-                />
-            ))}
+            {dynamicFiltersList.map(filter => {
+                const options = getOptionsFor(filter.key);
+                if (options.length === 0) return null;
+                return (
+                    <FilterAccordion
+                        key={filter.key}
+                        title={filter.label}
+                        options={options}
+                        selected={selectedFilters[filter.key] || []}
+                        onToggle={(val: string) => toggleFilter(filter.key, val)}
+                    />
+                );
+            })}
         </div>
     ), [categoryTree, essentialsSortBy, selectedEssentialsCategories, selectedEssentialsPriceList, selectedFilters]);
 

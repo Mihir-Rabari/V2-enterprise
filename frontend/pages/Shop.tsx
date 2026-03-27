@@ -199,6 +199,10 @@ const Shop: React.FC = () => {
         { key: 'neck', label: 'Neck' },
         { key: 'pocket', label: 'Pocket' },
         { key: 'length', label: 'Length' },
+        { key: 'chest', label: 'Chest' },
+        { key: 'waist', label: 'Waist' },
+        { key: 'shoulder', label: 'Shoulder' },
+        { key: 'sleeveLength', label: 'Sleeve Length' },
     ];
 
     const activeFilterCount = selectedCategories.length + selectedPriceRanges.length + Object.values(selectedFilters).reduce((acc: number, curr: string[]) => acc + curr.length, 0);

@@ -210,6 +210,10 @@ const Home: React.FC = () => {
         { key: 'neck', label: 'Neck' },
         { key: 'pocket', label: 'Pocket' },
         { key: 'length', label: 'Length' },
+        { key: 'chest', label: 'Chest' },
+        { key: 'waist', label: 'Waist' },
+        { key: 'shoulder', label: 'Shoulder' },
+        { key: 'sleeveLength', label: 'Sleeve Length' },
     ];
 
     const getOptionsFor = (key: string) => {

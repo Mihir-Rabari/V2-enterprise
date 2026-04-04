@@ -155,6 +155,7 @@ const AdminDashboard: React.FC = () => {
     const [waybillData, setWaybillData] = useState<Record<string, { awbNumber: string; trackingLink: string }>>({});
     const [filterSuggestions, setFilterSuggestions] = useState<any>({});
     const [productModalTab, setProductModalTab] = useState<'basic' | 'variants' | 'media' | 'attributes'>('basic');
+    const [productSearch, setProductSearch] = useState('');
 
     // Sync waybillData with apiOrders
     React.useEffect(() => {
@@ -637,10 +638,15 @@ const AdminDashboard: React.FC = () => {
                 });
                 setData(updatedData);
             } else {
-                if (!finalData.id) {
-                    finalData.id = modalType === 'page' ? formData.title?.toLowerCase().replace(/\s+/g, '-') : Date.now();
+                if (modalType === 'product') {
+                    // Refresh from server so new product appears at top (newest-first) with correct pagination totals
+                    fetchProducts(1, 15, productSearch);
+                } else {
+                    if (!finalData.id) {
+                        finalData.id = modalType === 'page' ? formData.title?.toLowerCase().replace(/\s+/g, '-') : Date.now();
+                    }
+                    setData([...data, finalData]);
                 }
-                setData([...data, finalData]);
             }
         }
         setModalOpen(false);
@@ -666,6 +672,7 @@ const AdminDashboard: React.FC = () => {
         // Pre-fill form with all data from the original, but strip ID fields and clear color
         const { id, _id, ...rest } = row as any;
         setFormData({ ...rest, color: '', name: row.name });
+        setProductModalTab('basic');
         setModalType('product');
         setModalOpen(true);
     };
@@ -685,6 +692,7 @@ const AdminDashboard: React.FC = () => {
             )
         },
         { header: 'Price', accessor: (row) => <div className="flex flex-col"><span className="font-bold text-slate-800">₹{row.price}</span>{row.originalPrice && <span className="text-[10px] text-gray-400 line-through">₹{row.originalPrice}</span>}</div> },
+        { header: 'Size', accessor: (row) => row.size ? <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 bg-gray-100 px-2 py-1 rounded">{row.size}</span> : <span className="text-gray-300">—</span> },
         {
             header: 'Trending',
             accessor: (row) => (
@@ -2206,9 +2214,10 @@ const AdminDashboard: React.FC = () => {
                         currentPage={productPagination.page}
                         totalPages={productPagination.totalPages}
                         totalEntries={productPagination.total}
-                        onPageChange={(page) => fetchProducts(page, 15)}
+                        onPageChange={(page) => fetchProducts(page, 15, productSearch)}
                         limit={15}
                         onRowClick={(row) => handleEdit('product', row)}
+                        onSearch={(q) => { setProductSearch(q); fetchProducts(1, 15, q); }}
                     />
                 );
 

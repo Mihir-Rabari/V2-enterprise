@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { TableColumn } from '../types';
 import { ChevronLeft, ChevronRight, MoreHorizontal, Plus, Package, Search } from 'lucide-react';
 
@@ -19,6 +19,8 @@ interface DataTableProps<T> {
   // Bulk operations
   bulkActions?: { label: string; onClick: (selectedIds: (string | number)[]) => void; variant?: 'danger' | 'default' }[];
   onRowClick?: (row: T) => void;
+  // Server-side search: when provided, client-side filtering is disabled and this callback fires on search changes (debounced 400ms)
+  onSearch?: (query: string) => void;
 }
 
 const DataTable = <T extends { id: number | string;[key: string]: any }>({
@@ -36,12 +38,33 @@ const DataTable = <T extends { id: number | string;[key: string]: any }>({
   limit = 10,
   bulkActions = [],
   onRowClick,
+  onSearch,
 }: DataTableProps<T>) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<(string | number)[]>([]);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Filter data client-side based on search query
+  // Debounced server-side search
+  useEffect(() => {
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    };
+  }, []);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const q = e.target.value;
+    setSearchQuery(q);
+    if (onSearch) {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+      searchDebounceRef.current = setTimeout(() => {
+        onSearch(q);
+      }, 400);
+    }
+  };
+
+  // Filter data client-side based on search query (only when no server-side search)
   const filteredData = useMemo(() => {
+    if (onSearch) return data; // Server handles filtering
     if (!searchQuery.trim()) return data;
     const q = searchQuery.toLowerCase();
     return data.filter(row => {
@@ -58,7 +81,7 @@ const DataTable = <T extends { id: number | string;[key: string]: any }>({
         return false;
       });
     });
-  }, [data, searchQuery]);
+  }, [data, searchQuery, onSearch]);
 
   const displayData = filteredData;
 
@@ -146,7 +169,7 @@ const DataTable = <T extends { id: number | string;[key: string]: any }>({
                 className="border border-gray-200 rounded-lg pl-9 pr-3 py-2 focus:outline-none focus:border-luxury-gold w-full bg-gray-50 text-luxury-black font-medium text-sm"
                 placeholder="Search by name, ID, email..."
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
+                onChange={handleSearchChange}
               />
             </div>
           </div>

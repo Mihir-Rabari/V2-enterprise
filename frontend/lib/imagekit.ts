@@ -9,7 +9,11 @@
  * The private key NEVER touches the browser.
  */
 
-const BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000/api/v1';
+const IS_LOCALHOST = typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.includes('192.168.'));
+
+const BASE_URL = (import.meta as any).env?.VITE_API_URL ||
+    (IS_LOCALHOST ? 'http://localhost:5000/api/v1' : '/api/v1');
 
 export const IMAGEKIT_PUBLIC_URL = 'https://ik.imagekit.io/ma42aehxw/';
 

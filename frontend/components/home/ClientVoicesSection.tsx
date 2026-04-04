@@ -25,9 +25,6 @@ const ClientVoicesSection: React.FC<{ reviews: any[] }> = ({ reviews }) => (
                             </p>
                         </div>
                         <div className="flex items-center gap-4 pt-4 border-t border-gray-200">
-                            <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
-                                <img src={review.product?.photo || review.productPhoto} alt="Product" className="w-full h-full object-cover" />
-                            </div>
                             <div>
                                 <p className="text-[10px] font-bold uppercase tracking-widest text-luxury-black">{review.customerName}</p>
                                 <p className="text-[9px] text-gray-500 uppercase tracking-wider">Verified Client</p>

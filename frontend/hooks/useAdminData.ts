@@ -83,10 +83,10 @@ export function useAdminData() {
         } catch (err) { console.error('Stats fetch error:', err); }
     }, []);
 
-    const fetchProducts = useCallback(async (page = 1, limit = 10) => {
+    const fetchProducts = useCallback(async (page = 1, limit = 10, search = '') => {
         setLoading(true);
         try {
-            const res = await productsAPI.getAll({ page, limit, status: 'ALL' as any });
+            const res = await productsAPI.getAll({ page, limit, status: 'ALL' as any, ...(search ? { search } : {}) });
             setProducts(res.data.data.products);
             setProductPagination({
                 page: res.data.data.page,

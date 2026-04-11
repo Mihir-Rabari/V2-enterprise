@@ -97,7 +97,9 @@ export const listR2Objects = async (
 
     const response = await s3Client.send(command);
 
-    const media = (response.Contents || []).map((item) => ({
+    const media = (response.Contents || [])
+        .filter(item => item.Key && !item.Key.endsWith('/'))
+        .map((item) => ({
         id: item.Key || '',
         url: `${env.R2_PUBLIC_URL}/${item.Key}`,
         thumbnailUrl: `${env.R2_PUBLIC_URL}/${item.Key}`, // R2 doesn't do transformations natively

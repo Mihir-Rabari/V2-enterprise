@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Upload, Trash2, Loader2, Link2, Image as ImageIcon, Video } from 'lucide-react';
-import { uploadToImageKit } from '../../lib/imagekit';
+import { uploadToR2 } from '../../lib/r2';
 import { MediaManagerModal } from './MediaManagerModal';
 import toast from 'react-hot-toast';
 import { adminAPI, resolveLocalAssetUrl } from '../../lib/apiClient';
@@ -20,7 +20,7 @@ interface ImageUploaderProps {
     compact?: boolean;
     /** If true, shows a video player preview instead of img */
     isVideo?: boolean;
-    /** If true, hides the Media Manager/Library option and uses backend direct upload for videos */
+    /** If true, hides the Media Manager/Library option and uses backend direct upload */
     directUploadOnly?: boolean;
     /** Optional dimension hint (e.g. 1920x1080) */
     sizeHint?: string;
@@ -61,14 +61,14 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
             } else if (uploadType === 'video' || isLocalVideo) {
                 uploadPromise = adminAPI.uploadLocalVideo(file).then(res => res.data.data.url);
             } else {
-                uploadPromise = uploadToImageKit(file, folder);
+                uploadPromise = uploadToR2(file, folder);
             }
         } else {
-            uploadPromise = uploadToImageKit(file, folder);
+            uploadPromise = uploadToR2(file, folder);
         }
         
         toast.promise(uploadPromise, {
-            loading: isLocalVideo ? 'Uploading to local server...' : 'Uploading to ImageKit Cloud...',
+            loading: 'Uploading to Cloudflare R2...',
             success: 'Upload complete!',
             error: 'Upload failed. Check file size.',
         });
@@ -175,7 +175,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
                     <div className="flex flex-col items-center gap-2 text-luxury-gold">
                         <Loader2 size={28} className="animate-spin" />
                         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                            {directUploadOnly ? 'Uploading to Server...' : 'Uploading to ImageKit...'}
+                            Uploading to Cloudflare R2...
                         </p>
                     </div>
                 ) : value ? (
@@ -212,7 +212,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
                         </p>
                         <p className="text-[9px] text-gray-300">
                             {accept.includes('video') ? 'Images & Videos • ' : 'Images • '}
-                            {directUploadOnly ? 'Stored on Local Server' : 'Stored on ImageKit CDN'}
+                            Stored on Cloudflare R2
                         </p>
                         {sizeHint && (
                             <p className="text-[9px] text-luxury-gold font-bold bg-luxury-gold/5 px-2 py-0.5 rounded-full mt-1">
@@ -272,7 +272,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
                     <input
                         type="text"
                         className="flex-1 bg-transparent outline-none text-[11px] text-gray-600"
-                        placeholder="https://ik.imagekit.io/... or any image URL"
+                        placeholder="https://pub-xxxx.r2.dev/... or any image URL"
                         value={urlDraft}
                         onChange={e => setUrlDraft(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter') handleUrlPaste(); }}

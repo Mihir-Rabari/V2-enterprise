@@ -22,6 +22,13 @@ const envSchema = z.object({
     UPLOAD_DIR: z.string().default('public/videos'),
     SMTP_EMAIL: z.string().email().optional(),
     SMTP_APP_PASSWORD: z.string().optional(),
+    
+    // Cloudflare R2 Credentials
+    R2_ACCOUNT_ID: z.string().optional(),
+    R2_ACCESS_KEY_ID: z.string().optional(),
+    R2_SECRET_ACCESS_KEY: z.string().optional(),
+    R2_BUCKET_NAME: z.string().optional(),
+    R2_PUBLIC_URL: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

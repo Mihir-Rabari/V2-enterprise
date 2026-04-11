@@ -1,12 +1,8 @@
 /**
- * ImageKit Upload Utility
+ * Cloudflare R2 Upload Utility
  *
  * Architecture:
- *   Browser → POST /api/v1/admin/upload (our backend) → ImageKit CDN
- *
- * The backend uses HTTP Basic Auth with the private key (private_key:)
- * — identical to the old PHP: CURLOPT_USERPWD => 'private_key:'
- * The private key NEVER touches the browser.
+ *   Browser → POST /api/v1/admin/upload (our backend) → Cloudflare R2
  */
 
 const IS_LOCALHOST = typeof window !== 'undefined' &&
@@ -15,15 +11,16 @@ const IS_LOCALHOST = typeof window !== 'undefined' &&
 const BASE_URL = (import.meta as any).env?.VITE_API_URL ||
     (IS_LOCALHOST ? 'http://localhost:5000/api/v1' : '/api/v1');
 
+// Deprecated in favor of direct R2 URLs returned by the backend
 export const IMAGEKIT_PUBLIC_URL = 'https://ik.imagekit.io/ma42aehxw/';
 
 /**
- * Upload a file via our backend proxy to ImageKit.
+ * Upload a file via our backend proxy to Cloudflare R2.
  * @param file   - File object from <input type="file">
- * @param folder - Destination folder on ImageKit (e.g. '/Products')
+ * @param folder - Destination folder on R2 (e.g. 'products')
  * @returns CDN URL string
  */
-export async function uploadToImageKit(file: File, folder = '/v2-uploads'): Promise<string> {
+export async function uploadToR2(file: File, folder = 'v2-uploads'): Promise<string> {
     const token = localStorage.getItem('v2_token');
 
     const form = new FormData();
@@ -35,7 +32,7 @@ export async function uploadToImageKit(file: File, folder = '/v2-uploads'): Prom
         method: 'POST',
         headers: {
             Authorization: `Bearer ${token}`,
-            // Note: Do NOT set Content-Type manually — browser sets multipart/form-data with boundary automatically
+            // browser sets multipart/form-data boundary automatically
         },
         body: form,
     });
@@ -53,6 +50,6 @@ export async function uploadToImageKit(file: File, folder = '/v2-uploads'): Prom
 
     const json = await res.json();
     const url = json?.data?.url;
-    if (!url) throw new Error('ImageKit did not return a URL');
+    if (!url) throw new Error('Backend did not return an R2 URL');
     return url;
 }

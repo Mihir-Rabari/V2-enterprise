@@ -13,47 +13,26 @@ import FormData from 'form-data';
 import axios from 'axios';
 import { env } from '../../config/env';
 import fs from 'fs';
+import { uploadToR2, listR2Objects, isR2Configured } from '../../utils/r2';
 
 const router = Router();
 
-// Standard Disk Storage for all Admin Uploads (Hardened against memory issues)
-const adminStorage = multer.diskStorage({
+// Standard Disk Storage for all Admin Uploads (Temporary before R2)
+const tempStorage = multer.diskStorage({
     destination: (_req, _file, cb) => {
         const dest = path.join(__dirname, '../../../uploads/v2-temp');
         if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
         cb(null, dest);
     },
     filename: (_req, file, cb) => {
-        cb(null, `admin-upload-${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`);
-    }
-});
-
-// Dedicated Storage for Slider Media (Permanent on Server)
-const sliderStorage = multer.diskStorage({
-    destination: (_req, _file, cb) => {
-        const dest = path.join(__dirname, '../../../uploads/sliders');
-        if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
-        cb(null, dest);
-    },
-    filename: (_req, file, cb) => {
-        cb(null, `v2-slider-${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`);
+        cb(null, `temp-upload-${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`);
     }
 });
 
 const upload = multer({ 
-    storage: adminStorage, 
-    limits: { fileSize: 500 * 1024 * 1024 } 
+    storage: tempStorage, 
+    limits: { fileSize: 500 * 1024 * 1024 } // 500MB
 });
-
-const uploadSliderMedia = multer({ 
-    storage: sliderStorage, 
-    limits: { fileSize: 500 * 1024 * 1024 } // 500MB for High-Res Hero Videos
-});
-
-// ImageKit credentials from env
-const IK_PRIVATE_KEY = env.IMAGEKIT_PRIVATE_KEY;
-const IK_UPLOAD_URL = 'https://upload.imagekit.io/api/v1/files/upload';
-const IK_LIST_URL = 'https://api.imagekit.io/v1/files';
 
 // Admin: get dashboard stats
 router.get('/stats', protect, adminOnly, async (_req: Request, res: Response) => {
@@ -231,206 +210,158 @@ router.get('/customers', protect, adminOnly, async (req: Request, res: Response)
     } catch (err: unknown) { return sendError(res, (err as Error).message); }
 });
 
-// Admin: get all media from ImageKit directly
+// Admin: get all media from R2
 router.get('/media', protect, adminOnly, async (req: Request, res: Response) => {
     try {
         const path = (req.query.path as string) || '/';
-        const searchQuery = (req.query.searchQuery as string) || '';
         const limit = parseInt(req.query.limit as string) || 100;
-        const skip = parseInt(req.query.skip as string) || 0;
+        const cursor = req.query.cursor as string | undefined;
 
-        if (!IK_PRIVATE_KEY) {
-            console.warn('⚠️ IMAGEKIT_PRIVATE_KEY is missing in backend env');
-            return sendError(res, 'ImageKit Private Key not configured', 500);
+        if (!isR2Configured()) {
+            return sendError(res, 'Cloudflare R2 is not fully configured', 500);
         }
 
-        const maskedKey = IK_PRIVATE_KEY.substring(0, 8) + '...' + IK_PRIVATE_KEY.substring(IK_PRIVATE_KEY.length - 4);
-        // console.log(`📡 Fetching Media assets (query: "${searchQuery}", path: "${path}") with key: ${maskedKey}`);
+        const prefix = path === '/' ? '' : path.replace(/^\/+/, '');
+        
+        let allMedia: any[] = [];
+        let allFolders: string[] = [];
 
-        const ikParams: any = { limit, skip };
-        if (path && path !== '/') ikParams.path = path;
-        if (searchQuery) ikParams.searchQuery = `name = "${searchQuery}"`;
-
-        // 1. Fetch files
-        const filesResponse = await axios.get(IK_LIST_URL, {
-            params: ikParams,
-            auth: {
-                username: IK_PRIVATE_KEY as string,
-                password: '',
-            },
-        });
-
-        // 2. Fetch subfolders in this path (optional but better for UI)
-        // Note: ImageKit API for folders is a bit different, let's just focus on files for now 
-        // to get the core logic back, but we can infer folders from file paths if needed.
-        // Actually, let's try to get subfolders if no search query is active
-        let subfolders: string[] = [];
-        if (!searchQuery) {
-            try {
-                // This is a guess on the endpoint structure based on common usage
-                // If this fails, we just don't show folders
-                const foldersRes = await axios.get('https://api.imagekit.io/v1/folders', {
-                    params: { parentFolderPath: path },
-                    auth: { username: IK_PRIVATE_KEY, password: '' }
-                });
-                subfolders = (foldersRes.data || []).map((f: any) => f.name);
-            } catch (fErr) {
-                console.warn('Could not fetch folders:', (fErr as Error).message);
-            }
-        }
-
-        // console.log(`✅ ImageKit returned ${filesResponse.data.length} assets and ${subfolders.length} folders`);
-
-        // Map ImageKit response to our frontend expected format
-        const media = filesResponse.data.map((file: any) => ({
-            id: file.fileId,
-            url: file.url,
-            thumbnailUrl: `${file.url}?tr=w-200,h-200,fo-auto`,
-            name: file.name,
-            size: file.size,
-            mimeType: file.fileType,
-            folder: file.filePath.split('/').slice(0, -1).join('/') || '/',
-            createdAt: file.createdAt
-        }));
+        const listResult = await listR2Objects(prefix, limit, cursor);
+        
+        allMedia = listResult.media;
+        allFolders = listResult.folders;
 
         return sendSuccess(res, {
-            media,
-            folders: subfolders,
-            currentPath: path,
-            total: media.length
+            media: allMedia,
+            folders: allFolders,
+            currentPath: listResult.currentPath,
+            total: listResult.total,
+            nextCursor: listResult.nextContinuationToken
         });
     } catch (err: any) {
-        const msg = err?.response?.data?.message || err?.message || 'Failed to fetch media library';
-        console.error('❌ ImageKit list error:', msg);
-        if (err.response) {
-            console.error('Response details:', JSON.stringify(err.response.data));
-        }
+        const msg = err?.message || 'Failed to fetch media library from R2';
+        console.error('❌ R2 list error:', msg);
         return sendError(res, msg);
     }
 });
 
-// Admin: Proxy upload to ImageKit (private key stays on server, Basic Auth)
+// Admin: Upload to R2 (replaces proxy to ImageKit)
 router.post('/upload', protect, adminOnly, upload.single('file'), async (req: Request, res: Response) => {
     try {
-        if (!IK_PRIVATE_KEY) {
-            return sendError(res, 'ImageKit Private Key not configured', 500);
-        }
         if (!req.file) return sendError(res, 'No file provided.', 400);
 
-        const folder = (req.body.folder as string) || '/v2-uploads';
-        const fileName = (req.body.fileName as string) || `upload_${Date.now()}_${req.file.originalname}`;
+        const folder = (req.body.folder as string) || 'products';
+        const fileContent = fs.readFileSync(req.file.path);
 
-        // Build multipart form for ImageKit (Reading from temporary disk file)
-        const form = new FormData();
-        form.append('file', fs.createReadStream(req.file.path), {
-            filename: fileName,
-            contentType: req.file.mimetype,
-        });
-        form.append('fileName', fileName);
-        form.append('folder', folder);
-        form.append('useUniqueFileName', 'true');
+        // Upload to R2
+        const r2Response = await uploadToR2(
+            fileContent,
+            folder,
+            req.file.originalname,
+            req.file.mimetype
+        );
 
-        // Upload to ImageKit
-        const response = await axios.post(IK_UPLOAD_URL, form, {
-            headers: { ...form.getHeaders() },
-            auth: { username: IK_PRIVATE_KEY as string, password: '' },
-        });
-
-        // Delete temporary file after successful upload
+        // Delete temporary file
         fs.unlink(req.file.path, (err) => {
             if (err) console.error('Failed to delete temp file:', err);
         });
 
-        // Save to Media collection for the Cloud Library
+        // Save to Media collection
         const newMedia = await Media.create({
-            url: response.data.url,
-            fileId: response.data.fileId,
-            name: response.data.name,
-            size: response.data.size,
+            url: r2Response.url,
+            fileId: r2Response.fileId,
+            name: r2Response.name,
+            size: req.file.size,
             mimeType: req.file.mimetype,
-            folder: folder,
+            folder: r2Response.folder,
         });
 
         return sendSuccess(res, {
-            url: response.data.url,
-            fileId: response.data.fileId,
-            name: response.data.name,
+            url: r2Response.url,
+            fileId: r2Response.fileId,
+            name: r2Response.name,
             id: newMedia._id.toString(),
-        }, 'File uploaded to ImageKit and saved to library');
+        }, 'File uploaded to R2 and saved to library');
     } catch (err: any) {
-        const msg = err?.response?.data?.message || err?.message || 'Upload failed';
-        console.error('ImageKit upload error:', msg);
+        const msg = err?.message || 'Upload failed';
+        console.error('R2 upload error:', msg);
         return sendError(res, msg, 500);
     }
 });
 
-// Admin: Local video upload (Multer disk storage)
-const videoStorage = multer.diskStorage({
-    destination: (_req, _file, cb) => {
-        cb(null, path.join(__dirname, '../../../uploads/videos'));
-    },
-    filename: (_req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, 'v2-video-' + uniqueSuffix + path.extname(file.originalname));
-    }
-});
-const uploadVideo = multer({ 
-    storage: videoStorage, 
-    limits: { fileSize: 500 * 1024 * 1024 } 
-});
-
-router.post('/upload-video', protect, adminOnly, uploadVideo.single('file'), async (req: Request, res: Response) => {
+// Admin: Legacy Local video upload (now mapped to R2 'products' by default)
+router.post('/upload-video', protect, adminOnly, upload.single('file'), async (req: Request, res: Response) => {
     try {
         if (!req.file) return sendError(res, 'No video file provided.', 400);
 
-        // Construct the local URL (relative to public)
-        const videoUrl = `/videos/${req.file.filename}`;
+        const fileContent = fs.readFileSync(req.file.path);
         
-        // Optional: Save to Media library as a local reference
-        await Media.create({
-            url: videoUrl,
-            fileId: `local_${req.file.filename}`,
-            name: req.file.originalname,
+        // Upload to R2 under products/
+        const r2Response = await uploadToR2(
+            fileContent,
+            'products',
+            req.file.originalname,
+            req.file.mimetype
+        );
+
+        // Delete temporary file
+        fs.unlink(req.file.path, () => {});
+
+        // Save to Media library
+        const newMedia = await Media.create({
+            url: r2Response.url,
+            fileId: r2Response.fileId,
+            name: r2Response.name,
             size: req.file.size,
             mimeType: req.file.mimetype,
-            folder: '/videos-local',
+            folder: r2Response.folder,
         });
 
         return sendSuccess(res, {
-            url: videoUrl,
-            name: req.file.originalname,
-            filename: req.file.filename
-        }, 'Video uploaded locally successfully');
+            url: r2Response.url,
+            name: r2Response.name,
+            filename: r2Response.name
+        }, 'Video uploaded to R2 successfully');
 
     } catch (err: any) {
-        console.error('Local video upload error:', err.message);
+        console.error('Video upload error:', err.message);
         return sendError(res, err.message, 500);
     }
 });
 
-// Dedicated route for Slider Media (Images or Videos - saved permanently to /uploads/sliders)
-router.post('/upload-slider-media', protect, adminOnly, uploadSliderMedia.single('file'), async (req: Request, res: Response) => {
+// Dedicated route for Slider Media (now mapped to R2 'sliders')
+router.post('/upload-slider-media', protect, adminOnly, upload.single('file'), async (req: Request, res: Response) => {
     try {
         if (!req.file) return sendError(res, 'No file uploaded', 400);
         
-        // Construct the local URL (relative to public /sliders)
-        const fileUrl = `/sliders/${req.file.filename}`;
+        const fileContent = fs.readFileSync(req.file.path);
         
-        // Optional: Save to Media library as a local reference
+        // Upload to R2 under sliders/
+        const r2Response = await uploadToR2(
+            fileContent,
+            'sliders',
+            req.file.originalname,
+            req.file.mimetype
+        );
+
+        // Delete temporary file
+        fs.unlink(req.file.path, () => {});
+
+        // Save to Media library
         await Media.create({
-            url: fileUrl,
-            fileId: `local_slider_${req.file.filename}`,
-            name: req.file.originalname,
+            url: r2Response.url,
+            fileId: r2Response.fileId,
+            name: r2Response.name,
             size: req.file.size,
             mimeType: req.file.mimetype,
-            folder: '/sliders-local',
+            folder: r2Response.folder,
         });
 
         return sendSuccess(res, {
-            url: fileUrl,
-            name: req.file.originalname,
-            filename: req.file.filename
-        }, 'Slider media uploaded successfully');
+            url: r2Response.url,
+            name: r2Response.name,
+            filename: r2Response.name
+        }, 'Slider media uploaded to R2 successfully');
     } catch (error: any) {
         console.error('Slider media upload error:', error.message);
         return sendError(res, error.message, 500);

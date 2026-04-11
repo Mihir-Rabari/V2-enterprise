@@ -21,23 +21,29 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
     const [uploading, setUploading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedId, setSelectedId] = useState<string | null>(null);
-    const [skip, setSkip] = useState(0);
+    const [cursor, setCursor] = useState<string | null>(null);
     const [hasMore, setHasMore] = useState(true);
     const LIMIT = 100;
 
-    const fetchMedia = async (query = '', path = '/', currentSkip = 0, isLoadMore = false) => {
+    const fetchMedia = async (query = '', path = '/', currentCursor: string | null = null, isLoadMore = false) => {
         if (isLoadMore) setLoadingMore(true);
         else setLoading(true);
 
         setError(null);
         try {
-            const res = await adminAPI.getMedia({ searchQuery: query, path, skip: currentSkip, limit: LIMIT });
+            const params: any = { searchQuery: query, path, limit: LIMIT };
+            if (currentCursor) params.cursor = currentCursor;
+
+            const res = await adminAPI.getMedia(params);
             if (res.data.success) {
                 const newFiles = res.data.data.media || [];
                 setMedia(prev => isLoadMore ? [...prev, ...newFiles] : newFiles);
                 setFolders(res.data.data.folders || []);
                 setCurrentPath(res.data.data.currentPath || path);
-                setHasMore(newFiles.length === LIMIT);
+                
+                const nextCursor = res.data.data.nextCursor;
+                setCursor(nextCursor || null);
+                setHasMore(!!nextCursor);
             } else {
                 setError(res.data.message || 'Failed to load media');
             }
@@ -53,8 +59,8 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
     useEffect(() => {
         const delayDebounceFn = setTimeout(() => {
             if (isOpen) {
-                setSkip(0);
-                fetchMedia(searchTerm, currentPath, 0, false);
+                setCursor(null);
+                fetchMedia(searchTerm, currentPath, null, false);
             }
         }, 500);
 
@@ -62,10 +68,8 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
     }, [searchTerm, currentPath, isOpen]);
 
     const handleLoadMore = () => {
-        if (loading || loadingMore || !hasMore) return;
-        const nextSkip = skip + LIMIT;
-        setSkip(nextSkip);
-        fetchMedia(searchTerm, currentPath, nextSkip, true);
+        if (loading || loadingMore || !hasMore || !cursor) return;
+        fetchMedia(searchTerm, currentPath, cursor, true);
     };
 
     // Infinite Scroll Sentinel
@@ -90,7 +94,7 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
                 observer.unobserve(observerTarget.current);
             }
         };
-    }, [hasMore, loading, loadingMore, skip]);
+    }, [hasMore, loading, loadingMore, cursor]);
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -100,7 +104,7 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
         const uploadPromise = adminAPI.uploadImage(file);
         
         toast.promise(uploadPromise, {
-            loading: 'Uploading media to ImageKit...',
+            loading: 'Uploading media to Cloudflare R2...',
             success: 'Media uploaded successfully!',
             error: 'Upload failed. File might be too large.',
         });

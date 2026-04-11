@@ -218,7 +218,7 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
                                 Try Refreshing
                             </button>
                         </div>
-                    ) : filteredMedia.length === 0 ? (
+                    ) : filteredMedia.length === 0 && folders.length === 0 ? (
                         <div className="h-64 flex flex-col items-center justify-center gap-4 text-gray-400">
                             <ImageIcon size={48} strokeWidth={1} />
                             <p className="text-xs font-bold uppercase tracking-widest">No assets found</p>

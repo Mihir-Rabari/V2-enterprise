@@ -48,70 +48,88 @@ const PromotionalSlider: React.FC<PromotionalSliderProps> = ({ slides }) => {
 
     return (
         <section className="relative h-[450px] sm:h-[550px] lg:h-[600px] w-full overflow-hidden bg-luxury-gray">
-            <AnimatePresence>
+            <AnimatePresence initial={false}>
                 <motion.div
                     key={currentIndex}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1, zIndex: 10 }}
                     exit={{ opacity: 0, zIndex: 0 }}
-                    transition={{ duration: 1.2, ease: "easeInOut" }}
+                    transition={{ duration: 1, ease: "easeInOut" }}
                     className="absolute inset-0"
                 >
-                    <div className="relative h-full w-full">
-                        {isVideo ? (
-                            <video
-                                src={resolveLocalAssetUrl(videoUrl)}
-                                autoPlay
-                                loop
-                                muted
-                                playsInline
-                                className="h-full w-full object-cover"
-                            />
-                        ) : (
-                            <img
-                                src={resolveLocalAssetUrl(getOptimizedImageUrl(currentSlide.image, { width: 1200, quality: 75 }))}
-                                alt={currentSlide.title}
-                                className="h-full w-full object-cover"
-                            />
-                        )}
-                        <div className="absolute inset-0 bg-black/30" />
+                    <Link to={currentSlide.link} className="block relative h-full w-full group/slide">
+                        <div className="relative h-full w-full overflow-hidden">
+                            {isVideo ? (
+                                <video
+                                    src={resolveLocalAssetUrl(videoUrl)}
+                                    autoPlay
+                                    loop
+                                    muted
+                                    playsInline
+                                    className="h-full w-full object-cover transition-transform duration-[2000ms] group-hover/slide:scale-105"
+                                />
+                            ) : (
+                                <img
+                                    src={resolveLocalAssetUrl(getOptimizedImageUrl(currentSlide.image, { width: 1200, quality: 75 }))}
+                                    alt={currentSlide.title}
+                                    className="h-full w-full object-cover transition-transform duration-[2000ms] group-hover/slide:scale-105"
+                                />
+                            )}
+                            <div className="absolute inset-0 bg-black/30 transition-colors duration-500 group-hover/slide:bg-black/20" />
 
-                        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
-                            <motion.span
-                                initial={{ y: 20, opacity: 0 }}
-                                animate={{ y: 0, opacity: 1 }}
-                                transition={{ delay: 0.3, duration: 0.8 }}
-                                className="text-white text-[10px] sm:text-[12px] font-bold uppercase tracking-[0.5em] mb-2 sm:mb-6"
-                            >
-                                {currentSlide.subtitle}
-                            </motion.span>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
+                                {(currentSlide.subtitleVisible !== false && currentSlide.subtitle) && (
+                                    <motion.span
+                                        initial={{ y: 20, opacity: 0 }}
+                                        animate={{ y: 0, opacity: 1 }}
+                                        transition={{ delay: 0.3, duration: 0.8 }}
+                                        className="text-white text-[10px] sm:text-[12px] font-bold uppercase tracking-[0.5em] mb-2 sm:mb-6"
+                                    >
+                                        {currentSlide.subtitle}
+                                    </motion.span>
+                                )}
 
-                            <motion.h2
-                                initial={{ y: 30, opacity: 0 }}
-                                animate={{ y: 0, opacity: 1 }}
-                                transition={{ delay: 0.5, duration: 1 }}
-                                className="font-serif text-4xl sm:text-7xl md:text-8xl italic text-white tracking-tighter mb-6 sm:mb-10 max-w-4xl"
-                            >
-                                {currentSlide.title}
-                            </motion.h2>
+                                {(currentSlide.titleVisible !== false && currentSlide.title) && (
+                                    <motion.h2
+                                        initial={{ y: 30, opacity: 0 }}
+                                        animate={{ y: 0, opacity: 1 }}
+                                        transition={{ delay: 0.5, duration: 1 }}
+                                        className="font-serif text-4xl sm:text-7xl md:text-8xl italic text-white tracking-tighter mb-6 sm:mb-10 max-w-4xl"
+                                    >
+                                        {currentSlide.title}
+                                    </motion.h2>
+                                )}
 
-                            <motion.div
-                                initial={{ y: 20, opacity: 0 }}
-                                animate={{ y: 0, opacity: 1 }}
-                                transition={{ delay: 0.8, duration: 0.8 }}
-                            >
-                                <Link
-                                    to={currentSlide.link}
-                                    className="group relative inline-flex items-center gap-4 bg-white text-luxury-black px-8 sm:px-12 py-4 sm:py-5 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.3em] overflow-hidden transition-all duration-700 hover:text-white"
-                                >
-                                    <span className="relative z-10 flex items-center gap-3">
-                                        {currentSlide.buttonText} <ArrowRight size={14} className="group-hover:translate-x-2 transition-transform duration-500" />
-                                    </span>
-                                    <div className="absolute inset-0 bg-luxury-gold translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out" />
-                                </Link>
-                            </motion.div>
+                                {((currentSlide as any).textVisible !== false && (currentSlide as any).text) && (
+                                    <motion.p
+                                        initial={{ y: 20, opacity: 0 }}
+                                        animate={{ y: 0, opacity: 1 }}
+                                        transition={{ delay: 0.6, duration: 0.8 }}
+                                        className="text-white/80 text-sm sm:text-base font-medium max-w-2xl mb-8 sm:mb-12"
+                                    >
+                                        {(currentSlide as any).text}
+                                    </motion.p>
+                                )}
+
+                                {(currentSlide.buttonVisible !== false && currentSlide.buttonText) && (
+                                    <motion.div
+                                        initial={{ y: 20, opacity: 0 }}
+                                        animate={{ y: 0, opacity: 1 }}
+                                        transition={{ delay: 0.8, duration: 0.8 }}
+                                    >
+                                        <div
+                                            className="group/btn relative inline-flex items-center gap-4 bg-white text-luxury-black px-8 sm:px-12 py-4 sm:py-5 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.3em] overflow-hidden transition-all duration-700 hover:text-white"
+                                        >
+                                            <span className="relative z-10 flex items-center gap-3">
+                                                {currentSlide.buttonText} <ArrowRight size={14} className="group-hover/btn:translate-x-2 transition-transform duration-500" />
+                                            </span>
+                                            <div className="absolute inset-0 bg-luxury-gold translate-y-full group-hover/btn:translate-y-0 transition-transform duration-500 ease-out" />
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </div>
                         </div>
-                    </div>
+                    </Link>
                 </motion.div>
             </AnimatePresence>
 

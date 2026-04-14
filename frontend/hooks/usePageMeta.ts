@@ -6,6 +6,7 @@ interface PageMetaOptions {
     ogImage?: string;
     ogType?: 'website' | 'product' | 'article';
     canonical?: string;
+    jsonLd?: object;
 }
 
 const SITE_NAME = 'V2 Enterprise';
@@ -28,6 +29,7 @@ export const usePageMeta = ({
     ogImage = DEFAULT_OG_IMAGE,
     ogType = 'website',
     canonical,
+    jsonLd,
 }: PageMetaOptions) => {
     useEffect(() => {
         // ── Title ──────────────────────────────────────────────────────────────
@@ -76,9 +78,23 @@ export const usePageMeta = ({
             setLink('canonical', canonical.startsWith('http') ? canonical : `${BASE_URL}${canonical}`);
         }
 
+        // ── JSON-LD Structured Data ───────────────────────────────────────────
+        if (jsonLd) {
+            let script = document.querySelector<HTMLScriptElement>('script[type="application/ld+json"]');
+            if (!script) {
+                script = document.createElement('script');
+                script.setAttribute('type', 'application/ld+json');
+                document.head.appendChild(script);
+            }
+            script.textContent = JSON.stringify(jsonLd);
+        }
+
         // ── Reset title on unmount ─────────────────────────────────────────────
         return () => {
             document.title = `${SITE_NAME} — Premium Luxury Fashion`;
+            // Remove JSON-LD on unmount to avoid stale data on navigation
+            const script = document.querySelector<HTMLScriptElement>('script[type="application/ld+json"]');
+            if (script) script.remove();
         };
-    }, [title, description, ogImage, ogType, canonical]);
+    }, [title, description, ogImage, ogType, canonical, jsonLd]);
 };

@@ -12,6 +12,10 @@ export interface ISlider extends Document {
     buttonText?: string;
     text?: string;
     link: string;
+    titleVisible?: boolean;
+    subtitleVisible?: boolean;
+    buttonVisible?: boolean;
+    textVisible?: boolean;
     duration?: number;
     status: 'ACTIVE' | 'INACTIVE';
 }
@@ -28,6 +32,10 @@ const SliderSchema = new Schema<ISlider>({
     buttonText: { type: String },
     text: { type: String },
     link: { type: String, default: '/shop' },
+    titleVisible: { type: Boolean },
+    subtitleVisible: { type: Boolean },
+    buttonVisible: { type: Boolean },
+    textVisible: { type: Boolean },
     duration: { type: Number, default: 5000 },
     status: { type: String, enum: ['ACTIVE', 'INACTIVE', 'Active', 'Inactive'], default: 'ACTIVE' },
 });

@@ -183,10 +183,26 @@ const Shop: React.FC = () => {
     }, [allCategories]);
 
     const getOptionsFor = (key: string) => {
-        if (filterSuggestions && Array.isArray(filterSuggestions[key])) {
+        if (filterSuggestions && Array.isArray(filterSuggestions[key]) && filterSuggestions[key].length > 0) {
             return filterSuggestions[key];
         }
-        return [];
+        if (key === 'color') {
+            const colors = new Set<string>();
+            products.forEach(p => {
+                if (p.color) colors.add(p.color);
+                p.variants?.forEach((v: any) => { if (v.color) colors.add(v.color) });
+            });
+            return Array.from(colors).sort();
+        }
+        if (key === 'size') {
+            const sizes = new Set<string>();
+            products.forEach(p => {
+                p.sizes?.forEach((s: string) => sizes.add(s));
+                p.variants?.forEach((v: any) => { if (v.size) sizes.add(v.size) });
+            });
+            return Array.from(sizes).sort();
+        }
+        return Array.from(new Set(products.map((p: any) => p[key]).filter(Boolean))).sort() as string[];
     };
 
     const dynamicFiltersList = [

@@ -72,96 +72,104 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
 
     return (
         <section className="relative h-screen w-full overflow-hidden bg-luxury-black">
-            <AnimatePresence mode="wait">
+            <AnimatePresence initial={false}>
                 <motion.div
                     key={current.id}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
+                    transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
                     className="absolute inset-0"
                 >
-                    <div className="absolute inset-0">
-                        {current.type === 'video' || (videoUrl && videoUrl.match(/\.(mp4|mov|webm|ogg)$/i)) ? (
-                            <video
-                                autoPlay
-                                loop
-                                muted
-                                playsInline
-                                key={videoUrl}
-                                preload="auto"
-                                width="1920"
-                                height="1080"
-                                className="w-full h-full object-cover opacity-60 scale-105"
-                            >
-                                 <source src={resolveLocalAssetUrl(videoUrl)} type="video/mp4" />
-                            </video>
-                        ) : (
-                            <img
-                                src={resolveLocalAssetUrl(getOptimizedImageUrl(current.url, { width: 1920, quality: 75 }))}
-                                alt={current.title}
-                                fetchPriority="high"
-                                decoding="sync"
-                                width="1920"
-                                height="1080"
-                                className="w-full h-full object-cover opacity-60 scale-105"
-                            />
-                        )}
-                    </div>
-                    <div className="absolute inset-0 bg-gradient-to-r from-luxury-black/80 via-luxury-black/20 to-transparent" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-luxury-black/90 via-transparent to-transparent" />
-
-                    <div className="relative h-full max-w-[1800px] mx-auto px-6 lg:px-12 flex flex-col justify-center items-start z-10">
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.5, duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
-                            className="max-w-5xl space-y-12"
-                        >
-                            <div className="space-y-8">
-                                <motion.div
-                                    initial={{ opacity: 0, x: -30 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: 0.8, duration: 0.8 }}
-                                    className="flex items-center gap-4"
+                    <Link to={current.ctaLink} className="block relative h-full w-full group/hero">
+                        <div className="absolute inset-0 overflow-hidden">
+                            {current.type === 'video' || (videoUrl && videoUrl.match(/\.(mp4|mov|webm|ogg)$/i)) ? (
+                                <video
+                                    autoPlay
+                                    loop
+                                    muted
+                                    playsInline
+                                    key={videoUrl}
+                                    preload="auto"
+                                    width="1920"
+                                    height="1080"
+                                    className="w-full h-full object-cover opacity-60 scale-105 transition-transform duration-[3000ms] group-hover/hero:scale-110"
                                 >
-                                    <div className="w-12 h-[1px] bg-luxury-gold" />
-                                    <span className="text-luxury-gold text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.4em]">{current.tagline}</span>
-                                </motion.div>
+                                     <source src={resolveLocalAssetUrl(videoUrl)} type="video/mp4" />
+                                </video>
+                            ) : (
+                                <img
+                                    src={resolveLocalAssetUrl(getOptimizedImageUrl(current.url, { width: 1920, quality: 75 }))}
+                                    alt={current.title}
+                                    fetchPriority="high"
+                                    decoding="sync"
+                                    width="1920"
+                                    height="1080"
+                                    className="w-full h-full object-cover opacity-60 scale-105 transition-transform duration-[3000ms] group-hover/hero:scale-110"
+                                />
+                            )}
+                        </div>
+                        <div className="absolute inset-0 bg-gradient-to-r from-luxury-black/80 via-luxury-black/20 to-transparent" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-luxury-black/90 via-transparent to-transparent" />
 
-                                <h1 className="font-serif text-[12vw] sm:text-[10vw] md:text-[140px] leading-[0.8] tracking-tighter text-white mix-blend-overlay opacity-90">
-                                    {current.title.split('\n').map((line, i) => (
-                                        <span key={i} className="block">{line}</span>
-                                    ))}
-                                </h1>
-
-                                {current.description && (
-                                    <motion.p
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 0.6 }}
-                                        transition={{ delay: 1.2, duration: 1 }}
-                                        className="max-w-xl text-white font-serif italic text-lg sm:text-xl leading-relaxed"
-                                    >
-                                        {current.description}
-                                    </motion.p>
-                                )}
-                            </div>
-
+                        <div className="relative h-full max-w-[1800px] mx-auto px-6 lg:px-12 flex flex-col justify-center items-start z-10">
                             <motion.div
-                                initial={{ opacity: 0, y: 30 }}
+                                initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 1.4, duration: 0.8 }}
-                                className="flex flex-col sm:flex-row gap-6 pt-4"
+                                transition={{ delay: 0.5, duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+                                className="max-w-5xl space-y-12"
                             >
-                                <Link to={current.ctaLink} className="group relative overflow-hidden bg-white text-luxury-black px-10 py-5 text-[11px] font-bold uppercase tracking-[0.2em] transition-all duration-500 hover:px-14">
-                                    <span className="relative z-10 flex items-center gap-2">
-                                        {current.ctaText} <ArrowRight size={14} />
-                                    </span>
-                                    <div className="absolute inset-0 bg-luxury-gold translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out" />
-                                </Link>
+                                <div className="space-y-8">
+                                    {(current.taglineVisible !== false && current.tagline) && (
+                                        <motion.div
+                                            initial={{ opacity: 0, x: -30 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: 0.8, duration: 0.8 }}
+                                            className="flex items-center gap-4"
+                                        >
+                                            <div className="w-12 h-[1px] bg-luxury-gold" />
+                                            <span className="text-luxury-gold text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.4em]">{current.tagline}</span>
+                                        </motion.div>
+                                    )}
+
+                                    {(current.titleVisible !== false && current.title) && (
+                                        <h1 className="font-serif text-[12vw] sm:text-[10vw] md:text-[140px] leading-[0.8] tracking-tighter text-white mix-blend-overlay opacity-90">
+                                            {current.title.split('\n').map((line, i) => (
+                                                <span key={i} className="block">{line}</span>
+                                            ))}
+                                        </h1>
+                                    )}
+
+                                    {(current.descriptionVisible !== false && current.description) && (
+                                        <motion.p
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 0.6 }}
+                                            transition={{ delay: 1.2, duration: 1 }}
+                                            className="max-w-xl text-white font-serif italic text-lg sm:text-xl leading-relaxed"
+                                        >
+                                            {current.description}
+                                        </motion.p>
+                                    )}
+                                </div>
+
+                                {(current.ctaVisible !== false && current.ctaText) && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 30 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 1.4, duration: 0.8 }}
+                                        className="flex flex-col sm:flex-row gap-6 pt-4"
+                                    >
+                                        <div className="group/btn relative overflow-hidden bg-white text-luxury-black px-10 py-5 text-[11px] font-bold uppercase tracking-[0.2em] transition-all duration-500 hover:px-14">
+                                            <span className="relative z-10 flex items-center gap-2">
+                                                {current.ctaText} <ArrowRight size={14} />
+                                            </span>
+                                            <div className="absolute inset-0 bg-luxury-gold translate-y-full group-hover/btn:translate-y-0 transition-transform duration-500 ease-out" />
+                                        </div>
+                                    </motion.div>
+                                )}
                             </motion.div>
-                        </motion.div>
-                    </div>
+                        </div>
+                    </Link>
                 </motion.div>
             </AnimatePresence>
 
@@ -217,26 +225,26 @@ const Home: React.FC = () => {
     ];
 
     const getOptionsFor = (key: string) => {
-        if (filterSuggestions && Array.isArray(filterSuggestions[key])) {
+        if (filterSuggestions && Array.isArray(filterSuggestions[key]) && filterSuggestions[key].length > 0) {
             return filterSuggestions[key];
         }
         if (key === 'color') {
             const colors = new Set<string>();
             products.forEach(p => {
                 if (p.color) colors.add(p.color);
-                p.variants?.forEach(v => { if (v.color) colors.add(v.color) });
+                p.variants?.forEach((v: any) => { if (v.color) colors.add(v.color) });
             });
             return Array.from(colors).sort();
         }
         if (key === 'size') {
             const sizes = new Set<string>();
             products.forEach(p => {
-                p.sizes?.forEach(s => sizes.add(s));
-                p.variants?.forEach(v => { if (v.size) sizes.add(v.size) });
+                p.sizes?.forEach((s: string) => sizes.add(s));
+                p.variants?.forEach((v: any) => { if (v.size) sizes.add(v.size) });
             });
             return Array.from(sizes).sort();
         }
-        return Array.from(new Set(products.map(p => (p as any)[key]).filter(Boolean))).sort() as string[];
+        return Array.from(new Set(products.map((p: any) => p[key]).filter(Boolean))).sort() as string[];
     };
 
     const toggleFilter = (key: string, value: string) => {

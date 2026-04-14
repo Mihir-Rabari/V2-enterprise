@@ -50,12 +50,60 @@ const ProductDetails: React.FC = () => {
     const [selectedSize, setSelectedSize] = useState<string | null>(null);
     const [selectedColor, setSelectedColor] = useState<string | null>(null);
 
+    const jsonLd = React.useMemo(() => {
+        if (!product) return undefined;
+        return {
+            "@context": "https://schema.org",
+            "@type": "Product",
+            "name": product.name,
+            "image": [product.photo, ...(product.photos || [])],
+            "description": product.description,
+            "brand": {
+                "@type": "Brand",
+                "name": "V2 Enterprise"
+            },
+            "sku": product.styleCode || String(product.id),
+            "mpn": product.styleCode || String(product.id),
+            "offers": {
+                "@type": "Offer",
+                "url": `https://v2enterprise.in/product/${id}`,
+                "priceCurrency": "INR",
+                "price": product.price,
+                "priceValidUntil": new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
+                "itemCondition": "https://schema.org/NewCondition",
+                "availability": product.quantity > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+                "seller": {
+                    "@type": "Organization",
+                    "name": "V2 Enterprise"
+                }
+            },
+            ...(productReviews.length > 0 ? {
+                "aggregateRating": {
+                    "@type": "AggregateRating",
+                    "ratingValue": (productReviews.reduce((acc, r) => acc + r.rating, 0) / productReviews.length).toFixed(1),
+                    "reviewCount": productReviews.length
+                },
+                "review": productReviews.map(r => ({
+                    "@type": "Review",
+                    "author": r.customerName || "Anonymous",
+                    "datePublished": r.date,
+                    "reviewBody": r.reviewText,
+                    "reviewRating": {
+                        "@type": "Rating",
+                        "ratingValue": r.rating
+                    }
+                }))
+            } : {})
+        };
+    }, [product, id, productReviews]);
+
     usePageMeta({
         title: product ? `${product.name} | V2 Enterprise` : 'Product Details | V2 Enterprise',
         description: product?.description?.slice(0, 160) || 'Premium luxury fashion from V2 Enterprise.',
         ogImage: product?.photo,
         ogType: 'product',
         canonical: `/product/${id}`,
+        jsonLd
     });
     const [activeImage, setActiveImage] = useState<number>(0);
     const [isVideoActive, setIsVideoActive] = useState(false);

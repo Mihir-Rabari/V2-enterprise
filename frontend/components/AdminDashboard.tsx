@@ -1570,56 +1570,95 @@ const AdminDashboard: React.FC = () => {
                             />
                         )}
                         <p className="text-[10px] text-gray-400 mt-1 italic font-medium tracking-wider">Recommended: 1920x600px (3.2:1 Aspect Ratio)</p>
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Title</label>
-                            <input
-                                type="text"
-                                className="w-full bg-transparent border-b border-gray-100 py-3 text-[11px] font-bold tracking-widest focus:outline-none focus:border-luxury-black transition-colors"
-                                value={formData.title || ''}
-                                onChange={e => setFormData({ ...formData, title: e.target.value })}
-                                placeholder="Slider Title"
-                            />
+                        <div className="grid grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-400">Main Title</label>
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="text"
+                                        className="flex-1 bg-transparent border-b border-gray-100 py-3 text-[11px] font-bold tracking-widest focus:outline-none focus:border-luxury-black transition-colors"
+                                        value={formData.title || ''}
+                                        onChange={e => setFormData({ ...formData, title: e.target.value })}
+                                        placeholder="Slider Title"
+                                    />
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold" checked={formData.titleVisible !== false} onChange={e => setFormData({ ...formData, titleVisible: e.target.checked })} />
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Show</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-400">Subtitle (Slogan)</label>
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="text"
+                                        className="flex-1 bg-transparent border-b border-gray-100 py-3 text-[11px] font-bold tracking-widest focus:outline-none focus:border-luxury-black transition-colors"
+                                        value={formData.subtitle || ''}
+                                        onChange={e => setFormData({ ...formData, subtitle: e.target.value })}
+                                        placeholder="Slider Slogan"
+                                    />
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold" checked={formData.subtitleVisible !== false} onChange={e => setFormData({ ...formData, subtitleVisible: e.target.checked })} />
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Show</span>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Subtitle (Slogan)</label>
-                            <input
-                                type="text"
-                                className="w-full bg-transparent border-b border-gray-100 py-3 text-[11px] font-bold tracking-widest focus:outline-none focus:border-luxury-black transition-colors"
-                                value={formData.subtitle || ''}
-                                onChange={e => setFormData({ ...formData, subtitle: e.target.value })}
-                                placeholder="Slider Slogan"
-                            />
+                        <div className="grid grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-400">Button Text</label>
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="text"
+                                        className="flex-1 bg-transparent border-b border-gray-100 py-3 text-[11px] font-bold tracking-widest focus:outline-none focus:border-luxury-black transition-colors"
+                                        value={formData.buttonText || ''}
+                                        onChange={e => setFormData({ ...formData, buttonText: e.target.value })}
+                                        placeholder="Shop Now"
+                                    />
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold" checked={formData.buttonVisible !== false} onChange={e => setFormData({ ...formData, buttonVisible: e.target.checked })} />
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Show</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-400">Description</label>
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="text"
+                                        className="flex-1 bg-transparent border-b border-gray-100 py-3 text-[11px] font-bold tracking-widest focus:outline-none focus:border-luxury-black transition-colors"
+                                        value={formData.text || ''}
+                                        onChange={e => setFormData({ ...formData, text: e.target.value })}
+                                        placeholder="Additional details..."
+                                    />
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold" checked={formData.textVisible !== false} onChange={e => setFormData({ ...formData, textVisible: e.target.checked })} />
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Show</span>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Link</label>
-                            <input
-                                type="text"
-                                className="w-full bg-transparent border-b border-gray-100 py-3 text-[11px] font-bold tracking-widest focus:outline-none focus:border-luxury-black transition-colors"
-                                value={formData.link || ''}
-                                onChange={e => setFormData({ ...formData, link: e.target.value })}
-                                placeholder="/example"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Button Text</label>
-                            <input
-                                type="text"
-                                className="w-full bg-transparent border-b border-gray-100 py-3 text-[11px] font-bold tracking-widest focus:outline-none focus:border-luxury-black transition-colors"
-                                value={formData.buttonText || ''}
-                                onChange={e => setFormData({ ...formData, buttonText: e.target.value })}
-                                placeholder="Shop Now"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Duration (ms)</label>
-                            <input
-                                type="number"
-                                className="w-full bg-transparent border-b border-gray-100 py-3 text-[11px] font-bold tracking-widest focus:outline-none focus:border-luxury-black transition-colors"
-                                value={formData.duration || 5000}
-                                onChange={e => setFormData({ ...formData, duration: Number(e.target.value) })}
-                                placeholder="5000"
-                            />
-                            <p className="text-[9px] text-gray-400 mt-1">Time to show this slide (1000ms = 1s)</p>
+                        <div className="grid grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-400">Target Link</label>
+                                <input
+                                    type="text"
+                                    className="w-full bg-transparent border-b border-gray-100 py-3 text-[11px] font-bold tracking-widest focus:outline-none focus:border-luxury-black transition-colors"
+                                    value={formData.link || ''}
+                                    onChange={e => setFormData({ ...formData, link: e.target.value })}
+                                    placeholder="/example"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-400">Duration (ms)</label>
+                                <input
+                                    type="number"
+                                    className="w-full bg-transparent border-b border-gray-100 py-3 text-[11px] font-bold tracking-widest focus:outline-none focus:border-luxury-black transition-colors"
+                                    value={formData.duration || 5000}
+                                    onChange={e => setFormData({ ...formData, duration: Number(e.target.value) })}
+                                    placeholder="5000"
+                                />
+                            </div>
                         </div>
                         <div>
                             <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Status</label>
@@ -1912,22 +1951,46 @@ const AdminDashboard: React.FC = () => {
                             </div>
                         )}
                         <div className="grid grid-cols-2 gap-4">
-                            <div>
+                            <div className="flex flex-col gap-2">
                                 <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Tagline</label>
-                                <input type="text" className="w-full border p-2.5 rounded focus:outline-none focus:border-black text-sm" value={formData.tagline || ''} onChange={e => setFormData({ ...formData, tagline: e.target.value })} />
+                                <div className="flex items-center gap-4">
+                                    <input type="text" className="flex-1 border p-2.5 rounded focus:outline-none focus:border-black text-sm" value={formData.tagline || ''} onChange={e => setFormData({ ...formData, tagline: e.target.value })} />
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold" checked={formData.taglineVisible !== false} onChange={e => setFormData({ ...formData, taglineVisible: e.target.checked })} />
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Show</span>
+                                    </label>
+                                </div>
                             </div>
-                            <div>
+                            <div className="flex flex-col gap-2">
                                 <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">CTA Text</label>
-                                <input type="text" className="w-full border p-2.5 rounded focus:outline-none focus:border-black text-sm" value={formData.ctaText || ''} onChange={e => setFormData({ ...formData, ctaText: e.target.value })} />
+                                <div className="flex items-center gap-4">
+                                    <input type="text" className="flex-1 border p-2.5 rounded focus:outline-none focus:border-black text-sm" value={formData.ctaText || ''} onChange={e => setFormData({ ...formData, ctaText: e.target.value })} />
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold" checked={formData.ctaVisible !== false} onChange={e => setFormData({ ...formData, ctaVisible: e.target.checked })} />
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Show</span>
+                                    </label>
+                                </div>
                             </div>
                         </div>
-                        <div>
+                        <div className="flex flex-col gap-2">
                             <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Hero Title (Use \n for line breaks)</label>
-                            <textarea className="w-full border p-2.5 rounded focus:outline-none focus:border-black text-sm h-20" value={formData.title || ''} onChange={e => setFormData({ ...formData, title: e.target.value })} />
+                            <div className="flex items-start gap-4">
+                                <textarea className="flex-1 border p-2.5 rounded focus:outline-none focus:border-black text-sm h-20" value={formData.title || ''} onChange={e => setFormData({ ...formData, title: e.target.value })} />
+                                <label className="flex items-center gap-2 cursor-pointer py-2">
+                                    <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold" checked={formData.titleVisible !== false} onChange={e => setFormData({ ...formData, titleVisible: e.target.checked })} />
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Show</span>
+                                </label>
+                            </div>
                         </div>
-                        <div>
+                        <div className="flex flex-col gap-2">
                             <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Description</label>
-                            <textarea className="w-full border p-2.5 rounded focus:outline-none focus:border-black text-sm h-24" value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} />
+                            <div className="flex items-start gap-4">
+                                <textarea className="flex-1 border p-2.5 rounded focus:outline-none focus:border-black text-sm h-24" value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} />
+                                <label className="flex items-center gap-2 cursor-pointer py-2">
+                                    <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-luxury-gold focus:ring-luxury-gold" checked={formData.descriptionVisible !== false} onChange={e => setFormData({ ...formData, descriptionVisible: e.target.checked })} />
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Show</span>
+                                </label>
+                            </div>
                         </div>
                         <div>
                             <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Target Link (URL or /category/name)</label>

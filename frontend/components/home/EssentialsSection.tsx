@@ -96,10 +96,14 @@ const EssentialsSection: React.FC<EssentialsSectionProps> = ({
                     </aside>
 
                     <div className="flex-1">
-                        <AnimatePresence mode="popLayout">
+                        <AnimatePresence initial={false}>
                             {displayFeatured.length > 0 ? (
                                 <motion.div
-                                    layout
+                                    key="essentials-grid"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.5 }}
                                     className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 md:gap-10 gap-y-12 md:gap-y-16"
                                 >
                                     {displayFeatured.map((product) => (

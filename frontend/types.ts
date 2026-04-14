@@ -172,7 +172,12 @@ export interface Slider {
   title: string;
   subtitle?: string;
   buttonText?: string;
+  text?: string;
   link: string;
+  titleVisible?: boolean;
+  subtitleVisible?: boolean;
+  buttonVisible?: boolean;
+  textVisible?: boolean;
   duration?: number;
   status: 'Active' | 'Inactive' | 'ACTIVE' | 'INACTIVE';
 }
@@ -219,6 +224,10 @@ export interface PromotionalSlide {
   subtitle?: string;
   link: string;
   buttonText?: string;
+  titleVisible?: boolean;
+  subtitleVisible?: boolean;
+  buttonVisible?: boolean;
+  textVisible?: boolean;
   duration?: number;
 }
 
@@ -372,6 +381,10 @@ export interface HeroSlide {
   description: string;
   ctaText: string;
   ctaLink: string;
+  taglineVisible?: boolean;
+  titleVisible?: boolean;
+  descriptionVisible?: boolean;
+  ctaVisible?: boolean;
   duration?: number;
   order: number;
   status: 'Active' | 'Inactive' | 'ACTIVE' | 'INACTIVE';

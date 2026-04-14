@@ -11,6 +11,10 @@ export interface IHeroSlide extends Document {
     description: string;
     ctaText: string;
     ctaLink: string;
+    taglineVisible?: boolean;
+    titleVisible?: boolean;
+    descriptionVisible?: boolean;
+    ctaVisible?: boolean;
     duration?: number;
     order: number;
     status: 'ACTIVE' | 'INACTIVE';
@@ -27,6 +31,10 @@ const HeroSlideSchema = new Schema<IHeroSlide>({
     description: { type: String, required: true },
     ctaText: { type: String, required: true },
     ctaLink: { type: String, default: '/shop' },
+    taglineVisible: { type: Boolean },
+    titleVisible: { type: Boolean },
+    descriptionVisible: { type: Boolean },
+    ctaVisible: { type: Boolean },
     duration: { type: Number, default: 5000 },
     order: { type: Number, default: 0 },
     status: { type: String, enum: ['ACTIVE', 'INACTIVE', 'Active', 'Inactive'], default: 'ACTIVE' },

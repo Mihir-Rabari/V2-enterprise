@@ -19,6 +19,9 @@ import wishlistRoutes from './modules/wishlist/wishlist.routes';
 import paymentRoutes from './modules/payments/payments.routes';
 import addressRoutes from './modules/addresses/addresses.routes';
 import { filtersRoutes } from './modules/filters/filters.routes';
+import sitemapRoutes from './modules/sitemap/sitemap.routes';
+import { Product } from './models/Product';
+import { Category } from './models/Category';
 import fs from 'fs';
 
 const app = express();
@@ -50,6 +53,9 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '500mb' }));
 app.use(express.urlencoded({ limit: '500mb', extended: true }));
+
+// ── SEO & Meta ───────────────────────────────────────────────────────────────
+app.use('/', sitemapRoutes);
 
 // ── Health Check ─────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
@@ -119,10 +125,83 @@ if (env.NODE_ENV === 'production') {
         }
     }));
 
-    // SPA fallback — all non-API routes serve index.html
-    app.get('*', (req, res) => {
-        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-        res.sendFile(path.join(frontendPath, 'index.html'));
+    // SPA fallback — all non-API routes serve index.html with dynamic meta injection for SEO
+    app.get('*', async (req, res) => {
+        try {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            const filePath = path.join(frontendPath, 'index.html');
+            
+            if (!fs.existsSync(filePath)) {
+                return res.status(404).send('Frontend not built');
+            }
+
+            let html = fs.readFileSync(filePath, 'utf8');
+
+            const BASE_URL = 'https://v2enterprise.in';
+            const DEFAULT_LOGO = `${BASE_URL}/v2_logo.webp`;
+            
+            let meta = {
+                title: 'V2 Enterprise — Premium Luxury Fashion',
+                description: "Discover V2 Enterprise's exclusive collection of premium menswear and luxury fashion. Crafted with care in Bhavnagar, Gujarat.",
+                image: DEFAULT_LOGO,
+                url: `${BASE_URL}${req.path}`
+            };
+
+            // 1. Dynamic Product Meta
+            if (req.path.startsWith('/product/')) {
+                const parts = req.path.split('/');
+                const productId = parts[2];
+                if (productId && productId.length >= 12) { // Basic MongoID check
+                    try {
+                        const product = await Product.findById(productId);
+                        if (product) {
+                            meta.title = `${product.name} | V2 Enterprise`;
+                            meta.description = product.description ? product.description.slice(0, 160) : meta.description;
+                            meta.image = product.photo || DEFAULT_LOGO;
+                        }
+                    } catch (e) {
+                         // Fallback to default if DB fails or ID invalid
+                    }
+                }
+            } 
+            // 2. Dynamic Category Meta
+            else if (req.path.startsWith('/category/')) {
+                const parts = req.path.split('/');
+                const slug = decodeURIComponent(parts[2]);
+                if (slug) {
+                    try {
+                        const category = await Category.findOne({ $or: [{ slug }, { name: slug }] });
+                        if (category) {
+                            meta.title = `${category.name} | V2 Enterprise`;
+                            meta.description = category.description ? category.description.slice(0, 160) : `Shop the finest ${category.name} at V2 Enterprise.`;
+                            meta.image = category.image || DEFAULT_LOGO;
+                        }
+                    } catch (e) {}
+                }
+            }
+
+            // Inject Meta Tags into HTML
+            html = html.replace(/<title>.*?<\/title>/g, `<title>${meta.title}</title>`);
+            
+            // Open Graph
+            html = html.replace(/property="og:title" content=".*?"/g, `property="og:title" content="${meta.title}"`);
+            html = html.replace(/property="og:description" content=".*?"/g, `property="og:description" content="${meta.description}"`);
+            html = html.replace(/property="og:image" content=".*?"/g, `property="og:image" content="${meta.image}"`);
+            html = html.replace(/property="og:url" content=".*?"/g, `property="og:url" content="${meta.url}"`);
+            
+            // Twitter
+            html = html.replace(/name="twitter:title" content=".*?"/g, `name="twitter:title" content="${meta.title}"`);
+            html = html.replace(/name="twitter:description" content=".*?"/g, `name="twitter:description" content="${meta.description}"`);
+            html = html.replace(/name="twitter:image" content=".*?"/g, `name="twitter:image" content="${meta.image}"`);
+            
+            // Primary Description
+            html = html.replace(/name="description" content=".*?"/g, `name="description" content="${meta.description}"`);
+
+            res.send(html);
+        } catch (error) {
+            console.error('SPA Fallback Error:', error);
+            res.status(500).send('Server Error');
+        }
     });
 } else {
     // ── Global 404 Handler (Development) ─────────────────────────────────────

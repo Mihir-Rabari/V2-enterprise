@@ -84,65 +84,90 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
 
     return (
         <section className="relative h-screen w-full overflow-hidden bg-luxury-black">
-            <AnimatePresence initial={false}>
+            {/* Persistent Media Stack (Preloading Layer) */}
+            <div className="absolute inset-0 z-0">
+                {activeSlides.map((slide, i) => {
+                    const isCurrent = i === index;
+                    const isNext = i === (index + 1) % activeSlides.length;
+                    
+                    // Only render current and next to optimize performance, or all if few slides
+                    if (!isCurrent && !isNext) return null;
+
+                    const slideVideoUrl = 
+                        width < 640 ? slide.mobileUrl || slide.url :
+                        width < 1024 ? slide.tabletUrl || slide.url :
+                        slide.laptopUrl || slide.url;
+
+                    const isVideo = slide.type === 'video' || (slideVideoUrl && slideVideoUrl.match(/\.(mp4|mov|webm|ogg)$/i));
+
+                    return (
+                        <div 
+                            key={slide.id}
+                            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${isCurrent ? 'opacity-100' : 'opacity-0'}`}
+                        >
+                            <div className="absolute inset-0 overflow-hidden">
+                                {isVideo ? (
+                                    <>
+                                        <video
+                                            autoPlay
+                                            loop
+                                            muted
+                                            playsInline
+                                            preload="auto"
+                                            width="1920"
+                                            height="1080"
+                                            poster={resolveLocalAssetUrl(getOptimizedImageUrl(slide.url, { width: 1920, quality: 75 }))}
+                                            onCanPlayThrough={() => {
+                                                if (isCurrent) {
+                                                    setVideoReady(true);
+                                                    setIsInitialLoad(false);
+                                                }
+                                            }}
+                                            className="w-full h-full object-cover opacity-60 scale-105 transition-transform duration-[3000ms] group-hover/hero:scale-110"
+                                        >
+                                            <source src={resolveLocalAssetUrl(slideVideoUrl)} type="video/mp4" />
+                                        </video>
+                                        {(isCurrent && !videoReady) && (
+                                            <img
+                                                src={resolveLocalAssetUrl(getOptimizedImageUrl(slide.url, { width: 1920, quality: 75 }))}
+                                                alt={slide.title}
+                                                className="absolute inset-0 w-full h-full object-cover opacity-60 scale-105"
+                                            />
+                                        )}
+                                    </>
+                                ) : (
+                                    <img
+                                        src={resolveLocalAssetUrl(getOptimizedImageUrl(slide.url, { width: 1920, quality: 75 }))}
+                                        alt={slide.title}
+                                        fetchPriority={isCurrent ? "high" : "low"}
+                                        className="w-full h-full object-cover opacity-60 scale-105 transition-transform duration-[3000ms] group-hover/hero:scale-110"
+                                    />
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            <div className="absolute inset-0 bg-gradient-to-r from-luxury-black/80 via-luxury-black/20 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-luxury-black/90 via-transparent to-transparent" />
+
+            {/* Content Transition Layer */}
+            <AnimatePresence mode="wait">
                 <motion.div
                     key={current.id}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
-                    className="absolute inset-0"
+                    transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                    className="absolute inset-0 z-10"
                 >
                     <Link to={current.ctaLink} className="block relative h-full w-full group/hero">
-                        <div className="absolute inset-0 overflow-hidden">
-                            {current.type === 'video' || (videoUrl && videoUrl.match(/\.(mp4|mov|webm|ogg)$/i)) ? (
-                                <>
-                                    <video
-                                        autoPlay
-                                        loop
-                                        muted
-                                        playsInline
-                                        key={videoUrl}
-                                        preload="auto"
-                                        width="1920"
-                                        height="1080"
-                                        poster={resolveLocalAssetUrl(getOptimizedImageUrl(current.url, { width: 1920, quality: 75 }))}
-                                        onCanPlayThrough={() => {
-                                            setVideoReady(true);
-                                            setIsInitialLoad(false);
-                                        }}
-                                        className={`w-full h-full object-cover scale-105 transition-all duration-[3000ms] group-hover/hero:scale-110 ${videoReady ? 'opacity-60' : 'opacity-0'}`}
-                                    >
-                                         <source src={resolveLocalAssetUrl(videoUrl)} type="video/mp4" />
-                                    </video>
-                                    {!videoReady && (
-                                        <img
-                                            src={resolveLocalAssetUrl(getOptimizedImageUrl(current.url, { width: 1920, quality: 75 }))}
-                                            alt={current.title}
-                                            className="absolute inset-0 w-full h-full object-cover opacity-60 scale-105"
-                                        />
-                                    )}
-                                </>
-                            ) : (
-                                <img
-                                    src={resolveLocalAssetUrl(getOptimizedImageUrl(current.url, { width: 1920, quality: 75 }))}
-                                    alt={current.title}
-                                    fetchPriority="high"
-                                    decoding="sync"
-                                    width="1920"
-                                    height="1080"
-                                    className="w-full h-full object-cover opacity-60 scale-105 transition-transform duration-[3000ms] group-hover/hero:scale-110"
-                                />
-                            )}
-                        </div>
-                        <div className="absolute inset-0 bg-gradient-to-r from-luxury-black/80 via-luxury-black/20 to-transparent" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-luxury-black/90 via-transparent to-transparent" />
-
                         <div className="relative h-full max-w-[1800px] mx-auto px-6 lg:px-12 flex flex-col justify-center items-start z-10">
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.5, duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+                                transition={{ delay: 0.2, duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
                                 className="max-w-5xl space-y-12"
                             >
                                 <div className="space-y-8">
@@ -150,7 +175,7 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
                                         <motion.div
                                             initial={{ opacity: 0, x: -30 }}
                                             animate={{ opacity: 1, x: 0 }}
-                                            transition={{ delay: 0.8, duration: 0.8 }}
+                                            transition={{ delay: 0.4, duration: 0.8 }}
                                             className="flex items-center gap-4"
                                         >
                                             <div className="w-12 h-[1px] bg-luxury-gold" />
@@ -170,7 +195,7 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
                                         <motion.p
                                             initial={{ opacity: 0 }}
                                             animate={{ opacity: 0.6 }}
-                                            transition={{ delay: 1.2, duration: 1 }}
+                                            transition={{ delay: 0.6, duration: 1 }}
                                             className="max-w-xl text-white font-serif italic text-lg sm:text-xl leading-relaxed"
                                         >
                                             {current.description}
@@ -182,7 +207,7 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
                                     <motion.div
                                         initial={{ opacity: 0, y: 30 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: 1.4, duration: 0.8 }}
+                                        transition={{ delay: 0.8, duration: 0.8 }}
                                         className="flex flex-col sm:flex-row gap-6 pt-4"
                                     >
                                         <div className="group/btn relative overflow-hidden bg-white text-luxury-black px-10 py-5 text-[11px] font-bold uppercase tracking-[0.2em] transition-all duration-500 hover:px-14">

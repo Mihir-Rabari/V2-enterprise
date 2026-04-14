@@ -96,31 +96,33 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
                     <Link to={current.ctaLink} className="block relative h-full w-full group/hero">
                         <div className="absolute inset-0 overflow-hidden">
                             {current.type === 'video' || (videoUrl && videoUrl.match(/\.(mp4|mov|webm|ogg)$/i)) ? (
-                                <video
-                                    autoPlay
-                                    loop
-                                    muted
-                                    playsInline
-                                    key={videoUrl}
-                                    preload="auto"
-                                    width="1920"
-                                    height="1080"
-                                    poster={resolveLocalAssetUrl(getOptimizedImageUrl(current.url, { width: 1920, quality: 75 }))}
-                                    onCanPlayThrough={() => {
-                                        setVideoReady(true);
-                                        setIsInitialLoad(false);
-                                    }}
-                                    className={`w-full h-full object-cover scale-105 transition-all duration-[3000ms] group-hover/hero:scale-110 ${videoReady ? 'opacity-60' : 'opacity-0'}`}
-                                >
-                                     <source src={resolveLocalAssetUrl(videoUrl)} type="video/mp4" />
-                                </video>
-                                {!videoReady && (
-                                    <img
-                                        src={resolveLocalAssetUrl(getOptimizedImageUrl(current.url, { width: 1920, quality: 75 }))}
-                                        alt={current.title}
-                                        className="absolute inset-0 w-full h-full object-cover opacity-60 scale-105"
-                                    />
-                                )}
+                                <>
+                                    <video
+                                        autoPlay
+                                        loop
+                                        muted
+                                        playsInline
+                                        key={videoUrl}
+                                        preload="auto"
+                                        width="1920"
+                                        height="1080"
+                                        poster={resolveLocalAssetUrl(getOptimizedImageUrl(current.url, { width: 1920, quality: 75 }))}
+                                        onCanPlayThrough={() => {
+                                            setVideoReady(true);
+                                            setIsInitialLoad(false);
+                                        }}
+                                        className={`w-full h-full object-cover scale-105 transition-all duration-[3000ms] group-hover/hero:scale-110 ${videoReady ? 'opacity-60' : 'opacity-0'}`}
+                                    >
+                                         <source src={resolveLocalAssetUrl(videoUrl)} type="video/mp4" />
+                                    </video>
+                                    {!videoReady && (
+                                        <img
+                                            src={resolveLocalAssetUrl(getOptimizedImageUrl(current.url, { width: 1920, quality: 75 }))}
+                                            alt={current.title}
+                                            className="absolute inset-0 w-full h-full object-cover opacity-60 scale-105"
+                                        />
+                                    )}
+                                </>
                             ) : (
                                 <img
                                     src={resolveLocalAssetUrl(getOptimizedImageUrl(current.url, { width: 1920, quality: 75 }))}

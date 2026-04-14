@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { Product } from '../products/../models/Product';
-import { Category } from '../categories/../models/Category';
+import { Product, IProduct } from '../../models/Product';
+import { Category, ICategory } from '../../models/Category';
 
 const BASE_URL = 'https://v2enterprise.in';
 
@@ -35,10 +35,10 @@ export const getSitemap = async (req: Request, res: Response) => {
 `;
 
         // Add Categories
-        categories.forEach(cat => {
+        categories.forEach((cat: any) => {
             xml += `  <url>
     <loc>${BASE_URL}/category/${encodeURIComponent(cat.slug || cat.name)}</loc>
-    <lastmod>${(cat as any).updatedAt ? (cat as any).updatedAt.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}</lastmod>
+    <lastmod>${cat.updatedAt ? cat.updatedAt.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -46,7 +46,7 @@ export const getSitemap = async (req: Request, res: Response) => {
         });
 
         // Add Products
-        products.forEach(prod => {
+        products.forEach((prod: any) => {
             xml += `  <url>
     <loc>${BASE_URL}/product/${prod._id}</loc>
     <lastmod>${prod.updatedAt ? prod.updatedAt.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}</lastmod>

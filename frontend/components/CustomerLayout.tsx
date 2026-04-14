@@ -19,16 +19,19 @@ interface CustomerLayoutProps {
 const CustomerLayout: React.FC<CustomerLayoutProps> = ({ onSwitchToAdmin }) => {
     const location = useLocation();
     const { toast, hideToast } = useCart();
-    const { isInitialLoad } = useInitialLoad();
+    const { isInitialLoad, setIsInitialLoad } = useInitialLoad();
     const [siteSettings, setSiteSettings] = React.useState<SiteSettings>({} as SiteSettings);
 
     useEffect(() => {
         window.scrollTo(0, 0);
-    }, []);
 
-    useEffect(() => {
-        window.scrollTo(0, 0);
-    }, [location.pathname]);
+        // FALLBACK: If we are NOT on the home page, the Home.tsx video trigger won't fire.
+        // We should automatically clear the splash after a standard premium delay.
+        if (location.pathname !== '/') {
+            const timer = setTimeout(() => setIsInitialLoad(false), 2000);
+            return () => clearTimeout(timer);
+        }
+    }, [location.pathname, setIsInitialLoad]);
 
     // Dynamic Taglines Logic
     const [taglines, setTaglines] = React.useState<{ text: string }[]>([]);

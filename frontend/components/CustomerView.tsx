@@ -20,6 +20,7 @@ const Checkout = lazy(() => import('../pages/Checkout'));
 import { CartProvider } from '../context/CartContext';
 import { QuickViewProvider } from '../context/QuickViewContext';
 import { AuthProvider } from '../context/AuthContext';
+import { InitialLoadProvider } from '../context/InitialLoadContext';
 
 interface CustomerViewProps {
   onSwitchToAdmin: () => void;
@@ -36,9 +37,10 @@ const PageLoading = () => (
 const CustomerView: React.FC<CustomerViewProps> = (props) => {
   return (
     <AuthProvider>
-      <QuickViewProvider>
-        <CartProvider>
-          <Suspense fallback={<PageLoading />}>
+      <InitialLoadProvider>
+        <QuickViewProvider>
+          <CartProvider>
+            <Suspense fallback={<PageLoading />}>
             <Routes>
               <Route path="/" element={<CustomerLayout {...props} />}>
                 <Route index element={<Home />} />
@@ -74,6 +76,7 @@ const CustomerView: React.FC<CustomerViewProps> = (props) => {
           </Suspense>
         </CartProvider>
       </QuickViewProvider>
+      </InitialLoadProvider>
     </AuthProvider>
   );
 };

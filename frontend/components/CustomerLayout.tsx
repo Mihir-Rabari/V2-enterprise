@@ -9,6 +9,7 @@ import QuickView from './QuickView';
 import { useCart } from '../context/CartContext';
 import { contentAPI, settingsAPI } from '../lib/apiClient';
 import { SiteSettings } from '../types';
+import { useInitialLoad } from '../context/InitialLoadContext';
 // No initialData imports allowed. 100% dynamic.
 
 interface CustomerLayoutProps {
@@ -18,14 +19,11 @@ interface CustomerLayoutProps {
 const CustomerLayout: React.FC<CustomerLayoutProps> = ({ onSwitchToAdmin }) => {
     const location = useLocation();
     const { toast, hideToast } = useCart();
-    const [isInitialLoad, setIsInitialLoad] = React.useState(true);
+    const { isInitialLoad } = useInitialLoad();
     const [siteSettings, setSiteSettings] = React.useState<SiteSettings>({} as SiteSettings);
 
     useEffect(() => {
         window.scrollTo(0, 0);
-        // Initial splash delay
-        const timer = setTimeout(() => setIsInitialLoad(false), 2000);
-        return () => clearTimeout(timer);
     }, []);
 
     useEffect(() => {

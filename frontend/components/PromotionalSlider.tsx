@@ -60,14 +60,28 @@ const PromotionalSlider: React.FC<PromotionalSliderProps> = ({ slides }) => {
                     <Link to={currentSlide.link} className="block relative h-full w-full group/slide">
                         <div className="relative h-full w-full overflow-hidden">
                             {isVideo ? (
-                                <video
-                                    src={resolveLocalAssetUrl(videoUrl)}
-                                    autoPlay
-                                    loop
-                                    muted
-                                    playsInline
-                                    className="h-full w-full object-cover transition-transform duration-[2000ms] group-hover/slide:scale-105"
-                                />
+                                <div className="relative h-full w-full">
+                                    <video
+                                        key={videoUrl}
+                                        src={resolveLocalAssetUrl(videoUrl)}
+                                        autoPlay
+                                        loop
+                                        muted
+                                        playsInline
+                                        poster={resolveLocalAssetUrl(getOptimizedImageUrl(currentSlide.image, { width: 1200, quality: 75 }))}
+                                        onCanPlayThrough={(e) => {
+                                            const video = e.target as HTMLVideoElement;
+                                            video.style.opacity = '1';
+                                        }}
+                                        className="h-full w-full object-cover transition-all duration-[2000ms] group-hover/slide:scale-105 opacity-0"
+                                        style={{ transition: 'opacity 1s ease-in-out' }}
+                                    />
+                                    <img
+                                        src={resolveLocalAssetUrl(getOptimizedImageUrl(currentSlide.image, { width: 1200, quality: 75 }))}
+                                        alt={currentSlide.title}
+                                        className="absolute inset-0 h-full w-full object-cover transition-transform duration-[2000ms] group-hover/slide:scale-105"
+                                    />
+                                </div>
                             ) : (
                                 <img
                                     src={resolveLocalAssetUrl(getOptimizedImageUrl(currentSlide.image, { width: 1200, quality: 75 }))}

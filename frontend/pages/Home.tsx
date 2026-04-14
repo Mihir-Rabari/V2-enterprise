@@ -18,6 +18,7 @@ import { useProducts } from '../hooks/useProducts';
 import { reviewsAPI, sliderAPI, settingsAPI, categoriesAPI, contentAPI, filtersAPI, resolveLocalAssetUrl } from '../lib/apiClient';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { getOptimizedImageUrl } from '../src/utils/mediaUtils';
+import { useInitialLoad } from '../context/InitialLoadContext';
 
 // Lazy load below-the-fold sections
 const NewStandardSection = React.lazy(() => import('../components/home/NewStandardSection'));
@@ -40,14 +41,25 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
     const [width, setWidth] = React.useState(() =>
         typeof window !== 'undefined' ? window.innerWidth : 1024
     );
+    const { setIsInitialLoad } = useInitialLoad();
+    const [videoReady, setVideoReady] = React.useState(false);
     const activeSlides = slides.filter(s => String(s.status || '').toUpperCase() === 'ACTIVE');
     const current = activeSlides[index] || activeSlides[0];
 
     React.useEffect(() => {
         const handleResize = () => setWidth(window.innerWidth);
         window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
+
+        // Fallback timeout: Resolve initial load if video takes too long
+        const fallbackTimer = setTimeout(() => {
+            setIsInitialLoad(false);
+        }, 5000);
+
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            clearTimeout(fallbackTimer);
+        };
+    }, [setIsInitialLoad]);
 
     React.useEffect(() => {
         if (activeSlides.length <= 1) return;
@@ -93,10 +105,22 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
                                     preload="auto"
                                     width="1920"
                                     height="1080"
-                                    className="w-full h-full object-cover opacity-60 scale-105 transition-transform duration-[3000ms] group-hover/hero:scale-110"
+                                    poster={resolveLocalAssetUrl(getOptimizedImageUrl(current.url, { width: 1920, quality: 75 }))}
+                                    onCanPlayThrough={() => {
+                                        setVideoReady(true);
+                                        setIsInitialLoad(false);
+                                    }}
+                                    className={`w-full h-full object-cover scale-105 transition-all duration-[3000ms] group-hover/hero:scale-110 ${videoReady ? 'opacity-60' : 'opacity-0'}`}
                                 >
                                      <source src={resolveLocalAssetUrl(videoUrl)} type="video/mp4" />
                                 </video>
+                                {!videoReady && (
+                                    <img
+                                        src={resolveLocalAssetUrl(getOptimizedImageUrl(current.url, { width: 1920, quality: 75 }))}
+                                        alt={current.title}
+                                        className="absolute inset-0 w-full h-full object-cover opacity-60 scale-105"
+                                    />
+                                )}
                             ) : (
                                 <img
                                     src={resolveLocalAssetUrl(getOptimizedImageUrl(current.url, { width: 1920, quality: 75 }))}

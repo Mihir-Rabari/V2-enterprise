@@ -50,6 +50,15 @@ const ProductDetails: React.FC = () => {
     const [selectedSize, setSelectedSize] = useState<string | null>(null);
     const [selectedColor, setSelectedColor] = useState<string | null>(null);
 
+    // Moved state definitions up to avoid initialization errors in useMemo
+    const [productReviews, setProductReviews] = useState<{ rating: number; reviewText: string; customerName: string; date: string }[]>([]);
+    const [newReview, setNewReview] = useState({
+        rating: 5,
+        text: '',
+        name: user?.name || '',
+        email: user?.email || ''
+    });
+
     const jsonLd = React.useMemo(() => {
         if (!product) return undefined;
         return {
@@ -138,15 +147,6 @@ const ProductDetails: React.FC = () => {
             setSelectedColor(product.color || null);
         }
     }, [product]);
-
-    // Reviews State — fetched from API
-    const [productReviews, setProductReviews] = useState<{ rating: number; reviewText: string; customerName: string; date: string }[]>([]);
-    const [newReview, setNewReview] = useState({
-        rating: 5,
-        text: '',
-        name: user?.name || '',
-        email: user?.email || ''
-    });
 
     useEffect(() => {
         if (product) {

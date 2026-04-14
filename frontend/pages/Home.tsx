@@ -481,7 +481,7 @@ const Home: React.FC = () => {
                 );
             })}
         </div>
-    ), [categoryTree, essentialsSortBy, selectedEssentialsCategories, selectedEssentialsPriceList, selectedFilters]);
+    ), [categoryTree, essentialsSortBy, selectedEssentialsCategories, selectedEssentialsPriceList, selectedFilters, filterSuggestions, products]);
 
     return (
         <>

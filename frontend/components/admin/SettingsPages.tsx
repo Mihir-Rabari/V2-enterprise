@@ -144,7 +144,7 @@ export const AboutSettingsPage: React.FC<{
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {aboutContent.values.map((v: any, i: number) => (
+                    {aboutContent.values?.map((v: any, i: number) => (
                         <div key={i} className="bg-luxury-gray p-6 rounded-2xl border border-gray-100">
                             <span className="text-luxury-gold text-[10px] font-bold uppercase tracking-widest block mb-4">0{i + 1}</span>
                             <h5 className="font-serif italic text-lg text-slate-800 mb-2">{v.title}</h5>

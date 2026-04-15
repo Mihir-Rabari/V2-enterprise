@@ -92,7 +92,7 @@ const About: React.FC = () => {
             <section className="bg-luxury-gray py-32 lg:py-48 border-y border-gray-100">
                 <div className="max-w-[var(--max-width)] mx-auto px-[var(--spacing-gutter)] sm:px-[var(--spacing-gutter-sm)] lg:px-[var(--spacing-gutter-lg)] xl:px-[var(--spacing-gutter-xl)]">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-24">
-                        {content.values.map((value, i) => (
+                        {content.values?.map((value, i) => (
                             <motion.div
                                 key={i}
                                 initial={{ opacity: 0, y: 30 }}

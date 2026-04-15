@@ -2342,7 +2342,7 @@ const AdminDashboard: React.FC = () => {
                                         </button>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                        {group.data.length > 0 ? group.data.map((slider) => (
+                                        {group.data?.length > 0 ? group.data.map((slider) => (
                                             <div key={slider.id} className="group bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-all">
                                                 <div className="aspect-[21/9] relative overflow-hidden bg-gray-50 border-b border-gray-100">
                                                     {slider.mediaType === 'video' || (slider.laptopUrl || slider.image)?.match(/\.(mp4|mov|webm|ogg)$/i) ? (

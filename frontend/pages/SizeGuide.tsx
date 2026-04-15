@@ -101,13 +101,13 @@ const SizeGuide: React.FC = () => {
                                 <table className="w-full text-left border-collapse">
                                     <thead>
                                         <tr>
-                                            {chart.headers.map((header, hIdx) => (
+                                            {chart.headers?.map((header, hIdx) => (
                                                 <th key={hIdx} className="py-4 px-4 text-[10px] font-black uppercase tracking-[0.2em] text-[#2A1E17]/40 border-b border-[#2A1E17]/5">{header}</th>
                                             ))}
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {chart.rows.map((row, rIdx) => (
+                                        {chart.rows?.map((row, rIdx) => (
                                             <tr key={rIdx} className="group hover:bg-white/40 transition-colors">
                                                 {row.map((cell, cIdx) => (
                                                     <td key={cIdx} className={`py-6 px-4 text-[12px] font-bold tracking-widest border-b border-[#2A1E17]/5 ${cIdx === 0 ? 'text-[#2A1E17]' : 'text-luxury-charcoal/60'}`}>

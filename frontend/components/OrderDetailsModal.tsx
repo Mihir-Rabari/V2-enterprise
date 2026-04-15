@@ -131,7 +131,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ isOpen, onClose, 
                                     <h3 className="text-[11px] font-bold uppercase tracking-[0.4em] text-luxury-black">Ordered Items</h3>
                                 </div>
                                 <div className="space-y-4">
-                                    {order.items.map((item, idx) => (
+                                    {order.items?.map((item, idx) => (
                                         <div key={idx} className="flex gap-6 p-4 rounded-2xl border border-gray-50 hover:border-gray-100 transition-colors bg-white group">
                                             <div className="w-20 h-24 bg-zinc-100 rounded-xl overflow-hidden flex-shrink-0">
                                                 <img src={item.productPhoto} alt={item.productName} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />

@@ -246,7 +246,7 @@ const Orders = () => {
                                         <div className="hidden lg:block space-y-2">
                                             <p className="text-[8px] font-bold uppercase tracking-[0.3em] text-gray-400">{order.items.length} Item{order.items.length !== 1 ? 's' : ''}</p>
                                             <p className="text-[10px] font-bold tracking-luxury text-gray-500 italic">
-                                                {order.items.map(i => i.productName).join(', ')}
+                                                {order.items?.map(i => i.productName).join(', ')}
                                             </p>
                                         </div>
                                     </div>

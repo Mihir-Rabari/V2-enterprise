@@ -147,11 +147,6 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
                         </div>
                     );
                 })}
-            </div>
-
-            <div className="absolute inset-0 bg-gradient-to-r from-luxury-black/80 via-luxury-black/20 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-t from-luxury-black/90 via-transparent to-transparent" />
-
             {/* Content Transition Layer */}
             <AnimatePresence mode="wait">
                 <motion.div

@@ -89,7 +89,6 @@ const PromotionalSlider: React.FC<PromotionalSliderProps> = ({ slides }) => {
                                     className="h-full w-full object-cover transition-transform duration-[2000ms] group-hover/slide:scale-105"
                                 />
                             )}
-                            <div className="absolute inset-0 bg-black/30 transition-colors duration-500 group-hover/slide:bg-black/20" />
 
                             <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
                                 {(currentSlide.subtitleVisible !== false && currentSlide.subtitle) && (

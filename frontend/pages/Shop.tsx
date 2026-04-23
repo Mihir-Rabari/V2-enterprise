@@ -31,15 +31,52 @@ const Shop: React.FC = () => {
     const location = useLocation();
     const isNewArrivalsPage = location.pathname.replace(/\/$/, '') === '/new-arrivals';
 
-    // Filter States
-    const [selectedCategories, setSelectedCategories] = useState<string[]>(
-        initialCategory && initialCategory !== 'All' ? [initialCategory] : []
-    );
-    const [selectedPriceRanges, setSelectedPriceRanges] = useState<string[]>([]);
-    const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({});
+    // Filter States (Synced with URL Search Params)
+    const [selectedCategories, setSelectedCategories] = useState<string[]>(() => {
+        const urlCats = searchParams.get('categories');
+        if (urlCats) return urlCats.split(',');
+        return initialCategory && initialCategory !== 'All' ? [initialCategory] : [];
+    });
+    const [selectedPriceRanges, setSelectedPriceRanges] = useState<string[]>(() => {
+        const urlPrices = searchParams.get('prices');
+        if (urlPrices) return urlPrices.split(',');
+        return [];
+    });
+    const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>(() => {
+        const urlFilters = searchParams.get('filters');
+        if (urlFilters) {
+            try { return JSON.parse(urlFilters); } catch (e) {}
+        }
+        return {};
+    });
     const [searchQuery, setSearchQuery] = useState(queryTerm);
-    const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'Newest');
+    const [sortBy, setSortBy] = useState(() => searchParams.get('sort') || 'Newest');
     const [page, setPage] = useState(1);
+
+    // Sync State to URL to support "Back" button persistence natively
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        
+        if (selectedCategories.length > 0 && !(selectedCategories.length === 1 && selectedCategories[0] === initialCategory && initialCategory !== 'All')) {
+            params.set('categories', selectedCategories.join(','));
+        } else {
+            params.delete('categories');
+        }
+
+        if (selectedPriceRanges.length > 0) params.set('prices', selectedPriceRanges.join(','));
+        else params.delete('prices');
+
+        if (Object.keys(selectedFilters).length > 0) params.set('filters', JSON.stringify(selectedFilters));
+        else params.delete('filters');
+
+        if (sortBy !== 'Newest') params.set('sort', sortBy);
+        else params.delete('sort');
+
+        if (searchQuery) params.set('q', searchQuery);
+        else params.delete('q');
+
+        setSearchParams(params, { replace: true });
+    }, [selectedCategories, selectedPriceRanges, selectedFilters, sortBy, searchQuery, initialCategory, setSearchParams]);
 
     // UI States
     const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);

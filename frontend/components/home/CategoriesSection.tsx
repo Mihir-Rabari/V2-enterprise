@@ -40,7 +40,6 @@ const CategoriesSection: React.FC<CategoriesSectionProps> = ({ homeSections, dis
                                     className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
                                     loading="lazy"
                                 />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
                                 <div className="absolute bottom-8 left-8 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
                                     <h3 className="text-white font-serif text-4xl italic tracking-tight mb-2">{cat.title}</h3>
                                     <span className="text-white/80 text-[10px] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-2">

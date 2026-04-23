@@ -23,7 +23,12 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ onSwitchToAdmin }) => {
     const [siteSettings, setSiteSettings] = React.useState<SiteSettings>({} as SiteSettings);
 
     useEffect(() => {
-        window.scrollTo(0, 0);
+        if ('scrollRestoration' in window.history) {
+            window.history.scrollRestoration = 'manual';
+        }
+        setTimeout(() => {
+            window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        }, 0);
 
         // FALLBACK: If we are NOT on the home page, the Home.tsx video trigger won't fire.
         // We should automatically clear the splash after a standard premium delay.

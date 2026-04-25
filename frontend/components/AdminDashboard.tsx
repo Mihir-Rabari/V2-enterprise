@@ -1496,31 +1496,34 @@ const AdminDashboard: React.FC = () => {
                                     ))}
                                 </div>
 
-                                {attributeDefinitions.filter(a => a.isActive).length > 0 && (
-                                    <div>
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3 border-t border-gray-100 pt-4">Custom Attributes</p>
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                            {attributeDefinitions.filter(a => a.isActive).map(attr => (
-                                                <div key={attr.key}>
-                                                    <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">{attr.name}</label>
-                                                    <input
-                                                        type="text"
-                                                        className="w-full border p-2 rounded focus:outline-none focus:border-black text-xs"
-                                                        value={(formData.customAttributes || {})[attr.key] || ''}
-                                                        onChange={e => setFormData({
-                                                            ...formData,
-                                                            customAttributes: {
-                                                                ...(formData.customAttributes || {}),
-                                                                [attr.key]: e.target.value
-                                                            }
-                                                        })}
-                                                        placeholder={attr.name}
-                                                    />
-                                                </div>
-                                            ))}
+                                {(() => {
+                                    const activeCustomAttrs = attributeDefinitions.filter(a => a.isActive);
+                                    return activeCustomAttrs.length > 0 ? (
+                                        <div>
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3 border-t border-gray-100 pt-4">Custom Attributes</p>
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                {activeCustomAttrs.map(attr => (
+                                                    <div key={attr.key}>
+                                                        <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">{attr.name}</label>
+                                                        <input
+                                                            type="text"
+                                                            className="w-full border p-2 rounded focus:outline-none focus:border-black text-xs"
+                                                            value={(formData.customAttributes || {})[attr.key] || ''}
+                                                            onChange={e => setFormData({
+                                                                ...formData,
+                                                                customAttributes: {
+                                                                    ...(formData.customAttributes || {}),
+                                                                    [attr.key]: e.target.value
+                                                                }
+                                                            })}
+                                                            placeholder={attr.name}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
+                                    ) : null;
+                                })()}
                             </div>
                         )}
 

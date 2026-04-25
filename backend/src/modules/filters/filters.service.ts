@@ -70,16 +70,26 @@ export const syncFiltersFromProducts = async (products: IProduct | IProduct[]) =
         const customMap = new Map<string, Set<string>>();
         productArray.forEach(p => {
             if (p.customAttributes) {
-                p.customAttributes.forEach((value: string, key: string) => {
-                    if (value && value.trim() !== '') {
+                // customAttributes may be a Mongoose Map or a plain object depending on retrieval path
+                const entries = typeof p.customAttributes.entries === 'function'
+                    ? Array.from(p.customAttributes.entries() as Iterable<[string, string]>)
+                    : Object.entries(p.customAttributes as unknown as Record<string, string>);
+                entries.forEach(([key, value]) => {
+                    if (value && String(value).trim() !== '') {
                         if (!customMap.has(key)) customMap.set(key, new Set());
-                        customMap.get(key)!.add(value.trim());
+                        customMap.get(key)!.add(String(value).trim());
                     }
                 });
             }
         });
         customMap.forEach((values, key) => {
-            const existing: string[] = (filterDoc.customAttributes && filterDoc.customAttributes.get(key)) || [];
+            const existing: string[] = (() => {
+                if (!filterDoc.customAttributes) return [];
+                if (typeof filterDoc.customAttributes.get === 'function') {
+                    return filterDoc.customAttributes.get(key) || [];
+                }
+                return (filterDoc.customAttributes as unknown as Record<string, string[]>)[key] || [];
+            })();
             filterDoc.customAttributes.set(key, mergeUnique(existing, Array.from(values)));
         });
         filterDoc.markModified('customAttributes');

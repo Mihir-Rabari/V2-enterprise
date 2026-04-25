@@ -60,6 +60,7 @@ export interface Product {
   isNewArrival?: boolean;
   isTrending?: boolean;
   tags?: string[];
+  customAttributes?: Record<string, string>;
   status: 'Active' | 'Inactive' | 'ACTIVE' | 'INACTIVE';
 }
 
@@ -399,4 +400,14 @@ export interface IMedia {
   mimeType?: string;
   folder?: string;
   createdAt: string;
+}
+
+export interface Attribute {
+  id: string;
+  _id?: string;
+  name: string;
+  key: string;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }

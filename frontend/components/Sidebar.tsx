@@ -53,6 +53,7 @@ const menuItems: any[] = [
         ]
       },
       { id: 'products', label: 'Products', icon: Package },
+      { id: 'attributes', label: 'Attributes', icon: Tag },
       {
         id: 'category',
         label: 'Categories',

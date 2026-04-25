@@ -32,6 +32,7 @@ export interface IProduct extends Document {
     isNewArrival: boolean;
     isTrending: boolean;
     tags: string[];
+    customAttributes: Map<string, string>;
     status: 'ACTIVE' | 'INACTIVE';
     createdAt: Date;
     updatedAt: Date;
@@ -70,6 +71,7 @@ const ProductSchema = new Schema<IProduct>(
         isNewArrival: { type: Boolean, default: false },
         isTrending: { type: Boolean, default: false },
         tags: [{ type: String }],
+        customAttributes: { type: Map, of: String, default: {} },
         status: { type: String, enum: ['ACTIVE', 'INACTIVE', 'Active', 'Inactive'], default: 'ACTIVE' },
     },
     { timestamps: true }

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAdminData } from '../hooks/useAdminData';
-import { sliderAPI, settingsAPI, contentAPI, categoriesAPI, productsAPI, reviewsAPI, contactsAPI, filtersAPI } from '../lib/apiClient';
+import { sliderAPI, settingsAPI, contentAPI, categoriesAPI, productsAPI, reviewsAPI, contactsAPI, filtersAPI, attributesAPI } from '../lib/apiClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Menu,
@@ -34,7 +34,8 @@ import {
     PlusCircle,
     Copy,
     Save,
-    ChevronLeft // Added ChevronLeft
+    ChevronLeft, // Added ChevronLeft
+    X
 } from 'lucide-react';
 import {
     LineChart,
@@ -89,11 +90,191 @@ import {
     HomeSectionContent,
     HeroSlide,
     SocialPost,
-    LookbookItem
+    LookbookItem,
+    Attribute
 } from '../types';
 // No initialData imports allowed. 100% dynamic.
 
 // Initial data moved to ../data/initialData.ts
+
+// --- ATTRIBUTES PAGE (inline component) ---
+
+const AttributesPage: React.FC<{ attributes: Attribute[]; onRefresh: () => Promise<void> }> = ({ attributes, onRefresh }) => {
+    const [localAttrs, setLocalAttrs] = React.useState<Attribute[]>(attributes);
+    const [newName, setNewName] = React.useState('');
+    const [adding, setAdding] = React.useState(false);
+    const [editId, setEditId] = React.useState<string | null>(null);
+    const [editName, setEditName] = React.useState('');
+    const [saving, setSaving] = React.useState(false);
+    const [error, setError] = React.useState('');
+
+    React.useEffect(() => { setLocalAttrs(attributes); }, [attributes]);
+
+    const derivedKey = (name: string) => name.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+
+    const handleAdd = async () => {
+        if (!newName.trim()) return;
+        setSaving(true); setError('');
+        try {
+            const res = await attributesAPI.create({ name: newName.trim() });
+            if (res.data.success) {
+                await onRefresh();
+                setNewName(''); setAdding(false);
+            }
+        } catch (e: any) {
+            setError(e?.response?.data?.message || e?.message || 'Failed to create');
+        } finally { setSaving(false); }
+    };
+
+    const handleToggleActive = async (attr: Attribute) => {
+        setSaving(true); setError('');
+        try {
+            const res = await attributesAPI.update(attr._id || attr.id, { isActive: !attr.isActive });
+            if (res.data.success) await onRefresh();
+        } catch (e: any) {
+            setError(e?.response?.data?.message || e?.message || 'Failed to update');
+        } finally { setSaving(false); }
+    };
+
+    const handleSaveEdit = async (attr: Attribute) => {
+        if (!editName.trim()) return;
+        setSaving(true); setError('');
+        try {
+            const res = await attributesAPI.update(attr._id || attr.id, { name: editName.trim() });
+            if (res.data.success) { await onRefresh(); setEditId(null); }
+        } catch (e: any) {
+            setError(e?.response?.data?.message || e?.message || 'Failed to update');
+        } finally { setSaving(false); }
+    };
+
+    const handleDelete = async (attr: Attribute) => {
+        if (!window.confirm(`Delete attribute "${attr.name}"? This will not remove existing product data.`)) return;
+        setSaving(true); setError('');
+        try {
+            await attributesAPI.delete(attr._id || attr.id);
+            await onRefresh();
+        } catch (e: any) {
+            setError(e?.response?.data?.message || e?.message || 'Failed to delete');
+        } finally { setSaving(false); }
+    };
+
+    return (
+        <div className="space-y-8 animate-fade-in pb-12">
+            <div className="flex justify-between items-end">
+                <div>
+                    <h2 className="text-2xl font-bold text-slate-800 font-serif italic mb-1 tracking-tight">Product Attributes</h2>
+                    <p className="text-sm text-gray-400 font-medium">Define dynamic attributes that can be assigned to any product and appear as shop filters.</p>
+                </div>
+                {!adding && (
+                    <button
+                        onClick={() => { setAdding(true); setNewName(''); setError(''); }}
+                        className="bg-luxury-black text-white px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-luxury-gold transition-all shadow-lg shadow-black/10"
+                    >
+                        <Plus size={16} /> Add Attribute
+                    </button>
+                )}
+            </div>
+
+            {error && <p className="text-red-500 text-xs font-bold uppercase tracking-widest">{error}</p>}
+
+            {adding && (
+                <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm space-y-4">
+                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400">New Attribute</p>
+                    <div className="flex gap-3 items-end">
+                        <div className="flex-1">
+                            <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Attribute Name</label>
+                            <input
+                                type="text"
+                                className="w-full border p-2.5 rounded-lg focus:outline-none focus:border-black text-sm"
+                                placeholder="e.g. Width, Material Finish, Cut"
+                                value={newName}
+                                onChange={e => setNewName(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && handleAdd()}
+                                autoFocus
+                            />
+                            {newName.trim() && (
+                                <p className="text-[10px] text-gray-400 mt-1">Key: <span className="font-mono text-luxury-black">{derivedKey(newName)}</span></p>
+                            )}
+                        </div>
+                        <button onClick={handleAdd} disabled={saving || !newName.trim()} className="px-6 py-2.5 bg-luxury-black text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-luxury-gold transition-all disabled:opacity-50">
+                            {saving ? 'Saving…' : 'Save'}
+                        </button>
+                        <button onClick={() => { setAdding(false); setError(''); }} className="px-4 py-2.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-gray-200 transition-all">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+                {localAttrs.length === 0 ? (
+                    <div className="py-16 flex flex-col items-center justify-center text-gray-300">
+                        <Tag size={32} strokeWidth={1} className="mb-2" />
+                        <p className="text-xs font-bold uppercase tracking-widest">No attributes defined yet</p>
+                    </div>
+                ) : (
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className="border-b border-gray-100">
+                                <th className="text-left px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Name</th>
+                                <th className="text-left px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Key</th>
+                                <th className="text-left px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Status</th>
+                                <th className="text-right px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {localAttrs.map(attr => (
+                                <tr key={attr._id || attr.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                                    <td className="px-6 py-4">
+                                        {editId === (attr._id || attr.id) ? (
+                                            <input
+                                                type="text"
+                                                className="border p-1.5 rounded focus:outline-none focus:border-black text-xs w-40"
+                                                value={editName}
+                                                onChange={e => setEditName(e.target.value)}
+                                                onKeyDown={e => e.key === 'Enter' && handleSaveEdit(attr)}
+                                                autoFocus
+                                            />
+                                        ) : (
+                                            <span className="font-medium text-slate-800">{attr.name}</span>
+                                        )}
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <span className="font-mono text-[11px] text-gray-400 bg-gray-50 px-2 py-1 rounded">{attr.key}</span>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <button
+                                            onClick={() => handleToggleActive(attr)}
+                                            disabled={saving}
+                                            className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${attr.isActive ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-400'}`}
+                                        >
+                                            {attr.isActive ? 'Active' : 'Inactive'}
+                                        </button>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex gap-2 justify-end">
+                                            {editId === (attr._id || attr.id) ? (
+                                                <>
+                                                    <button onClick={() => handleSaveEdit(attr)} disabled={saving} className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors"><Check size={16} /></button>
+                                                    <button onClick={() => setEditId(null)} className="p-1.5 text-gray-400 hover:bg-gray-100 rounded transition-colors"><X size={16} /></button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <button onClick={() => { setEditId(attr._id || attr.id); setEditName(attr.name); setError(''); }} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"><Edit size={16} /></button>
+                                                    <button onClick={() => handleDelete(attr)} disabled={saving} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"><Trash2 size={16} /></button>
+                                                </>
+                                            )}
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
+            </div>
+        </div>
+    );
+};
 
 // --- ADMIN DASHBOARD ---
 
@@ -154,6 +335,7 @@ const AdminDashboard: React.FC = () => {
     const [siteSettings, setSiteSettings] = useState<SiteSettings>({} as SiteSettings);
     const [waybillData, setWaybillData] = useState<Record<string, { awbNumber: string; trackingLink: string }>>({});
     const [filterSuggestions, setFilterSuggestions] = useState<any>({});
+    const [attributeDefinitions, setAttributeDefinitions] = useState<Attribute[]>([]);
     const [productModalTab, setProductModalTab] = useState<'basic' | 'variants' | 'media' | 'attributes'>('basic');
     const [productSearch, setProductSearch] = useState('');
 
@@ -183,7 +365,7 @@ const AdminDashboard: React.FC = () => {
     React.useEffect(() => {
         const loadExtraData = async () => {
             try {
-                const [tagRes, socialRes, lookRes, heroRes, promoRes, settingsRes, catRes, logoRes, bestRes, pageRes, featRes, filterRes] = await Promise.all([
+                const [tagRes, socialRes, lookRes, heroRes, promoRes, settingsRes, catRes, logoRes, bestRes, pageRes, featRes, filterRes, attrRes] = await Promise.all([
                     fetchContent('TAGLINE'),
                     fetchContent('SOCIAL_POST'),
                     fetchContent('LOOKBOOK_ITEM'),
@@ -196,12 +378,14 @@ const AdminDashboard: React.FC = () => {
                     fetchContent('PAGE'),
                     fetchContent('FEATURE_ITEM'),
                     filtersAPI.getSuggestions(),
+                    attributesAPI.getAllAdmin(),
                 ]);
 
                 if (tagRes.data.success) setTaglines(tagRes.data.data);
                 if (socialRes.data.success) setSocialPosts(socialRes.data.data);
                 if (lookRes.data.success) setLookbookItems(lookRes.data.data);
                 if (filterRes.data.success) setFilterSuggestions(filterRes.data.data);
+                if (attrRes.data.success) setAttributeDefinitions(attrRes.data.data);
                 if (heroRes.data.success) setHeroSlides(heroRes.data.data);
                 if (promoRes.data.success) {
                     const allPromo = promoRes.data.data as Slider[];
@@ -1311,6 +1495,32 @@ const AdminDashboard: React.FC = () => {
                                         </div>
                                     ))}
                                 </div>
+
+                                {attributeDefinitions.filter(a => a.isActive).length > 0 && (
+                                    <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3 border-t border-gray-100 pt-4">Custom Attributes</p>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                            {attributeDefinitions.filter(a => a.isActive).map(attr => (
+                                                <div key={attr.key}>
+                                                    <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">{attr.name}</label>
+                                                    <input
+                                                        type="text"
+                                                        className="w-full border p-2 rounded focus:outline-none focus:border-black text-xs"
+                                                        value={(formData.customAttributes || {})[attr.key] || ''}
+                                                        onChange={e => setFormData({
+                                                            ...formData,
+                                                            customAttributes: {
+                                                                ...(formData.customAttributes || {}),
+                                                                [attr.key]: e.target.value
+                                                            }
+                                                        })}
+                                                        placeholder={attr.name}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -2283,6 +2493,17 @@ const AdminDashboard: React.FC = () => {
                         onSearch={(q) => { setProductSearch(q); fetchProducts(1, 15, q); }}
                     />
                 );
+
+            case 'attributes':
+                return <AttributesPage
+                    attributes={attributeDefinitions}
+                    onRefresh={async () => {
+                        try {
+                            const res = await attributesAPI.getAllAdmin();
+                            if (res.data.success) setAttributeDefinitions(res.data.data);
+                        } catch (e) { console.error(e); }
+                    }}
+                />;
 
             case 'orders':
                 return (

@@ -14,6 +14,7 @@ export interface IFilterSuggestion extends Document {
     sleeveLength: string[];
     size: string[];
     color: string[];
+    customAttributes: Map<string, string[]>;
     updatedAt: Date;
 }
 
@@ -31,7 +32,8 @@ const FilterSuggestionSchema = new Schema<IFilterSuggestion>(
         shoulder: [{ type: String }],
         sleeveLength: [{ type: String }],
         size: [{ type: String }],
-        color: [{ type: String }]
+        color: [{ type: String }],
+        customAttributes: { type: Map, of: [String], default: {} },
     },
     { timestamps: true }
 );

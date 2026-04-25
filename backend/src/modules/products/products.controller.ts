@@ -39,6 +39,23 @@ export const getProducts = async (req: Request, res: Response) => {
             pockets: toArray(getParam('pockets')),
             lengths: toArray(getParam('lengths')),
             patternTypes: toArray(getParam('patternTypes')),
+            // Custom dynamic attribute filters: any query param prefixed with "custom_"
+            customFilters: (() => {
+                const known = new Set(['mainCategories', 'mainCategory', 'subCategories', 'subCategory',
+                    'isTrending', 'isNew', 'tag', 'search', 'status', 'page', 'limit', 'groupByColor',
+                    'sort', 'minPrice', 'maxPrice', 'colors', 'sizes', 'fabrics', 'collars', 'sleeves',
+                    'necks', 'pockets', 'lengths', 'patternTypes']);
+                const custom: Record<string, string[]> = {};
+                Object.keys(req.query).forEach(key => {
+                    const cleanKey = key.replace(/\[\]$/, '');
+                    if (!known.has(cleanKey) && cleanKey.startsWith('custom_')) {
+                        const attrKey = cleanKey.replace(/^custom_/, '');
+                        const vals = toArray(getParam(key));
+                        if (vals && vals.length > 0) custom[attrKey] = vals;
+                    }
+                });
+                return Object.keys(custom).length > 0 ? custom : undefined;
+            })(),
         });
         return sendSuccess(res, result);
     } catch (err: unknown) {

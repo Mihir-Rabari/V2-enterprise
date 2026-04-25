@@ -66,6 +66,24 @@ export const syncFiltersFromProducts = async (products: IProduct | IProduct[]) =
         filterDoc.size = mergeUnique(filterDoc.size, Array.from(newSizes));
         filterDoc.color = mergeUnique(filterDoc.color, Array.from(newColors));
 
+        // Sync custom (dynamic) attributes
+        const customMap = new Map<string, Set<string>>();
+        productArray.forEach(p => {
+            if (p.customAttributes) {
+                p.customAttributes.forEach((value: string, key: string) => {
+                    if (value && value.trim() !== '') {
+                        if (!customMap.has(key)) customMap.set(key, new Set());
+                        customMap.get(key)!.add(value.trim());
+                    }
+                });
+            }
+        });
+        customMap.forEach((values, key) => {
+            const existing: string[] = (filterDoc.customAttributes && filterDoc.customAttributes.get(key)) || [];
+            filterDoc.customAttributes.set(key, mergeUnique(existing, Array.from(values)));
+        });
+        filterDoc.markModified('customAttributes');
+
         await filterDoc.save();
         return filterDoc;
     } catch (error) {

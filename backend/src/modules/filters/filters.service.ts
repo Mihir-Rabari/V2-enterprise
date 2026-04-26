@@ -1,5 +1,5 @@
 import { FilterSuggestion } from '../../models/FilterSuggestion';
-import { IProduct } from '../../models/Product';
+import { IProduct, Product } from '../../models/Product';
 
 export const syncFiltersFromProducts = async (products: IProduct | IProduct[]) => {
     try {
@@ -110,5 +110,96 @@ export const getFilterSuggestionsService = async () => {
         return filterDoc.toObject({ flattenMaps: true });
     } catch (error) {
         throw error;
+    }
+};
+
+/**
+ * Rebuild the FilterSuggestion document from scratch using all remaining products.
+ * Call this after a product is deleted so removed values are purged from filters.
+ */
+export const rebuildFiltersFromAllProducts = async () => {
+    try {
+        const allProducts = await Product.find({});
+        if (allProducts.length === 0) {
+            // No products left — clear the filter document entirely
+            await FilterSuggestion.deleteMany({});
+            await FilterSuggestion.create({});
+            return;
+        }
+
+        let filterDoc = await FilterSuggestion.findOne();
+        if (!filterDoc) {
+            filterDoc = new FilterSuggestion();
+        }
+
+        const fabrics = new Set<string>();
+        const patternTypes = new Set<string>();
+        const collars = new Set<string>();
+        const sleeves = new Set<string>();
+        const necks = new Set<string>();
+        const pockets = new Set<string>();
+        const lengths = new Set<string>();
+        const chests = new Set<string>();
+        const waists = new Set<string>();
+        const shoulders = new Set<string>();
+        const sleeveLengths = new Set<string>();
+        const sizes = new Set<string>();
+        const colors = new Set<string>();
+        const customMap = new Map<string, Set<string>>();
+
+        allProducts.forEach((p: IProduct) => {
+            if (p.color) colors.add(p.color);
+            if (p.size) sizes.add(p.size);
+            if (p.fabric) fabrics.add(p.fabric);
+            if (p.patternType) patternTypes.add(p.patternType);
+            if (p.collar) collars.add(p.collar);
+            if (p.sleeve) sleeves.add(p.sleeve);
+            if (p.neck) necks.add(p.neck);
+            if (p.pocket) pockets.add(p.pocket);
+            if (p.length) lengths.add(p.length);
+            if (p.chest) chests.add(p.chest);
+            if (p.waist) waists.add(p.waist);
+            if (p.shoulder) shoulders.add(p.shoulder);
+            if (p.sleeveLength) sleeveLengths.add(p.sleeveLength);
+
+            if (p.customAttributes) {
+                const entries = typeof p.customAttributes.entries === 'function'
+                    ? Array.from(p.customAttributes.entries() as Iterable<[string, string]>)
+                    : Object.entries(p.customAttributes as unknown as Record<string, string>);
+                entries.forEach(([key, value]) => {
+                    if (value && String(value).trim() !== '') {
+                        if (!customMap.has(key)) customMap.set(key, new Set());
+                        customMap.get(key)!.add(String(value).trim());
+                    }
+                });
+            }
+        });
+
+        const toSorted = (s: Set<string>) => Array.from(s).sort();
+
+        filterDoc.fabric = toSorted(fabrics);
+        filterDoc.patternType = toSorted(patternTypes);
+        filterDoc.collar = toSorted(collars);
+        filterDoc.sleeve = toSorted(sleeves);
+        filterDoc.neck = toSorted(necks);
+        filterDoc.pocket = toSorted(pockets);
+        filterDoc.length = toSorted(lengths);
+        filterDoc.chest = toSorted(chests);
+        filterDoc.waist = toSorted(waists);
+        filterDoc.shoulder = toSorted(shoulders);
+        filterDoc.sleeveLength = toSorted(sleeveLengths);
+        filterDoc.size = toSorted(sizes);
+        filterDoc.color = toSorted(colors);
+
+        // Rebuild custom attributes map from scratch
+        filterDoc.customAttributes = new Map<string, string[]>();
+        customMap.forEach((values, key) => {
+            filterDoc!.customAttributes.set(key, toSorted(values));
+        });
+        filterDoc.markModified('customAttributes');
+
+        await filterDoc.save();
+    } catch (error) {
+        console.error('Error rebuilding filter suggestions:', error);
     }
 };

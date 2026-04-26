@@ -255,6 +255,8 @@ const Home: React.FC = () => {
     const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
     const [filterSuggestions, setFilterSuggestions] = useState<Record<string, string[]>>({});
 
+    const hardcodedFilterKeys = new Set(['color', 'size', 'patternType', 'fabric', 'collar', 'sleeve', 'neck', 'pocket', 'length', 'chest', 'waist', 'shoulder', 'sleeveLength']);
+
     const dynamicFiltersList = [
         { key: 'color', label: 'Color' },
         { key: 'size', label: 'Size' },
@@ -269,9 +271,17 @@ const Home: React.FC = () => {
         { key: 'waist', label: 'Waist' },
         { key: 'shoulder', label: 'Shoulder' },
         { key: 'sleeveLength', label: 'Sleeve Length' },
+        // Dynamic custom attribute filters (not already in hardcoded list)
+        ...Object.entries((filterSuggestions?.customAttributes as Record<string, string[]>) || {})
+            .filter(([key]) => !hardcodedFilterKeys.has(key))
+            .map(([key, values]) => ({ key: `custom_${key}`, label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), _customValues: values })),
     ];
 
-    const getOptionsFor = (key: string) => {
+    const getOptionsFor = (key: string, customValues?: string[]) => {
+        // Custom attribute keys (prefixed with "custom_")
+        if (key.startsWith('custom_')) {
+            return Array.isArray(customValues) ? customValues : [];
+        }
         if (filterSuggestions && Array.isArray(filterSuggestions[key]) && filterSuggestions[key].length > 0) {
             return filterSuggestions[key];
         }
@@ -446,9 +456,14 @@ const Home: React.FC = () => {
         Object.entries(selectedFilters).forEach(([key, values]: [string, string[]]) => {
             if (values.length > 0) {
                 filtered = filtered.filter(p => {
-                    if (key === 'color') return values.includes(p.color || '') || p.variants?.some(v => values.includes(v.color || ''));
-                    if (key === 'size') return values.some(val => p.sizes?.includes(val) || p.variants?.some(v => v.size === val));
-                    return true;
+                    if (key === 'color') return values.includes(p.color || '') || p.variants?.some((v: any) => values.includes(v.color || ''));
+                    if (key === 'size') return values.some(val => p.sizes?.includes(val) || p.variants?.some((v: any) => v.size === val));
+                    if (key.startsWith('custom_')) {
+                        const attrKey = key.slice('custom_'.length);
+                        const attrVal = (p as any).customAttributes?.[attrKey];
+                        return attrVal != null && values.includes(String(attrVal));
+                    }
+                    return values.includes((p as any)[key] || '');
                 });
             }
         });
@@ -515,7 +530,7 @@ const Home: React.FC = () => {
                 options={[]}
             />
             {dynamicFiltersList.map(filter => {
-                const options = getOptionsFor(filter.key);
+                const options = getOptionsFor(filter.key, (filter as any)._customValues);
                 if (options.length === 0) return null;
                 return (
                     <FilterAccordion

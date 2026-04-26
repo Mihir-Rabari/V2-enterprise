@@ -367,6 +367,33 @@ export const addressesAPI = {
 export const filtersAPI = {
     getSuggestions: () =>
         IS_MOCK
-            ? mockResponse({ fabric: [], size: [], collar: [], patternType: [], neck: [], sleeve: [], chest: [], length: [], pocket: [], shoulder: [], sleeveLength: [], waist: [], color: [] })
+            ? mockResponse({ fabric: [], size: [], collar: [], patternType: [], neck: [], sleeve: [], chest: [], length: [], pocket: [], shoulder: [], sleeveLength: [], waist: [], color: [], customAttributes: {} })
             : api.get('/filters/suggestions'),
+};
+
+export const attributesAPI = {
+    getAll: () =>
+        IS_MOCK
+            ? mockResponse([])
+            : api.get('/attributes'),
+
+    getAllAdmin: () =>
+        IS_MOCK
+            ? mockResponse([])
+            : api.get('/attributes/all'),
+
+    create: (data: { name: string; isActive?: boolean }) =>
+        IS_MOCK
+            ? mockResponse({ id: Date.now(), ...data, key: data.name.toLowerCase().replace(/\s+/g, '_') })
+            : api.post('/attributes', data),
+
+    update: (id: string, data: { name?: string; isActive?: boolean }) =>
+        IS_MOCK
+            ? mockResponse({ id, ...data })
+            : api.patch(`/attributes/${id}`, data),
+
+    delete: (id: string) =>
+        IS_MOCK
+            ? mockResponse(null)
+            : api.delete(`/attributes/${id}`),
 };

@@ -19,6 +19,7 @@ import wishlistRoutes from './modules/wishlist/wishlist.routes';
 import paymentRoutes from './modules/payments/payments.routes';
 import addressRoutes from './modules/addresses/addresses.routes';
 import { filtersRoutes } from './modules/filters/filters.routes';
+import { attributesRoutes } from './modules/attributes/attributes.routes';
 import sitemapRoutes from './modules/sitemap/sitemap.routes';
 import { Product } from './models/Product';
 import { Category } from './models/Category';
@@ -79,6 +80,7 @@ app.use(`${API}/wishlist`, wishlistRoutes);
 app.use(`${API}/payments`, paymentRoutes);
 app.use(`${API}/addresses`, addressRoutes);
 app.use(`${API}/filters`, filtersRoutes);
+app.use(`${API}/attributes`, attributesRoutes);
 
 // ── Serve Videos Locally (Persistent) ────────────────────────────────────────
 // This ensures /videos/filename.mp4 works in both dev and prod

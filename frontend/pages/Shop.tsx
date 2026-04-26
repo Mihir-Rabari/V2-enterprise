@@ -129,7 +129,12 @@ const Shop: React.FC = () => {
         // Dynamic Filters Mapping
         (Object.entries(selectedFilters) as [string, string[]][]).forEach(([key, values]) => {
             if (values.length > 0) {
-                // Pluralize keys for backend
+                // Custom attribute filters (prefixed with "custom_") go to backend as custom_<key>
+                if (key.startsWith('custom_')) {
+                    params[key] = values;
+                    return;
+                }
+                // Pluralize built-in keys for backend
                 let apiKey = key;
                 if (key === 'color') apiKey = 'colors';
                 else if (key === 'size') apiKey = 'sizes';
@@ -219,7 +224,11 @@ const Shop: React.FC = () => {
         }));
     }, [allCategories]);
 
-    const getOptionsFor = (key: string) => {
+    const getOptionsFor = (key: string, customValues?: string[]) => {
+        // Custom attribute keys (prefixed with "custom_")
+        if (key.startsWith('custom_')) {
+            return Array.isArray(customValues) ? customValues : [];
+        }
         if (filterSuggestions && Array.isArray(filterSuggestions[key]) && filterSuggestions[key].length > 0) {
             return filterSuggestions[key];
         }
@@ -242,6 +251,8 @@ const Shop: React.FC = () => {
         return Array.from(new Set(products.map((p: any) => p[key]).filter(Boolean))).sort() as string[];
     };
 
+    const hardcodedFilterKeys = new Set(['color', 'size', 'patternType', 'fabric', 'collar', 'sleeve', 'neck', 'pocket', 'length', 'chest', 'waist', 'shoulder', 'sleeveLength']);
+
     const dynamicFiltersList = [
         { key: 'color', label: 'Color' },
         { key: 'size', label: 'Size' },
@@ -256,6 +267,10 @@ const Shop: React.FC = () => {
         { key: 'waist', label: 'Waist' },
         { key: 'shoulder', label: 'Shoulder' },
         { key: 'sleeveLength', label: 'Sleeve Length' },
+        // Dynamic custom attribute filters (not already in hardcoded list)
+        ...Object.entries((filterSuggestions?.customAttributes as Record<string, string[]>) || {})
+            .filter(([key]) => !hardcodedFilterKeys.has(key))
+            .map(([key, values]) => ({ key: `custom_${key}`, label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), _customValues: values })),
     ];
 
     const activeFilterCount = selectedCategories.length + selectedPriceRanges.length + Object.values(selectedFilters).reduce((acc: number, curr: string[]) => acc + curr.length, 0);
@@ -267,7 +282,7 @@ const Shop: React.FC = () => {
             <FilterAccordion title="Price" isPriceRange selected={selectedPriceRanges} onToggle={togglePrice} options={[]} />
 
             {dynamicFiltersList.map(filter => {
-                const options = getOptionsFor(filter.key);
+                const options = getOptionsFor(filter.key, (filter as any)._customValues);
                 if (options.length === 0) return null;
                 return (
                     <FilterAccordion

@@ -26,6 +26,7 @@ export interface ProductFilters {
     lengths?: string[];
     patternTypes?: string[];
     sort?: string;
+    customFilters?: Record<string, string[]>;
 }
 
 export const getProductsService = async (filters: ProductFilters) => {
@@ -33,7 +34,7 @@ export const getProductsService = async (filters: ProductFilters) => {
         mainCategories, subCategories, isTrending, isNewArrival, tag, search, status, 
         page = 1, limit = 12, groupByColor,
         minPrice, maxPrice, colors, sizes, fabrics, collars, sleeves, necks, pockets, lengths, patternTypes,
-        sort = 'Newest'
+        sort = 'Newest', customFilters
     } = filters;
     const skip = (page - 1) * limit;
 
@@ -61,6 +62,12 @@ export const getProductsService = async (filters: ProductFilters) => {
         ...(pockets && pockets.length > 0 && { pocket: { $in: pockets } }),
         ...(lengths && lengths.length > 0 && { length: { $in: lengths } }),
         ...(patternTypes && patternTypes.length > 0 && { patternType: { $in: patternTypes } }),
+        // Custom (dynamic) attribute filters
+        ...(customFilters && Object.fromEntries(
+            Object.entries(customFilters)
+                .filter(([, values]) => values && values.length > 0)
+                .map(([key, values]) => [`customAttributes.${key}`, { $in: values }])
+        )),
         ...(search && {
             $or: [
                 { name: { $regex: search, $options: 'i' } },

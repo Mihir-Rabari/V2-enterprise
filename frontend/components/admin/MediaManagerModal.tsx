@@ -103,7 +103,7 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
         setUploading(true);
         const uploadPromise = adminAPI.uploadImage(file);
         
-        toast.promise(uploadPromise, {
+        toast.promise(uploadPromise as Promise<unknown>, {
             loading: 'Uploading media to Cloudflare R2...',
             success: 'Media uploaded successfully!',
             error: 'Upload failed. File might be too large.',

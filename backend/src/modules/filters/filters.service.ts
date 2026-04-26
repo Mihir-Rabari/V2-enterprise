@@ -107,7 +107,7 @@ export const getFilterSuggestionsService = async () => {
         if (!filterDoc) {
             filterDoc = await FilterSuggestion.create({});
         }
-        return filterDoc;
+        return filterDoc.toObject({ flattenMaps: true });
     } catch (error) {
         throw error;
     }

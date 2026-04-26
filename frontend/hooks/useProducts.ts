@@ -26,6 +26,20 @@ export interface ApiProduct {
     mainCategory?: string;
     subCategory?: string;
     photo2?: string;
+    fabric?: string;
+    patternType?: string;
+    collar?: string;
+    sleeve?: string;
+    neck?: string;
+    pocket?: string;
+    length?: string;
+    chest?: string;
+    waist?: string;
+    shoulder?: string;
+    sleeveLength?: string;
+    customAttributes?: Record<string, string>;
+    materialCare?: string;
+    variants?: any[];
 }
 
 export function useProducts(params?: Record<string, any>) {

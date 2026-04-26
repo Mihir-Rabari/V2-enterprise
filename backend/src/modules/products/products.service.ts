@@ -1,6 +1,6 @@
 import { Product } from '../../models/Product';
 import mongoose from 'mongoose';
-import { syncFiltersFromProducts } from '../filters/filters.service';
+import { syncFiltersFromProducts, rebuildFiltersFromAllProducts } from '../filters/filters.service';
 
 export interface ProductFilters {
     mainCategories?: string[];
@@ -253,5 +253,9 @@ export const deleteProductService = async (id: string | number) => {
     const filter: any = mongoose.Types.ObjectId.isValid(idStr) ? { _id: idStr } : { id: id };
     const product = await Product.findOneAndDelete(filter);
     if (!product) throw new Error('Product not found.');
+
+    // Rebuild filter suggestions to remove values that no longer exist (fire-and-forget)
+    rebuildFiltersFromAllProducts().catch(err => console.error("Filter rebuild error:", err));
+
     return product;
 };

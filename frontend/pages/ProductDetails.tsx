@@ -558,15 +558,15 @@ const ProductDetails: React.FC = () => {
                             </div>
 
                             {/* Composition & Maintenance */}
-                            {(product?.materialCare || product?.fabric || product?.patternType || product?.collar ||
-                                product?.sleeve || product?.neck || product?.pocket || product?.length ||
-                                product?.chest || product?.waist || product?.shoulder || product?.sleeveLength ||
-                                (product?.customAttributes && Object.keys(product.customAttributes).length > 0) ||
-                                (product.variants?.find(v => v.size === selectedSize) && (
-                                    product.variants?.find(v => v.size === selectedSize)?.fabric ||
-                                    product.variants?.find(v => v.size === selectedSize)?.collar ||
-                                    product.variants?.find(v => v.size === selectedSize)?.sleeve
-                                ))) && (
+                            {(() => {
+                                const selectedVariant = product.variants?.find(v => v.size === selectedSize);
+                                const hasSpecs = product?.materialCare || product?.fabric || product?.patternType || product?.collar ||
+                                    product?.sleeve || product?.neck || product?.pocket || product?.length ||
+                                    product?.chest || product?.waist || product?.shoulder || product?.sleeveLength ||
+                                    (product?.customAttributes && Object.keys(product.customAttributes).length > 0) ||
+                                    (selectedVariant && (selectedVariant.fabric || selectedVariant.collar || selectedVariant.sleeve));
+                                if (!hasSpecs) return null;
+                                return (
                                     <div className="pt-12 border-t border-[#2A1E17]/5 space-y-6">
                                         <div className="flex items-center gap-3">
                                             <div className="w-8 h-[1px] bg-luxury-gold/30" />
@@ -603,7 +603,8 @@ const ProductDetails: React.FC = () => {
                                             </p>
                                         )}
                                     </div>
-                                )}
+                                );
+                            })()}
                         </div>
                     </div>
                 </div>

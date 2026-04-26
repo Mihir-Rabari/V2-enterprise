@@ -147,6 +147,7 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
                         </div>
                     );
                 })}
+            </div>
             {/* Content Transition Layer */}
             <AnimatePresence mode="wait">
                 <motion.div

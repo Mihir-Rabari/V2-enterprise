@@ -211,8 +211,36 @@ export const createProductService = async (data: any) => {
 export const updateProductService = async (id: string | number, data: any) => {
     const idStr = String(id);
     const filter: any = mongoose.Types.ObjectId.isValid(idStr) ? { _id: idStr } : { id: id };
-    const product = await Product.findOneAndUpdate(filter, data, { new: true });
+    const product = await Product.findOne(filter);
     if (!product) throw new Error('Product not found.');
+
+    // Strip internal / immutable fields that should never be overwritten
+    const { _id, __v, id: _id2, createdAt, updatedAt, ...safeData } = data;
+
+    // Apply each field explicitly so Mongoose document change-tracking works
+    Object.keys(safeData).forEach(key => {
+        if (key === 'customAttributes') {
+            // customAttributes is a Mongoose Map — must be set key-by-key
+            // so that .markModified fires correctly
+            const incoming: Record<string, string> = safeData.customAttributes || {};
+            // Ensure the map exists (may be undefined on very old documents)
+            if (!product.customAttributes) {
+                product.customAttributes = new Map<string, string>();
+            }
+            // Clear existing map entries, then set new ones
+            product.customAttributes.clear();
+            Object.entries(incoming).forEach(([k, v]) => {
+                if (v !== undefined && v !== null && String(v).trim() !== '') {
+                    product.customAttributes.set(k, String(v));
+                }
+            });
+            product.markModified('customAttributes');
+        } else {
+            (product as any)[key] = safeData[key];
+        }
+    });
+
+    await product.save();
 
     syncFiltersFromProducts(product).catch(err => console.error("Filter sync error:", err));
 

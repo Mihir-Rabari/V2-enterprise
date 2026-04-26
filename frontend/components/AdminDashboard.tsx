@@ -494,9 +494,22 @@ const AdminDashboard: React.FC = () => {
     const handleEdit = (type: string, item: any) => {
         setModalType(type);
         setValidationErrors({});
-        setFormData(item);
         if (type === 'product') {
+            // Normalize customAttributes to a plain object so form inputs can read it
+            let normalizedItem = { ...item };
+            const ca = item.customAttributes;
+            if (ca && typeof ca === 'object' && typeof (ca as any).entries === 'function') {
+                // Real JS Map
+                const plainObj: Record<string, string> = {};
+                (ca as Map<string, string>).forEach((v: string, k: string) => { plainObj[k] = v; });
+                normalizedItem.customAttributes = plainObj;
+            } else if (!ca || typeof ca !== 'object') {
+                normalizedItem.customAttributes = {};
+            }
+            setFormData(normalizedItem);
             setProductModalTab('basic');
+        } else {
+            setFormData(item);
         }
         setModalOpen(true);
     };
@@ -703,7 +716,7 @@ const AdminDashboard: React.FC = () => {
                 }
             } else if (modalType === 'product') {
                 // Normalize Product Data
-                let normalizedData = {
+                let normalizedData: any = {
                     ...formData,
                     price: parseFloat(formData.price) || 0,
                     originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : undefined,
@@ -734,6 +747,23 @@ const AdminDashboard: React.FC = () => {
                     }
                 } else if (!normalizedData.attributes) {
                     normalizedData.attributes = [];
+                }
+
+                // Normalize customAttributes — ensure it's always a plain object {key: string}
+                // Handles: undefined, Mongoose Map objects, or plain objects
+                const rawCustomAttrs = normalizedData.customAttributes;
+                if (rawCustomAttrs && typeof rawCustomAttrs === 'object' && typeof (rawCustomAttrs as any).entries === 'function') {
+                    // It's a real Map — convert to plain object
+                    const plainObj: Record<string, string> = {};
+                    (rawCustomAttrs as Map<string, string>).forEach((v: string, k: string) => { if (v) plainObj[k] = v; });
+                    normalizedData.customAttributes = plainObj;
+                } else if (rawCustomAttrs && typeof rawCustomAttrs === 'object') {
+                    // Already a plain object — keep only non-empty string values
+                    normalizedData.customAttributes = Object.fromEntries(
+                        Object.entries(rawCustomAttrs as Record<string, string>).filter(([, v]) => v !== undefined && v !== null && v !== '')
+                    );
+                } else {
+                    normalizedData.customAttributes = {};
                 }
 
                 if (formData.id || formData._id) {

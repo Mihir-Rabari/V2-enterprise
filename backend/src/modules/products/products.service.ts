@@ -150,7 +150,7 @@ export const getProductsService = async (filters: ProductFilters) => {
     ]);
 
     const productsWithId = products.map(p => {
-        const obj = p.toObject();
+        const obj = p.toObject({ flattenMaps: true });
         return { ...obj, id: p._id.toString() };
     });
 
@@ -177,7 +177,7 @@ export const getProductByIdService = async (id: string | number) => {
 
     if (!product) throw new Error('Product not found.');
 
-    const obj = product.toObject();
+    const obj = product.toObject({ flattenMaps: true });
     const productWithId = { ...obj, id: product._id.toString() };
 
     // Fetch siblings — other SKUs sharing the same styleCode
@@ -204,7 +204,7 @@ export const createProductService = async (data: any) => {
     // Sync new attributes to filters collection (fire-and-forget)
     syncFiltersFromProducts(product).catch(err => console.error("Filter sync error:", err));
 
-    const obj = product.toObject();
+    const obj = product.toObject({ flattenMaps: true });
     return { ...obj, id: product._id.toString() };
 };
 
@@ -244,7 +244,7 @@ export const updateProductService = async (id: string | number, data: any) => {
 
     syncFiltersFromProducts(product).catch(err => console.error("Filter sync error:", err));
 
-    const obj = product.toObject();
+    const obj = product.toObject({ flattenMaps: true });
     return { ...obj, id: product._id.toString() };
 };
 

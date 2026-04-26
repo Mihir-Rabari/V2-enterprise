@@ -96,7 +96,7 @@ const PromotionalSlider: React.FC<PromotionalSliderProps> = ({ slides }) => {
                                         initial={{ y: 20, opacity: 0 }}
                                         animate={{ y: 0, opacity: 1 }}
                                         transition={{ delay: 0.3, duration: 0.8 }}
-                                        className="text-white text-[10px] sm:text-[12px] font-bold uppercase tracking-[0.5em] mb-2 sm:mb-6"
+                                        className="text-white text-[10px] sm:text-[12px] font-bold uppercase tracking-[0.5em] mb-2 sm:mb-6 text-shadow-luxury"
                                     >
                                         {currentSlide.subtitle}
                                     </motion.span>
@@ -107,7 +107,7 @@ const PromotionalSlider: React.FC<PromotionalSliderProps> = ({ slides }) => {
                                         initial={{ y: 30, opacity: 0 }}
                                         animate={{ y: 0, opacity: 1 }}
                                         transition={{ delay: 0.5, duration: 1 }}
-                                        className="font-serif text-4xl sm:text-7xl md:text-8xl italic text-white tracking-tighter mb-6 sm:mb-10 max-w-4xl"
+                                        className="font-serif text-4xl sm:text-7xl md:text-8xl italic text-white tracking-tighter mb-6 sm:mb-10 max-w-4xl text-shadow-luxury"
                                     >
                                         {currentSlide.title}
                                     </motion.h2>

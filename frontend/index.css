@@ -99,4 +99,8 @@
   .stroke-text {
     -webkit-text-stroke: 1px white;
   }
+
+  .text-shadow-luxury {
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 0, 0, 0.3);
+  }
 }

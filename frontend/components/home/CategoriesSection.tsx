@@ -41,7 +41,7 @@ const CategoriesSection: React.FC<CategoriesSectionProps> = ({ homeSections, dis
                                     loading="lazy"
                                 />
                                 <div className="absolute bottom-8 left-8 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
-                                    <h3 className="text-white font-serif text-4xl italic tracking-tight mb-2">{cat.title}</h3>
+                                    <h3 className="text-white font-serif text-4xl italic tracking-tight mb-2 text-shadow-luxury">{cat.title}</h3>
                                     <span className="text-white/80 text-[10px] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-2">
                                         Explore <ArrowRight size={12} />
                                     </span>

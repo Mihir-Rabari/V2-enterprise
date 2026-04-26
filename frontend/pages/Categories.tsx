@@ -80,7 +80,7 @@ const Categories: React.FC = () => {
                                         alt={category.name || category.title}
                                         className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-1000 ease-out"
                                     />
-                                    <div className="absolute inset-0 bg-luxury-black/10 group-hover:bg-transparent transition-colors duration-500" />
+                                    <div className="absolute inset-0 group-hover:bg-transparent transition-colors duration-500" />
                                     <div className="absolute bottom-8 left-8 flex items-center gap-4 text-white">
                                         <div className="w-12 h-[1px] bg-white group-hover:w-20 transition-all duration-500" />
                                         <span className="text-[10px] font-bold uppercase tracking-[0.5em]">Explore</span>

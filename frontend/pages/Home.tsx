@@ -123,7 +123,7 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
                                                     setIsInitialLoad(false);
                                                 }
                                             }}
-                                            className="w-full h-full object-cover opacity-60 scale-105 transition-transform duration-[3000ms] group-hover/hero:scale-110"
+                                            className="w-full h-full object-cover scale-105 transition-transform duration-[3000ms] group-hover/hero:scale-110"
                                         >
                                             <source src={resolveLocalAssetUrl(slideVideoUrl)} type="video/mp4" />
                                         </video>
@@ -131,7 +131,7 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
                                             <img
                                                 src={resolveLocalAssetUrl(getOptimizedImageUrl(slide.url, { width: 1920, quality: 75 }))}
                                                 alt={slide.title}
-                                                className="absolute inset-0 w-full h-full object-cover opacity-60 scale-105"
+                                                className="absolute inset-0 w-full h-full object-cover scale-105"
                                             />
                                         )}
                                     </>
@@ -140,7 +140,7 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
                                         src={resolveLocalAssetUrl(getOptimizedImageUrl(slide.url, { width: 1920, quality: 75 }))}
                                         alt={slide.title}
                                         fetchPriority={isCurrent ? "high" : "low"}
-                                        className="w-full h-full object-cover opacity-60 scale-105 transition-transform duration-[3000ms] group-hover/hero:scale-110"
+                                        className="w-full h-full object-cover scale-105 transition-transform duration-[3000ms] group-hover/hero:scale-110"
                                     />
                                 )}
                             </div>
@@ -175,12 +175,12 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
                                             className="flex items-center gap-4"
                                         >
                                             <div className="w-12 h-[1px] bg-luxury-gold" />
-                                            <span className="text-luxury-gold text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.4em]">{current.tagline}</span>
+                                            <span className="text-luxury-gold text-[10px] sm:text-[12px] font-bold uppercase tracking-[0.6em] mb-6 block animate-fade-in-up text-shadow-luxury">{current.tagline}</span>
                                         </motion.div>
                                     )}
 
                                     {(current.titleVisible !== false && current.title) && (
-                                        <h1 className="font-serif text-[12vw] sm:text-[10vw] md:text-[140px] leading-[0.8] tracking-tighter text-white mix-blend-overlay opacity-90">
+                                        <h1 className="font-serif text-[12vw] sm:text-[10vw] md:text-[140px] leading-[0.8] tracking-tighter text-white text-shadow-luxury">
                                             {current.title.split('\n').map((line, i) => (
                                                 <span key={i} className="block">{line}</span>
                                             ))}

@@ -8,7 +8,7 @@ const Cart: React.FC = () => {
     const navigate = useNavigate();
     const { cart, removeFromCart, updateQuantity, cartTotal: subtotal } = useCart();
 
-    const shipping = subtotal > 999 ? 0 : 99;
+    const shipping = 0;
     const total = subtotal + shipping;
 
     if (cart.length === 0) {

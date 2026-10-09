@@ -1,0 +1,60 @@
+home-desktop 3 runs
+  score: runs=[38, 38, 35] median=38
+  fcp: runs=[1700.303, 1611.963, 2297.569] median=1700.303
+  lcp: runs=[4629.899, 4521.146, 4758.655] median=4629.899
+  tbt: runs=[39.5, 70.5, 46.5] median=46.5
+  cls: runs=[0.916, 0.916, 0.916] median=0.916
+  si: runs=[7250.641, 6527.165, 5971.191] median=6527.165
+  ttfb: runs=[122, 156, 225] median=156
+  bytes: runs=[16439039, 17437743, 16003972] median=16439039
+  reqs: runs=[79, 77, 76] median=77
+  imgN: runs=[22, 20, 20] median=20
+  imgB: runs=[6239566, 7565425, 6189913] median=6239566
+  medN: runs=[13, 13, 12] median=13
+  medB: runs=[9258148, 8931822, 8873334] median=8931822
+  LCP el: {}
+home-mobile 3 runs
+  score: runs=[10, 9, 8] median=9
+  fcp: runs=[3956.045, 5014.381, 3813.419] median=3956.045
+  lcp: runs=[15224.008, 17856.499, 16255.328] median=16255.328
+  tbt: runs=[1049.0, 1022.5, 1364.0] median=1049.0
+  cls: runs=[1.113, 1.113, 1.113] median=1.113
+  si: runs=[12911.07, 19870.972, 16309.019] median=16309.019
+  ttfb: runs=[149, 290, 134] median=149
+  bytes: runs=[19530231, 19876862, 20569491] median=19876862
+  reqs: runs=[75, 80, 75] median=75
+  imgN: runs=[17, 23, 19] median=19
+  imgB: runs=[6085522, 6048288, 7554674] median=6085522
+  medN: runs=[12, 13, 12] median=12
+  medB: runs=[12503744, 12887955, 12073668] median=12503744
+  LCP el: {}
+shop-desktop 2 runs
+  score: runs=[49, 48] median=48.5
+  fcp: runs=[1702.668, 2145.69] median=1924.179
+  lcp: runs=[40331.975, 6066.883] median=23199.429
+  tbt: runs=[72, 43] median=57.5
+  cls: runs=[0.234, 0.226] median=0.23
+  si: runs=[3251.456, 3856.555] median=3554.006
+  ttfb: runs=[363, 396] median=379.5
+  bytes: runs=[104883925, 101062786] median=102973355.5
+  reqs: runs=[72, 72] median=72.0
+  imgN: runs=[42, 41] median=41.5
+  imgB: runs=[104064667, 100242765] median=102153716.0
+  medN: runs=[0, 0] median=0.0
+  medB: runs=[0, 0] median=0.0
+  LCP el: {}
+shop-mobile 3 runs
+  score: runs=[34, 41, 38] median=38
+  fcp: runs=[4451.98, 2714.83, 3916.681] median=3916.681
+  lcp: runs=[64538.044, 48770.857, 20191.156] median=48770.857
+  tbt: runs=[977, 811.0, 776.5] median=811.0
+  cls: runs=[0.091, 0.091, 0.091] median=0.091
+  si: runs=[11343.556, 9773.301, 9625.771] median=9773.301
+  ttfb: runs=[465, 416, 375] median=416
+  bytes: runs=[138466954, 120956268, 134947689] median=134947689
+  reqs: runs=[73, 73, 73] median=73
+  imgN: runs=[43, 43, 43] median=43
+  imgB: runs=[137642847, 120138237, 134129045] median=134129045
+  medN: runs=[0, 0, 0] median=0
+  medB: runs=[0, 0, 0] median=0
+  LCP el: {}

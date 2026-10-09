@@ -8,6 +8,12 @@ import mongoose from 'mongoose';
 
 const router = Router();
 
+/** Public review shape: never expose reviewer email / user id. */
+const toPublicReview = (r: any) => {
+    const { customerEmail, userId, __v, ...rest } = r;
+    return rest;
+};
+
 // Public: get approved reviews for a product
 router.get('/product/:id', async (req: Request, res: Response) => {
     try {
@@ -15,7 +21,7 @@ router.get('/product/:id', async (req: Request, res: Response) => {
         const filter: any = mongoose.Types.ObjectId.isValid(productId) ? { productId } : { productId: parseInt(productId) };
         const reviews = await Review.find({ ...filter, status: 'ACTIVE' })
             .sort({ date: -1 });
-        return sendSuccess(res, reviews);
+        return sendSuccess(res, reviews.map(r => toPublicReview({ ...r.toObject(), id: r._id.toString() })));
     } catch (err: unknown) { return sendError(res, (err as Error).message); }
 });
 
@@ -28,11 +34,11 @@ router.get('/homepage', async (_req: Request, res: Response) => {
         const reviewsWithProduct = reviews.map(r => {
             const obj = r.toObject();
             const product = (r.productId as any);
-            return {
+            return toPublicReview({
                 ...obj,
                 product: { name: product?.name, photo: product?.photo },
                 id: r._id.toString()
-            };
+            });
         });
         return sendSuccess(res, reviewsWithProduct);
     } catch (err: unknown) { return sendError(res, (err as Error).message); }

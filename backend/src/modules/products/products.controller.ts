@@ -1,32 +1,52 @@
 import { Request, Response } from 'express';
 import { sendSuccess, sendError } from '../../utils/response';
+import { verifyToken } from '../../utils/jwt';
+import { parseIntParam, asString } from '../../utils/query';
 import {
     getProductsService, getProductByIdService, createProductService,
     updateProductService, deleteProductService,
 } from './products.service';
 
+/** Non-ACTIVE catalog data is only visible to a valid admin token (public callers always get ACTIVE). */
+export const resolveListStatus = (authHeader: string | undefined, requested: string | undefined): 'ACTIVE' | 'INACTIVE' | 'ALL' => {
+    const wanted = requested?.toUpperCase();
+    if (wanted !== 'ALL' && wanted !== 'INACTIVE' && wanted !== 'ACTIVE') return 'ACTIVE';
+    try {
+        if (!authHeader?.startsWith('Bearer ')) return 'ACTIVE';
+        return verifyToken(authHeader.split(' ')[1]).role === 'ADMIN' ? wanted : 'ACTIVE';
+    } catch {
+        return 'ACTIVE';
+    }
+};
+
+export const MAX_PRODUCTS_LIMIT = 500;
+
 export const getProducts = async (req: Request, res: Response) => {
     try {
         const getParam = (key: string) => req.query[key] || req.query[`${key}[]`];
 
+        // Only plain strings are accepted; `?x[$ne]=1` style objects are dropped.
         const toArray = (val: any): string[] | undefined => {
             if (!val) return undefined;
-            if (Array.isArray(val)) return val as string[];
-            return [val as string];
+            const arr = Array.isArray(val) ? val : [val];
+            const strs = arr.filter((v): v is string => typeof v === 'string');
+            return strs.length > 0 ? strs : undefined;
         };
+
+        const status = resolveListStatus(req.headers.authorization, asString(getParam('status')));
 
         const result = await getProductsService({
             mainCategories: toArray(getParam('mainCategories') || getParam('mainCategory')),
             subCategories: toArray(getParam('subCategories') || getParam('subCategory')),
             isTrending: getParam('isTrending') === 'true' ? true : getParam('isTrending') === 'false' ? false : undefined,
             isNewArrival: getParam('isNew') === 'true' ? true : getParam('isNew') === 'false' ? false : undefined,
-            tag: getParam('tag') as string,
-            search: getParam('search') as string,
-            status: getParam('status') as 'ACTIVE' | 'INACTIVE' | 'ALL',
-            page: getParam('page') ? parseInt(getParam('page') as string) : 1,
-            limit: getParam('limit') ? parseInt(getParam('limit') as string) : 12,
+            tag: asString(getParam('tag')),
+            search: asString(getParam('search')),
+            status,
+            page: parseIntParam(getParam('page'), 1, 1, 100000),
+            limit: parseIntParam(getParam('limit'), 12, 1, MAX_PRODUCTS_LIMIT),
             groupByColor: getParam('groupByColor') === 'true',
-            sort: getParam('sort') as string,
+            sort: asString(getParam('sort')),
             // Dynamic Filters
             minPrice: getParam('minPrice') ? parseFloat(getParam('minPrice') as string) : undefined,
             maxPrice: getParam('maxPrice') ? parseFloat(getParam('maxPrice') as string) : undefined,

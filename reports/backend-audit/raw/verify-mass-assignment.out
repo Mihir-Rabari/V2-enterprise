@@ -1,0 +1,4 @@
+cast update Mongoose would send: {"$set":{"resetPasswordToken":"t","password":"plaintext","role":"ADMIN","name":"x"}}
+Product schema has 'variants' path: false (orders.service.ts:~137 filters on 'variants.size')
+stock update Mongoose would send: {}
+runValidators default for findOneAndUpdate: undefined

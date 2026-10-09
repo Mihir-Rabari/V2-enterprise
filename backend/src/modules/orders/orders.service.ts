@@ -6,6 +6,7 @@ import mongoose from 'mongoose';
 import { verifyRazorpaySignature } from '../payments/payments.service';
 import { sendMail } from '../../utils/mailer';
 import { orderPlacedTemplate, orderStatusTemplate } from '../../utils/emailTemplates';
+import { validateOrderItems } from '../../utils/orderItems';
 
 interface CreateOrderInput {
     userId: string;
@@ -24,6 +25,8 @@ export const createOrderService = async (input: CreateOrderInput) => {
         console.error('[Orders] CRITICAL: Invalid User ID format received:', input.userId);
         throw new Error(`Invalid User ID format (${input.userId}). Please log out and log in again.`);
     }
+
+    validateOrderItems(input.items);
 
     // 1. Fetch all products to get live prices
     const productIds = input.items.map(i => {

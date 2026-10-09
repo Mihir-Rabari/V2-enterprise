@@ -1,5 +1,6 @@
 import { Product } from '../../models/Product';
 import mongoose from 'mongoose';
+import { escapeRegex } from '../../utils/query';
 import { syncFiltersFromProducts, rebuildFiltersFromAllProducts } from '../filters/filters.service';
 
 export interface ProductFilters {
@@ -39,11 +40,11 @@ export const getProductsService = async (filters: ProductFilters) => {
     const skip = (page - 1) * limit;
 
     const query: Record<string, unknown> = {
-        ...(mainCategories && mainCategories.length > 0 && { mainCategory: { $in: mainCategories.map(c => new RegExp(`^${c}$`, 'i')) } }),
-        ...(subCategories && subCategories.length > 0 && { subCategory: { $in: subCategories.map(c => new RegExp(`^${c}$`, 'i')) } }),
+        ...(mainCategories && mainCategories.length > 0 && { mainCategory: { $in: mainCategories.map(c => new RegExp(`^${escapeRegex(c)}$`, 'i')) } }),
+        ...(subCategories && subCategories.length > 0 && { subCategory: { $in: subCategories.map(c => new RegExp(`^${escapeRegex(c)}$`, 'i')) } }),
         ...(isTrending !== undefined && { isTrending }),
         ...(isNewArrival !== undefined && { isNewArrival }),
-        ...(status === 'ALL' ? {} : { status: { $regex: new RegExp(`^${status || 'ACTIVE'}$`, 'i') } }),
+        ...(status === 'ALL' ? {} : { status: { $regex: new RegExp(`^${escapeRegex(status || 'ACTIVE')}$`, 'i') } }),
         ...(tag && { tags: tag }),
         // Price Range
         ...((minPrice !== undefined || maxPrice !== undefined) && {
@@ -68,16 +69,19 @@ export const getProductsService = async (filters: ProductFilters) => {
                 .filter(([, values]) => values && values.length > 0)
                 .map(([key, values]) => [`customAttributes.${key}`, { $in: values }])
         )),
-        ...(search && {
+        ...(search && (() => {
+            const safe = escapeRegex(search);
+            return {
             $or: [
-                { name: { $regex: search, $options: 'i' } },
-                { description: { $regex: search, $options: 'i' } },
-                { styleCode: { $regex: search, $options: 'i' } },
-                { mainCategory: { $regex: search, $options: 'i' } },
-                { subCategory: { $regex: search, $options: 'i' } },
-                { tags: { $regex: search, $options: 'i' } }
+                { name: { $regex: safe, $options: 'i' } },
+                { description: { $regex: safe, $options: 'i' } },
+                { styleCode: { $regex: safe, $options: 'i' } },
+                { mainCategory: { $regex: safe, $options: 'i' } },
+                { subCategory: { $regex: safe, $options: 'i' } },
+                { tags: { $regex: safe, $options: 'i' } }
             ],
-        }),
+            };
+        })()),
     };
 
     let sortOptions: Record<string, 1 | -1> = { createdAt: -1 };

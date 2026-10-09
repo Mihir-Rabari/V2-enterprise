@@ -2,6 +2,7 @@ import { User } from '../../models/User';
 import { hashPassword, comparePassword } from '../../utils/hash';
 import { signToken } from '../../utils/jwt';
 import { env } from '../../config/env';
+import { pickProfileUpdate } from '../../utils/profile';
 import { RegisterInput, LoginInput } from './auth.schema';
 import { sendMail } from '../../utils/mailer';
 import { forgotPasswordTemplate } from '../../utils/emailTemplates';
@@ -54,7 +55,7 @@ export const getMeService = async (userId: string) => {
 
 export const updateMeService = async (userId: string, data: { name?: string; firstName?: string; lastName?: string; phone?: string }) => {
     try {
-        const user = await User.findByIdAndUpdate(userId, data, { new: true }).select('-password');
+        const user = await User.findByIdAndUpdate(userId, pickProfileUpdate(data as Record<string, unknown>), { new: true }).select('-password');
         if (!user) {
             console.warn('[Auth] User not found for update:', userId);
             throw new Error('User not found.');

@@ -9,7 +9,8 @@
     "build:full": "cd ../frontend && npm run build && cd ../backend && tsc",
     "start": "node dist/server.js",
     "start:prod": "NODE_ENV=production node dist/server.js",
-    "seed": "ts-node src/scripts/seed.ts"
+    "seed": "ts-node src/scripts/seed.ts",
+    "test": "node --test -r ts-node/register/transpile-only test/*.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1029.0",

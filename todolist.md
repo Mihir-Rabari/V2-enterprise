@@ -44,6 +44,10 @@ Details, evidence and acceptance criteria: `reports/performance-audit.md`, `repo
 - [ ] F-09 Load hover image on first hover
 - [ ] F-10 `Cache-Control: immutable` on R2 uploads
 - [ ] F-11 Hash-based upload dedupe
+- [ ] Rewrite 152 legacy `pub-*.r2.dev` image URLs in products to `cdn.v2enterprise.in` (DB backfill, dry-run first)
+- [ ] Fix `og:image` (`/og-image.jpg` returns HTML); make missing static files return 404 instead of SPA fallback
+- [ ] Remove unused 3.7 MB `frontend/public/The_Dior_...mp4` (confirm rights) 
+- [ ] Bundle: LazyMotion for framer-motion, move react-dom into vendor chunk, defer Meta Pixel
 - [ ] F-12 Verify HTML caching (origin no-store vs edge max-age)
 - [ ] F-13 Fix preconnect hints (`cdn.v2enterprise.in`)
 - [ ] Measure PDP, search, cart, checkout, warm cache; add RUM (web-vitals); pull CrUX data

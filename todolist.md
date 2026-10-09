@@ -8,8 +8,8 @@ Details, evidence and acceptance criteria: `reports/performance-audit.md`, `repo
 - [ ] B-10 Remove public `adminCode` admin sign-up; add rate limit
 
 ## Backend — P1
-- [ ] B-11 helmet + express-rate-limit (login, register, forgot-password, contact, payments); remove `x-powered-by`
-- [ ] B-13 Remove duplicate frontend fetches (`/settings` x4, navbar `limit=500`, home `limit=300`) — server-side search endpoint, shared settings context
+- [x] B-11 helmet + express-rate-limit (login, register, forgot-password, contact, payments); remove `x-powered-by`
+- [ ] B-13 (settings + navbar search done; Home still fetches limit=300) Remove duplicate frontend fetches (`/settings` x4, navbar `limit=500`, home `limit=300`) — server-side search endpoint, shared settings context
 - [ ] B-17 Run `explain("executionStats")` on staging, then add compound indexes (products `{status,createdAt}`, orders `{userId,createdAt}`, `{status,createdAt}`)
 
 ## Backend — P2
@@ -36,12 +36,12 @@ Details, evidence and acceptance criteria: `reports/performance-audit.md`, `repo
 
 ## Performance / media (frontend)
 - [ ] F-01 Resized WebP variants + `srcset` for product/category/hero images (decide: Cloudflare Image Resizing vs `sharp` at upload + backfill); visual QA first
-- [ ] F-02 Hero `<video poster>` must be an image, not the .mp4
-- [ ] F-03 Hero/promo videos: `preload="metadata"` for next slide, re-encode (mobile <= ~1 MB), load promo video only in view
-- [ ] F-04 CLS: size footer logo, reserve space for lazy home sections
+- [x] F-02 Hero `<video poster>` must be an image, not the .mp4
+- [ ] F-03 (hero preload done; remaining) Hero/promo videos: `preload="metadata"` for next slide, re-encode (mobile <= ~1 MB), load promo video only in view
+- [x] F-04 CLS: size footer logo, reserve space for lazy home sections
 - [ ] F-05 First 1-2 shop cards eager + `fetchpriority=high` (after F-01)
 - [ ] F-08 Defer GTM / Meta Pixel; trim unused JS
-- [ ] F-09 Load hover image on first hover
+- [x] F-09 Load hover image on first hover
 - [ ] F-10 `Cache-Control: immutable` on R2 uploads
 - [ ] F-11 Hash-based upload dedupe
 - [ ] Rewrite 152 legacy `pub-*.r2.dev` image URLs in products to `cdn.v2enterprise.in` (DB backfill, dry-run first)
@@ -49,8 +49,11 @@ Details, evidence and acceptance criteria: `reports/performance-audit.md`, `repo
 - [ ] Remove unused 3.7 MB `frontend/public/The_Dior_...mp4` (confirm rights) 
 - [ ] Bundle: LazyMotion for framer-motion, move react-dom into vendor chunk, defer Meta Pixel
 - [ ] F-12 Verify HTML caching (origin no-store vs edge max-age)
-- [ ] F-13 Fix preconnect hints (`cdn.v2enterprise.in`)
+- [x] F-13 Fix preconnect hints (`cdn.v2enterprise.in`)
 - [ ] Measure PDP, search, cart, checkout, warm cache; add RUM (web-vitals); pull CrUX data
 
 ## Housekeeping
 - [ ] Deploy `fix/backend-audit-hardening`, then re-run the reproduction commands in `reports/backend-audit/backend-audit.md` §D to confirm B-05..B-09 are closed
+
+## Done on branch perf/frontend-quick-wins
+See `reports/performance-audit/optimization-results.md` (F-02, F-04, F-09, F-13, B-11, B-13 partial, F-03 partial). Remaining: add admin UI field for hero `poster`; re-measure on production after deploy.

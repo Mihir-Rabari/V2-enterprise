@@ -3,6 +3,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface IHeroSlide extends Document {
     type: 'image' | 'video';
     url: string;
+    poster?: string;
     laptopUrl?: string;
     mobileUrl?: string;
     tabletUrl?: string;
@@ -23,6 +24,7 @@ export interface IHeroSlide extends Document {
 const HeroSlideSchema = new Schema<IHeroSlide>({
     type: { type: String, enum: ['image', 'video'], default: 'image' },
     url: { type: String, required: true },
+    poster: { type: String },
     laptopUrl: { type: String },
     mobileUrl: { type: String },
     tabletUrl: { type: String },

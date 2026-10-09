@@ -374,6 +374,8 @@ export interface HeroSlide {
   id: string | number;
   type: 'image' | 'video';
   url: string;
+  /** Optional still image shown while a video slide loads */
+  poster?: string;
   laptopUrl?: string;
   mobileUrl?: string;
   tabletUrl?: string;

@@ -4,7 +4,7 @@ import { MarqueeItem } from '../../types';
 
 const MarqueeSection: React.FC<{ items: MarqueeItem[] }> = ({ items }) => {
     return (
-        <div className="bg-luxury-black py-4 md:py-8 border-y border-white/10 overflow-hidden flex relative z-20">
+        <div className="bg-luxury-black py-4 md:py-8 min-h-[56px] md:min-h-[92px] border-y border-white/10 overflow-hidden flex relative z-20">
             <motion.div
                 className="flex whitespace-nowrap gap-8 md:gap-32"
                 animate={{ x: [0, -1000] }}

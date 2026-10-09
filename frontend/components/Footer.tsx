@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { Instagram, Twitter, Facebook, ArrowRight, Youtube, MessageCircle, Truck, CreditCard, RefreshCw, Headphones, MapPin, Phone, Mail, LucideIcon } from 'lucide-react';
 import { SiteSettings, FeatureItem } from '../types';
 // No initialData imports allowed. 100% dynamic.
-import { settingsAPI, contentAPI } from '../lib/apiClient';
+import { contentAPI } from '../lib/apiClient';
+import { useSettings } from '../context/SettingsContext';
 import { useState, useEffect } from 'react';
 
 interface FooterProps {
@@ -11,16 +12,10 @@ interface FooterProps {
 }
 
 const Footer: React.FC<FooterProps> = ({ onSwitchToAdmin }) => {
-    const [siteSettings, setSiteSettings] = useState<SiteSettings>({} as SiteSettings);
+    const { settings: siteSettings } = useSettings();
     const [features, setFeatures] = useState<FeatureItem[]>([]);
 
     useEffect(() => {
-        settingsAPI.get().then(res => {
-            if (res.data.success && res.data.data) {
-                setSiteSettings(res.data.data);
-            }
-        }).catch(err => console.error('Error fetching settings for footer:', err));
-
         contentAPI.getByType('FEATURE_ITEM').then(res => {
             if (res.data.success && res.data.data) {
                 setFeatures(res.data.data.map((item: any) => ({
@@ -75,7 +70,7 @@ const Footer: React.FC<FooterProps> = ({ onSwitchToAdmin }) => {
                             {siteSettings.logoImage ? (
                                 <img src={siteSettings.logoImage} alt={siteSettings.logoText} className="h-10 w-auto object-contain self-start" />
                             ) : (
-                                <img src="/v2_logo.webp" alt="V2 Logo" className="h-10 w-auto object-contain self-start" />
+                                <img src="/v2_logo.webp" width="1188" height="183" alt="V2 Logo" className="h-10 w-auto object-contain self-start" />
                             )}
                             <span className="text-[8px] sm:text-[9px] font-bold tracking-[0.1em] sm:tracking-[0.3em] uppercase mt-1 text-gray-400">{siteSettings.slogan}</span>
                         </Link>

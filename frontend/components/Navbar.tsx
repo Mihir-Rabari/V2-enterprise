@@ -5,8 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { SiteSettings, Product } from '../types';
 // No initialData imports allowed. 100% dynamic.
 import { useCart } from '../context/CartContext';
-import { settingsAPI } from '../lib/apiClient';
-import { useProducts } from '../hooks/useProducts';
+import { productsAPI } from '../lib/apiClient';
+import { useSettings } from '../context/SettingsContext';
 
 interface NavbarProps {
     onSwitchToAdmin?: () => void;
@@ -18,16 +18,8 @@ const Navbar: React.FC<NavbarProps> = ({ onSwitchToAdmin }) => {
     const location = useLocation();
     const navigate = useNavigate();
 
-    const [siteSettings, setSiteSettings] = useState<SiteSettings>({} as SiteSettings);
+    const { settings: siteSettings } = useSettings();
     const isAdmin = localStorage.getItem('v2_admin_session') === 'true';
-
-    useEffect(() => {
-        settingsAPI.get().then(res => {
-            if (res.data.success && res.data.data) {
-                setSiteSettings(res.data.data);
-            }
-        }).catch(err => console.error('Error fetching settings for navbar:', err));
-    }, []);
 
     useEffect(() => {
         setMobileMenuOpen(false);
@@ -46,7 +38,7 @@ const Navbar: React.FC<NavbarProps> = ({ onSwitchToAdmin }) => {
                         {siteSettings.logoImage ? (
                             <img src={siteSettings.logoImage} alt={siteSettings.logoText} className="h-8 w-auto object-contain" />
                         ) : (
-                            <img src="/v2_logo.webp" alt="V2 Logo" className="h-8 w-auto object-contain" />
+                            <img src="/v2_logo.webp" width="1188" height="183" alt="V2 Logo" className="h-8 w-auto object-contain" />
                         )}
                     </Link>
                 </div>
@@ -103,7 +95,7 @@ const Navbar: React.FC<NavbarProps> = ({ onSwitchToAdmin }) => {
                                 {siteSettings.logoImage ? (
                                     <img src={siteSettings.logoImage} alt={siteSettings.logoText} className="h-7 w-auto object-contain" />
                                 ) : (
-                                    <img src="/v2_logo.webp" alt="V2 Logo" className="h-7 w-auto object-contain" />
+                                    <img src="/v2_logo.webp" width="1188" height="183" alt="V2 Logo" className="h-7 w-auto object-contain" />
                                 )}
                                 <button onClick={() => setMobileMenuOpen(false)} className="p-2 -mr-2">
                                     <X size={28} strokeWidth={1} />
@@ -156,7 +148,6 @@ const MobileNavLink: React.FC<{ to: string; children: React.ReactNode }> = ({ to
 const SearchBar: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [query, setQuery] = useState('');
-    const { products } = useProducts({ limit: 500, groupByColor: true }); // Fetch all for search
     const [results, setResults] = useState<Product[]>([]);
     const location = useLocation();
     const navigate = useNavigate();
@@ -166,19 +157,21 @@ const SearchBar: React.FC = () => {
         setQuery('');
     }, [location.pathname]);
 
+    // Server-side search: debounced, cancelled/ignored when a newer query is typed
     useEffect(() => {
-        if (query.length > 1) {
-            const filtered = products.filter(p =>
-                p.name?.toLowerCase().includes(query.toLowerCase()) ||
-                p.subCategory?.toLowerCase().includes(query.toLowerCase()) ||
-                p.styleCode?.toLowerCase().includes(query.toLowerCase()) ||
-                p.tags?.some(tag => tag.toLowerCase().includes(query.toLowerCase()))
-            ).slice(0, 5);
-            setResults(filtered);
-        } else {
+        const q = query.trim();
+        if (q.length < 2) {
             setResults([]);
+            return;
         }
-    }, [query, products]);
+        let stale = false;
+        const timer = setTimeout(() => {
+            productsAPI.getAll({ search: q, limit: 5, groupByColor: true })
+                .then(res => { if (!stale) setResults(res.data?.data?.products ?? []); })
+                .catch(() => { if (!stale) setResults([]); });
+        }, 250);
+        return () => { stale = true; clearTimeout(timer); };
+    }, [query]);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();

@@ -7,7 +7,8 @@ import LoadingBar from './LoadingBar';
 import Toast from './Toast';
 import QuickView from './QuickView';
 import { useCart } from '../context/CartContext';
-import { contentAPI, settingsAPI } from '../lib/apiClient';
+import { contentAPI } from '../lib/apiClient';
+import { useSettings } from '../context/SettingsContext';
 import { SiteSettings } from '../types';
 import { useInitialLoad } from '../context/InitialLoadContext';
 // No initialData imports allowed. 100% dynamic.
@@ -20,7 +21,7 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ onSwitchToAdmin }) => {
     const location = useLocation();
     const { toast, hideToast } = useCart();
     const { isInitialLoad, setIsInitialLoad } = useInitialLoad();
-    const [siteSettings, setSiteSettings] = React.useState<SiteSettings>({} as SiteSettings);
+    const { settings: siteSettings } = useSettings();
 
     useEffect(() => {
         if ('scrollRestoration' in window.history) {
@@ -54,12 +55,6 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ onSwitchToAdmin }) => {
                 console.error('Error fetching taglines:', err);
                 setTaglines([{ text: "" }]);
             });
-
-        settingsAPI.get().then(res => {
-            if (res.data.success && res.data.data) {
-                setSiteSettings(res.data.data);
-            }
-        }).catch(err => console.error('Error fetching settings for splash:', err));
     }, []);
 
     const [currentTaglineIndex, setCurrentTaglineIndex] = React.useState(0);
@@ -93,7 +88,7 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ onSwitchToAdmin }) => {
                             {siteSettings.logoImage ? (
                                 <img src={siteSettings.logoImage} alt={siteSettings.logoText} className="h-16 sm:h-20 w-auto object-contain" />
                             ) : (
-                                <img src="/v2_logo.webp" alt="V2 Logo" className="h-16 sm:h-20 w-auto object-contain" />
+                                <img src="/v2_logo.webp" width="1188" height="183" alt="V2 Logo" className="h-16 sm:h-20 w-auto object-contain" />
                             )}
                             <div className="w-12 h-[1px] bg-luxury-gold/30" />
                         </motion.div>
@@ -123,7 +118,7 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ onSwitchToAdmin }) => {
 
             <Navbar onSwitchToAdmin={onSwitchToAdmin} />
 
-            <main className="flex-grow relative">
+            <main className="flex-grow relative min-h-screen">
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={location.pathname}

@@ -29,6 +29,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ id, name, price, image, hover
     const { user } = useAuth();
     const navigate = useNavigate();
     const [isHovered, setIsHovered] = useState(false);
+    // Hover image is fetched only after the first hover, not for every card on load
+    const [hoverRequested, setHoverRequested] = useState(false);
     const [imageLoaded, setImageLoaded] = useState(false);
 
     const [isWishlisted, setIsWishlisted] = useState(false);
@@ -79,7 +81,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ id, name, price, image, hover
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.21, 0.47, 0.32, 0.98] }}
             className="group relative"
-            onMouseEnter={() => setIsHovered(true)}
+            onMouseEnter={() => { setIsHovered(true); setHoverRequested(true); }}
             onMouseLeave={() => setIsHovered(false)}
         >
             <div className="relative aspect-[3/4] overflow-hidden bg-luxury-gray rounded-sm mb-6">
@@ -104,7 +106,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ id, name, price, image, hover
                         />
 
                         {/* Secondary/Hover Image */}
-                        {hoverImage && (
+                        {hoverImage && hoverRequested && (
                             <motion.img
                                 initial={{ opacity: 0 }}
                                 animate={{

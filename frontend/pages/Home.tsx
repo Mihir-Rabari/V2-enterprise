@@ -15,10 +15,11 @@ import { AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import FilterAccordion from '../components/FilterAccordion';
 import { useProducts } from '../hooks/useProducts';
-import { reviewsAPI, sliderAPI, settingsAPI, categoriesAPI, contentAPI, filtersAPI, resolveLocalAssetUrl } from '../lib/apiClient';
+import { reviewsAPI, sliderAPI, categoriesAPI, contentAPI, filtersAPI, resolveLocalAssetUrl } from '../lib/apiClient';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { getOptimizedImageUrl } from '../src/utils/mediaUtils';
 import { useInitialLoad } from '../context/InitialLoadContext';
+import { useSettings } from '../context/SettingsContext';
 
 // Lazy load below-the-fold sections
 const NewStandardSection = React.lazy(() => import('../components/home/NewStandardSection'));
@@ -34,6 +35,46 @@ const ClientVoicesSection = React.lazy(() => import('../components/home/ClientVo
 interface HeroProps {
     slides: HeroSlide[];
 }
+
+interface HeroVideoProps {
+    src: string;
+    poster?: string;
+    isCurrent: boolean;
+    onReady: () => void;
+}
+
+// Only the visible slide downloads/plays; the upcoming slide just fetches metadata.
+const HeroVideo: React.FC<HeroVideoProps> = ({ src, poster, isCurrent, onReady }) => {
+    const ref = React.useRef<HTMLVideoElement>(null);
+
+    React.useEffect(() => {
+        const v = ref.current;
+        if (!v) return;
+        if (isCurrent) {
+            v.play().catch(() => { /* autoplay blocked: poster/first frame stays */ });
+        } else {
+            v.pause();
+        }
+    }, [isCurrent]);
+
+    return (
+        <video
+            ref={ref}
+            autoPlay={isCurrent}
+            loop
+            muted
+            playsInline
+            preload={isCurrent ? 'auto' : 'metadata'}
+            width="1920"
+            height="1080"
+            poster={poster}
+            onCanPlayThrough={() => { if (isCurrent) onReady(); }}
+            className="w-full h-full object-cover scale-105 transition-transform duration-[3000ms] group-hover/hero:scale-110"
+        >
+            <source src={src} type="video/mp4" />
+        </video>
+    );
+};
 
 const Hero: React.FC<HeroProps> = ({ slides }) => {
     const [index, setIndex] = React.useState(0);
@@ -107,34 +148,15 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
                         >
                             <div className="absolute inset-0 overflow-hidden">
                                 {isVideo ? (
-                                    <>
-                                        <video
-                                            autoPlay
-                                            loop
-                                            muted
-                                            playsInline
-                                            preload="auto"
-                                            width="1920"
-                                            height="1080"
-                                            poster={resolveLocalAssetUrl(getOptimizedImageUrl(slide.url, { width: 1920, quality: 75 }))}
-                                            onCanPlayThrough={() => {
-                                                if (isCurrent) {
-                                                    setVideoReady(true);
-                                                    setIsInitialLoad(false);
-                                                }
-                                            }}
-                                            className="w-full h-full object-cover scale-105 transition-transform duration-[3000ms] group-hover/hero:scale-110"
-                                        >
-                                            <source src={resolveLocalAssetUrl(slideVideoUrl)} type="video/mp4" />
-                                        </video>
-                                        {(isCurrent && !videoReady) && (
-                                            <img
-                                                src={resolveLocalAssetUrl(getOptimizedImageUrl(slide.url, { width: 1920, quality: 75 }))}
-                                                alt={slide.title}
-                                                className="absolute inset-0 w-full h-full object-cover scale-105"
-                                            />
-                                        )}
-                                    </>
+                                    <HeroVideo
+                                        src={resolveLocalAssetUrl(slideVideoUrl)}
+                                        poster={slide.poster ? resolveLocalAssetUrl(getOptimizedImageUrl(slide.poster, { width: 1920, quality: 75 })) : undefined}
+                                        isCurrent={isCurrent}
+                                        onReady={() => {
+                                            setVideoReady(true);
+                                            setIsInitialLoad(false);
+                                        }}
+                                    />
                                 ) : (
                                     <img
                                         src={resolveLocalAssetUrl(getOptimizedImageUrl(slide.url, { width: 1920, quality: 75 }))}
@@ -319,10 +341,15 @@ const Home: React.FC = () => {
 
     // Configuration States
     const [homeSections, setHomeSections] = useState<HomeSectionContent>({} as HomeSectionContent);
+    const [heroLoaded, setHeroLoaded] = useState(false);
     const [marqueeItems, setMarqueeItems] = useState<MarqueeItem[]>([]);
     const [lookbookItems, setLookbookItems] = useState<LookbookItem[]>([]);
     const [commitment, setCommitment] = useState<CommitmentContent>({} as CommitmentContent);
-    const [siteSettings, setSiteSettings] = useState<SiteSettings>({} as SiteSettings);
+    const { settings: siteSettings } = useSettings();
+    useEffect(() => {
+        if (siteSettings.homeSections) setHomeSections(siteSettings.homeSections as HomeSectionContent);
+        if (siteSettings.commitment) setCommitment(siteSettings.commitment as CommitmentContent);
+    }, [siteSettings]);
     const [heroSlides, setHeroSlides] = useState<HeroSlide[]>([]);
     const [promotionalSlides, setPromotionalSlides] = useState<PromotionalSlide[]>([]);
     const [bottomPromoSlides, setBottomPromoSlides] = useState<PromotionalSlide[]>([]);
@@ -336,27 +363,20 @@ const Home: React.FC = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [heroRes, categoriesRes, settingsRes] = await Promise.allSettled([
+                const [heroRes, categoriesRes] = await Promise.allSettled([
                     sliderAPI.getHero(),
-                    categoriesAPI.getAll(),
-                    settingsAPI.get()
+                    categoriesAPI.getAll()
                 ]);
 
                 if (heroRes.status === 'fulfilled' && heroRes.value.data.success) {
                     setHeroSlides(heroRes.value.data.data);
                 }
+                setHeroLoaded(true);
                 
                 if (categoriesRes.status === 'fulfilled' && categoriesRes.value.data.success) {
                     const sortedCats = categoriesRes.value.data.data;
                     setAllCategories(sortedCats);
                     setCategories(sortedCats.filter((c: any) => !c.parentId || c.parentId === "" || c.parentId === null));
-                }
-
-                if (settingsRes.status === 'fulfilled' && settingsRes.value.data.success) {
-                    const s = settingsRes.value.data.data;
-                    setSiteSettings(s);
-                    if (s.homeSections) setHomeSections(s.homeSections);
-                    if (s.commitment) setCommitment(s.commitment);
                 }
 
                 const [reviewsRes, promoRes, marqueeRes, filtersRes, lookbookRes] = await Promise.allSettled([
@@ -548,13 +568,15 @@ const Home: React.FC = () => {
     return (
         <>
             <div className="bg-white">
+                {!homeSections.sectionOrder?.length && <section className="h-screen w-full bg-luxury-black" />}
                 {Array.from(new Set(homeSections.sectionOrder || [])).map((sectionId) => {
                     switch (sectionId) {
                         case 'hero':
-                            return <Hero key="hero" slides={heroSlides} />;
+                            // Reserve the hero's height until slides arrive so content below does not jump
+                            return heroLoaded ? <Hero key="hero" slides={heroSlides} /> : <section key="hero-placeholder" className="h-screen w-full bg-luxury-black" />;
                         case 'marquee':
                             return (
-                                <React.Suspense key="marquee" fallback={<div className="h-16 md:h-24 bg-luxury-black animate-pulse" />}>
+                                <React.Suspense key="marquee" fallback={<div className="min-h-[56px] md:min-h-[92px] bg-luxury-black animate-pulse" />}>
                                     <MarqueeSection items={marqueeItems} />
                                 </React.Suspense>
                             );

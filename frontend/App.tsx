@@ -2,6 +2,7 @@ import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import CustomerView from './components/CustomerView';
 import { Toaster } from 'react-hot-toast';
+import { SettingsProvider } from './context/SettingsContext';
 
 // Lazy load admin components to optimize performance and fix preload warnings
 const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
@@ -28,6 +29,7 @@ const AdminLoading = () => (
 
 function App() {
   return (
+    <SettingsProvider>
     <BrowserRouter>
       <Toaster position="top-right" toastOptions={{ style: { background: '#0A0A0B', color: '#fff', fontSize: '13px', border: '1px solid #1f2937' }, duration: 4000 }} />
       <Suspense fallback={<AdminLoading />}>
@@ -54,6 +56,7 @@ function App() {
         </Routes>
       </Suspense>
     </BrowserRouter>
+    </SettingsProvider>
   );
 }
 

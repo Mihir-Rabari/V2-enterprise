@@ -1,8 +1,10 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import path from 'path';
 import { env } from './config/env';
 import { errorHandler } from './middlewares/error.middleware';
+import { apiLimiter, authLimiter, forgotPasswordLimiter, contactLimiter, paymentLimiter } from './middlewares/rateLimit.middleware';
 
 // Route imports
 import authRoutes from './modules/auth/auth.routes';
@@ -26,6 +28,12 @@ import { Category } from './models/Category';
 import fs from 'fs';
 
 const app = express();
+
+// Behind Cloudflare / reverse proxy
+app.set('trust proxy', 1);
+app.disable('x-powered-by');
+// CSP is intentionally off: the SPA relies on inline GTM / Meta Pixel snippets and Google Fonts.
+app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false, crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
 // ── Ensure Persistent Upload Directories Exist ──────────────────────────────
 const uploadDirs = [
@@ -65,6 +73,15 @@ app.get('/health', (_req, res) => {
 
 // ── API Routes ───────────────────────────────────────────────────────────────
 const API = '/api/v1';
+
+// ── Rate limits ───────────────────────────────────────────────────────────────
+app.use(API, apiLimiter);
+app.use(`${API}/auth/login`, authLimiter);
+app.use(`${API}/auth/register`, authLimiter);
+app.use(`${API}/auth/forgot-password`, forgotPasswordLimiter);
+app.use(`${API}/auth/reset-password`, authLimiter);
+app.post(`${API}/contacts`, contactLimiter);
+app.use(`${API}/payments`, paymentLimiter);
 
 app.use(`${API}/auth`, authRoutes);
 app.use(`${API}/products`, productRoutes);

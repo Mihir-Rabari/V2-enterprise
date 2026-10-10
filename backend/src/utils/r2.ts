@@ -1,5 +1,6 @@
 import { S3Client, PutObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { env } from '../config/env';
+import { thumbnailUrlFor } from './mediaMapping';
 
 // Determine if R2 is configured
 export const isR2Configured = () => {
@@ -102,7 +103,8 @@ export const listR2Objects = async (
         .map((item) => ({
         id: item.Key || '',
         url: `${env.R2_PUBLIC_URL}/${item.Key}`,
-        thumbnailUrl: `${env.R2_PUBLIC_URL}/${item.Key}`, // R2 doesn't do transformations natively
+        // Small verified WebP variant when the migration tool has produced one; otherwise the original (unchanged behaviour)
+        thumbnailUrl: (item.Key && thumbnailUrlFor(item.Key, env.R2_PUBLIC_URL as string, env.MEDIA_MAPPING_FILE)) || `${env.R2_PUBLIC_URL}/${item.Key}`,
         name: item.Key?.split('/').pop() || item.Key,
         size: item.Size || 0,
         mimeType: '', // S3 doesn't return mimeType in ListObjects

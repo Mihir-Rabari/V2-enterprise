@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Upload, Search, Check, Grid, List, Loader2, Image as ImageIcon } from 'lucide-react';
 import { adminAPI } from '../../lib/apiClient';
+import { getOptimizedImageUrl } from '../../src/utils/mediaUtils';
 import { IMedia } from '../../types';
 import toast from 'react-hot-toast';
 
@@ -268,7 +269,7 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
                                         />
                                     ) : (
                                         <img
-                                            src={m.thumbnailUrl || m.url}
+                                            src={getOptimizedImageUrl(m.thumbnailUrl || m.url, { width: 400 })}
                                             alt={m.name}
                                             loading="lazy"
                                             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"

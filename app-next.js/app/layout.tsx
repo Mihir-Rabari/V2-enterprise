@@ -130,9 +130,14 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // The font variable classes must sit on <html> (= :root): the @theme tokens
+  // (--font-sans: var(--font-inter), …) resolve their var() at computed-value
+  // time ON :root, where --font-inter was undefined while these classes lived
+  // on <body> — every font token then computed to the guaranteed-invalid empty
+  // value and the whole page silently rendered in the system font stack.
   return (
-    <html lang="en">
-      <body className={`${inter.variable} ${playfair.variable}`}>
+    <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
+      <body>
         {/* Shared client providers (toast, and later the context stack) live in Providers. */}
         <Providers>{children}</Providers>
       </body>

@@ -200,7 +200,7 @@ Rules of thumb:
 
 | Route (Next file) | Owner | `title` | `description` | `alternates.canonical` | OG / other |
 | --- | --- | --- | --- | --- | --- |
-| `/` `(storefront)/page.tsx` | home | Rely on root layout (legacy home did the same via index.html) — an explicit export equal to the root values is also fine | root default | `/` (root already sets it) | root OG |
+| ✅ `/` `(storefront)/page.tsx` (landed) | home | Explicit export equal to root values (legacy home relied on index.html via a dead `usePageMeta` import) | root default | `/` (re-exported explicitly) | root OG |
 | ✅ `/shop` `(storefront)/shop/page.tsx` (landed) | catalog | `Shop All \| V2 Enterprise` | `Browse the full V2 Enterprise collection — premium kurtas, shirts, and luxury menswear. Filter by category, fabric, size, and more.` | `/shop` | default OG |
 | ✅ `/new-arrivals` (landed) | catalog | `New Arrivals \| V2 Enterprise` (**fix:** legacy reused `/shop`'s title) | `The latest arrivals from V2 Enterprise — fresh drops of premium menswear.` | `/new-arrivals` (**fix:** legacy pointed at `/shop`) | default OG |
 | ✅ `/categories` (landed) | catalog | `Shop by Category \| V2 Enterprise` (legacy had none) | `Browse every V2 Enterprise collection — explore our main categories of premium kurtas, shirts, and luxury menswear.` | `/categories` | default OG |

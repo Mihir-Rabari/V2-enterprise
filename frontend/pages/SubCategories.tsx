@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { useSettings } from '../context/SettingsContext';
 import { motion } from 'framer-motion';
 import { Link, useParams, Navigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
-import { categoriesAPI, settingsAPI } from '../lib/apiClient';
-import { SiteSettings } from '../types';
+import { categoriesAPI } from '../lib/apiClient';
 // No initialData imports allowed. 100% dynamic.
 
 const SubCategories: React.FC = () => {
     const { category } = useParams<{ category: string }>();
     const [subCategories, setSubCategories] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [siteSettings, setSiteSettings] = useState<SiteSettings>({} as SiteSettings);
+    const { settings: siteSettings } = useSettings();
 
     const decodedCategory = decodeURIComponent(category || '');
 
@@ -29,11 +29,6 @@ const SubCategories: React.FC = () => {
             })
             .catch(() => setLoading(false));
 
-        settingsAPI.get().then(res => {
-            if (res.data.success && res.data.data) {
-                setSiteSettings(res.data.data);
-            }
-        }).catch(err => console.error(err));
     }, [decodedCategory]);
 
     if (loading) {

@@ -1,0 +1,32 @@
+# Frontend regression review (protected working tree, unmodified)
+
+State: branch `perf/pdp-responsive-images`, HEAD `68984e78b78799f33b06b439b24ee2ee07278ddf` (unchanged from the starting commit), index empty (`git diff --cached` empty), 8 modified files (+57/-59), diff hash `6a999a1b2200dfcd` taken at 10:27 UTC; this audit changed no tracked file. Review is by reading `git diff` plus the dynamic checks noted.
+
+## Existing measurements (from `validation.md`, DevTools throttling, 5 paired runs; **reported, not re-run in this audit**)
+Category LCP 11.43 -> 9.58 s, products requests 2 -> 1, bytes -30%, CLS 0.2435 -> 0.0001; Shop LCP unchanged (10.07 vs 10.35 s); Home last API response 6.44 -> 5.67 s, LCP unchanged; PDP unchanged. Caveat from `api-timing-forensics.md`: absolute API times in those runs are inflated by the local proxy's cold upstream connections; request counts and orderings are valid.
+
+## Change-by-change
+| Change | Confirmed | Risk / gap |
+|---|---|---|
+| **Shared settings** (`Shop/SubCategories/Categories/Contact/Login` use `useSettings`) | Diff removes page-local `/settings` calls; Lighthouse/browser show 1 `/settings` | `useSettings()` returns `{}` until the provider's fetch resolves (same as the old per-page initial state). The provider never refetches, so a settings edit made in another tab appears only after reload (also true for Navbar/Footer before). **About.tsx still fetches its own copy** (needs `aboutContent`): remaining duplicate. Login/Register branding flashes default until loaded (unchanged behaviour) |
+| **Case-insensitive category match + first filtered request** (`Shop.tsx` `fetchParams`) | **Reproduced**: `/mens/tshirt` -> one request `subCategories[]=tshirt`, only T-shirts shown | **Confirmed defect (pre-existing, now slightly different): `/mens/co-ord-set` does not resolve to `CO-ORD SET`.** Reproduced in the final build: request 1 `subCategories[]=co-ord-set` (returns nothing: backend regex `^co-ord-set$` does not match `CO-ORD SET`), then after `/categories` arrives the mapping drops the unmatched name and request 2 is unfiltered, so the page ends up showing **all products** (same final state as before the change; the transitional empty-results flash is new). Fix needs slug matching (`Category.slug` is available from `/categories`) |
+| | Not tested | `/MENS/All` and `/:category/All` (initialCategory 'All' -> no filter), `?categories=` URL param, selecting/deselecting sidebar categories, main-vs-sub mapping when a main category name is typed in the sub slot, browser back/forward with URL sync effect, `/new-arrivals` |
+| | Speculative | Out-of-order responses: `useProducts` has no AbortController; with two sequential requests a late first response could overwrite the second (pre-existing; more visible on slow links) |
+| **Home concurrent secondary requests** (`Home.tsx` `secondaryRequests`) | Diff is a pure reordering; same 11 requests; `allSettled` preserves per-request failure isolation | Section ordering/loading flags: `setReviewsLoading(false)` etc. still run after the first batch resolves (they now wait on the slower of the two batches, not their own request): reviews/promos appear when **both** batches are done, so a slow hero or categories call still delays them. No visual test. Error path (any request rejecting) unchanged but unexercised |
+| | Speculative | If `getHero()` throws synchronously the new `secondaryRequests` promise would already be running (harmless) |
+| **Home products `limit=300`** | Present: 300 of 436 grouped products; Essentials search/filters operate client-side on that subset | **Confirmed correctness limitation (not changed):** 136 products can never appear in Essentials search/filter; do not shrink without a server-side filter |
+| **PDP responsive images** (`ProductDetails.tsx`) | Main image 800 default, srcset 800/1200/1600, eager + `fetchpriority=high`, width/height 800x1000; thumbs/swatches 400 | Gaps: legacy (non-canonical) image URLs fall back to the original with no srcset (intended); retina phones pick 1200 (not visually verified); a product with a single image or none: thumbnails row logic unchanged but the `mainImageLoaded` gate has no test; `onError` unblocks thumbnails; `isVideoActive` also unblocks. Zoom loupe still downloads the stored 1600 on hover (desktop). Thumbnails render with empty `alt` until the main image loads (a11y nit) |
+| **GTM deferral** (`index.html`) | Injection after `load` + idle; `dataLayer`/`gtm.start` immediate | Container tags/triggers not verified (GTM Preview needed); fast-bounce visitors may no longer be counted; **must not ship unreviewed** |
+
+## Other checks requested
+- **Search result completeness:** Navbar search is server-side (`limit=5`, `groupByColor`, regex over name/description/styleCode/category/tags) -> complete up to 5 hits; Home Essentials search incomplete (above); Shop search server-side.
+- **Pagination / infinite scroll:** unchanged code; `page` resets on filter change; the added pre-categories request keeps `page=1` params, so no duplicate page-1 fetch beyond the intended one; **not exercised**.
+- **Loading states:** Category/Shop show skeleton while `productsLoading`; with the first request now filtered there is no wrong-content flash for valid names; for unmatched slugs there is an empty-state flash.
+- **Authenticated vs public settings:** `/settings` is public and ignores the token (`settings.routes.ts:10`); no divergence.
+- **Duplicate requests / re-renders:** product requests are keyed by `JSON.stringify(params)` in `useProducts`; `allCategories` loading changes `fetchParams` identity but not its serialised value for matched names (that is why the second request disappears). Re-render counts not profiled.
+- **Test coverage:** frontend has only `test/mediaUtils.test.ts` (6 tests). No component, routing or e2e test covers any file above. Backend tests (9) cover `parseIntParam`, `asString`, `escapeRegex`, `validateOrderItems`, `pickProfileUpdate`, `resolveListStatus`, rate limits, app smoke, media mapping.
+
+## Classification
+- **Confirmed defects:** `/mens/co-ord-set` (and any hyphenated/space-different slug) shows all products; Home Essentials covers 300/436 products; About still duplicates `/settings`.
+- **Test gaps:** Shop filters/pagination/infinite scroll/back-forward; Home visual sections and failure paths; PDP gallery edge cases and retina selection; GTM container.
+- **Speculative:** stale-response races; a11y of empty alt; re-render counts.

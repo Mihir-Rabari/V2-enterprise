@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useSettings } from '../context/SettingsContext';
 import { createPortal } from 'react-dom';
 import { useParams, useSearchParams, useLocation } from 'react-router-dom';
 import { Search, ChevronDown, X, Filter, TrendingUp, Sparkles } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import FilterAccordion from '../components/FilterAccordion';
 import { useProducts } from '../hooks/useProducts';
-import { settingsAPI, categoriesAPI, filtersAPI } from '../lib/apiClient';
+import { categoriesAPI, filtersAPI } from '../lib/apiClient';
 // No initialData imports allowed. 100% dynamic.
-import { SiteSettings, Category } from '../types';
+import { Category } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePageMeta } from '../hooks/usePageMeta';
 
@@ -80,7 +81,7 @@ const Shop: React.FC = () => {
 
     // UI States
     const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
-    const [siteSettings, setSiteSettings] = useState<SiteSettings>({} as SiteSettings);
+    const { settings: siteSettings } = useSettings();
     const [allCategories, setAllCategories] = useState<Category[]>([]);
     const [filterSuggestions, setFilterSuggestions] = useState<Record<string, string[]>>({});
 
@@ -100,14 +101,21 @@ const Shop: React.FC = () => {
 
         // Categories mapping
         if (selectedCategories.length > 0) {
-            const mainCats = selectedCategories.filter(name => {
-                const cat = allCategories.find(c => c.name === name);
+            // Case-insensitive so slug-style URLs (/mens/tshirt) resolve to the same category as /MENS/TSHIRT.
+            const findCategory = (name: string) =>
+                allCategories.find(c => c.name === name) ||
+                allCategories.find(c => c.name?.toLowerCase() === name.toLowerCase());
+            // On /:category/:subcategory routes the URL already names the sub-category, so the first product
+            // request can be sent in parallel with /categories instead of unfiltered (and then repeated).
+            const categoriesLoaded = allCategories.length > 0;
+            const mainCats = categoriesLoaded ? selectedCategories.filter(name => {
+                const cat = findCategory(name);
                 return cat && !cat.parentId;
-            });
-            const subCats = selectedCategories.filter(name => {
-                const cat = allCategories.find(c => c.name === name);
+            }) : [];
+            const subCats = categoriesLoaded ? selectedCategories.filter(name => {
+                const cat = findCategory(name);
                 return cat && cat.parentId;
-            });
+            }) : (subcategory ? selectedCategories.filter(name => name === initialCategory) : []);
             
             if (mainCats.length > 0) params.mainCategories = mainCats;
             if (subCats.length > 0) params.subCategories = subCats;
@@ -154,7 +162,6 @@ const Shop: React.FC = () => {
 
     // Initial Data Load (Settings, Categories, Suggestions)
     useEffect(() => {
-        settingsAPI.get().then(res => res.data.success && setSiteSettings(res.data.data)).catch(console.error);
         categoriesAPI.getAll().then(res => res.data.success && setAllCategories(res.data.data)).catch(console.error);
         filtersAPI.getSuggestions().then(res => res.data.success && setFilterSuggestions(res.data.data)).catch(console.error);
     }, []);

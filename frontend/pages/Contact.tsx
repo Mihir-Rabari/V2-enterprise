@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
+import { useSettings } from '../context/SettingsContext';
 import { Mail, Phone, MapPin, Instagram, Facebook, Twitter, ArrowRight, Youtube, MessageCircle, Clock, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 // No initialData imports allowed. 100% dynamic.
-import { SiteSettings } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { contactsAPI, settingsAPI } from '../lib/apiClient';
+import { contactsAPI } from '../lib/apiClient';
 import { validateEmail, validateRequired } from '../lib/validation';
 import { usePageMeta } from '../hooks/usePageMeta';
 
@@ -16,7 +16,7 @@ const Contact: React.FC = () => {
         canonical: '/contact',
     });
     const { user } = useAuth();
-    const [siteSettings, setSiteSettings] = useState<SiteSettings>({} as SiteSettings);
+    const { settings: siteSettings } = useSettings();
 
     const [submitted, setSubmitted] = useState(false);
     const [localError, setLocalError] = useState('');
@@ -28,11 +28,6 @@ const Contact: React.FC = () => {
     });
 
     React.useEffect(() => {
-        settingsAPI.get().then(res => {
-            if (res.data.success) {
-                setSiteSettings(res.data.data);
-            }
-        });
 
         if (user) {
             setFormData(prev => ({

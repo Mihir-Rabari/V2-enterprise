@@ -1,0 +1,11 @@
+# Root-cause register (third-party scripts and PDP LCP)
+
+| ID | Finding | Status | Evidence | Confidence |
+|---|---|---|---|---|
+| TP-01 | Meta (114 + 164 KB) and GTM (119 KB) are requested at 0.63 s and compete with the JS bundles on the throttled link. Deferring either brings FCP from 4.03 s to about 3.6 s (-9..-12%, all pages, ranges disjoint). | **Proven** | dt `fcp` medians: ctl 4034/4043/4140, meta 3623/3624/3651, gtm 3657/3630/3628 | HIGH |
+| TP-02 | Deferring **GTM** lowers throttled LCP on all three PDPs: A2 7178 -> 6706 ms (-6.6%), B3 7109 -> 6408 (-9.9%), C4 6440 -> 5967 (-7.3%). Main image starts 0.3-0.8 s earlier. TBT within noise (+1.2%, +9.5%, +1.6%). | **Supported** (n=5 paired per page, rotated order; A2 gtm max 6956 < ctl min 7092; B3 and C4 ranges overlap, B3 control has a 10.6 s outlier) | `before-after.csv` | MEDIUM-HIGH |
+| TP-03 | Deferring **Meta** gives mixed LCP (-5.3%, -7.8%, +4.8%), raises TBT by 23-48% (757 -> 997, 630 -> 932, 740 -> 909 ms) and delays the PageView beacon from about 6.0 s to about 12.5 s (throttled). | **Not supported; rejected** | `before-after.csv` | MEDIUM-HIGH |
+| TP-04 | Lighthouse *simulated* LCP shows no consistent effect (GTM -1.0%, -3.7%, +9.8%; Meta -17.9%, -3.3%, +6.9%; ranges as wide as 5.8-9.0 s). | **Discrepancy; hypothesis only**: unthrottled observed LCP (about 1.5-2 s) is later than the deferred injection time (about 0.5-0.7 s), so Lantern's pessimistic graph still contains the scripts in both builds, and it does not model bandwidth sharing. Not independently tested. | `sim` rows; `gtm_start` 0.58-0.68 s | MEDIUM |
+| TP-05 | Why Meta deferral raises TBT. | **Hypothesis**: its long tasks (188-251 ms simulated) move from before FCP (not counted by TBT) to after FCP (counted); total Meta/GTM long-task time is flat (about 900-1010 ms across variants). | `long_tasks_3p_ms` | MEDIUM |
+| TP-06 | GTM execution is cheap (about 18 ms main thread); Meta is the heavy one (about 113 ms, two long tasks). GTM deferral therefore helps through bandwidth, not CPU. | Measured | third-parties insight, long tasks | HIGH |
+| TP-07 | Remaining overlap with the main image after the GTM change: Meta (278 KB) and fonts (156 KB). | Measured, not yet tested | HAR files | MEDIUM |

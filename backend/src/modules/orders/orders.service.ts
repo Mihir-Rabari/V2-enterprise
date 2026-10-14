@@ -1,9 +1,9 @@
 import { Order } from '../../models/Order';
-import { Product } from '../../models/Product';
-import { Coupon } from '../../models/Coupon';
 import { User } from '../../models/User';
 import mongoose from 'mongoose';
-import { verifyRazorpaySignature } from '../payments/payments.service';
+import { claimVerifiedPayment, completeIntent, failIntent, releaseIntent, PaymentRejected } from '../payments/payments.service';
+import { priceCart, CartError } from './pricing';
+import { reserveStock, releaseStock, StockLine } from './inventory';
 import { sendMail } from '../../utils/mailer';
 import { orderPlacedTemplate, orderStatusTemplate } from '../../utils/emailTemplates';
 import { validateOrderItems } from '../../utils/orderItems';
@@ -20,6 +20,15 @@ interface CreateOrderInput {
     razorpaySignature?: string;
 }
 
+/** Re-read the already-created order for a payment (idempotent duplicate verification), owner only. */
+const findOrderForPayment = async (userId: string, paymentId: unknown, providerOrderId: unknown) => {
+    if (typeof paymentId !== 'string' || typeof providerOrderId !== 'string') return null;
+    return Order.findOne({ razorpayPaymentId: paymentId, razorpayOrderId: providerOrderId, userId: new mongoose.Types.ObjectId(userId) });
+};
+
+const sameCart = (a: { productId: unknown; quantity: number }[], b: { productId: unknown; quantity: number }[]) =>
+    a.length === b.length && a.every(x => b.some(y => String(y.productId) === String(x.productId) && y.quantity === x.quantity));
+
 export const createOrderService = async (input: CreateOrderInput) => {
     if (!mongoose.Types.ObjectId.isValid(input.userId)) {
         console.error('[Orders] CRITICAL: Invalid User ID format received:', input.userId);
@@ -27,114 +36,77 @@ export const createOrderService = async (input: CreateOrderInput) => {
     }
 
     validateOrderItems(input.items);
+    const method = String(input.method).toLowerCase();
+    const isPrepaid = method === 'prepaid';
 
-    // 1. Fetch all products to get live prices
-    const productIds = input.items.map(i => {
-        if (!mongoose.Types.ObjectId.isValid(i.productId)) {
-            console.error('[Orders] Invalid product ID format:', i.productId);
-            throw new Error(`Invalid product ID format: ${i.productId}`);
-        }
-        return new mongoose.Types.ObjectId(i.productId);
-    });
-
-    const products = await Product.find({
-        _id: { $in: productIds },
-        status: 'ACTIVE'
-    });
-
-    if (products.length !== input.items.length) {
-        const foundIds = products.map(p => p._id.toString());
-        const missingIds = input.items
-            .filter(i => !foundIds.includes(i.productId))
-            .map(i => i.productId);
-        const foundButInactive = products.filter(p => p.status !== 'ACTIVE').map(p => p._id.toString());
-        throw new Error(`Some items in your cart are no longer available (${[...missingIds, ...foundButInactive].join(', ')}). Please clear your cart and try again.`);
+    // Duplicate verification of an already-fulfilled payment returns the same order (no second order/decrement).
+    if (isPrepaid) {
+        const existing = await findOrderForPayment(input.userId, input.razorpayPaymentId, input.razorpayOrderId);
+        if (existing) return { ...existing.toObject(), id: existing._id.toString() };
     }
 
-    // 2. Calculate total server-side
-    let subtotal = 0;
-    const orderItems = input.items.map((item) => {
-        const product = products.find((p) => p._id.toString() === item.productId)!;
-        subtotal += product.price * item.quantity;
-        return {
-            productId: product._id,
-            productName: product.name,
-            productPhoto: product.photo,
-            quantity: item.quantity,
-            size: item.size,
-            color: item.color,
-            priceAtTime: product.price,
-        };
-    });
+    // Prepaid: verify signature + provider payment (amount/currency/order/status) and claim the payment intent.
+    const intent = isPrepaid ? await claimVerifiedPayment(input.userId, input) : null;
 
-    // 3. Apply coupon and method-specific discounts
-    let discount = 0;
-    const method = input.method.toLowerCase();
-    const totalItems = input.items.reduce((acc, item) => acc + item.quantity, 0);
+    let order;
+    let reserved: StockLine[] = [];
+    let priced;
+    // Phase 1 (deterministic checks): any failure after a captured payment is FAILED for manual review/refund.
+    try {
+        // 1-3. Server-side price: live prices, quantities, method/coupon discounts
+        priced = await priceCart({ items: input.items, method, couponCode: input.couponCode });
 
-    if (method === 'pickup') {
-        discount += totalItems * 100;
-    } else if (method === 'prepaid') {
-        discount += totalItems * 50;
-    }
-
-    if (input.couponCode) {
-        const coupon = await Coupon.findOne({ code: input.couponCode });
-        if (coupon && coupon.isActive && subtotal >= coupon.minOrderValue) {
-            if (!coupon.expiresAt || coupon.expiresAt > new Date()) {
-                const couponDiscount = coupon.discountType === 'percentage'
-                    ? (subtotal * coupon.discountValue) / 100
-                    : coupon.discountValue;
-                discount += couponDiscount;
+        if (intent) {
+            if (priced.totalPaise !== intent.amountPaise || !sameCart(input.items, intent.items)) {
+                throw new PaymentRejected('Prices or cart changed after payment was started. Please contact support.');
             }
         }
+
+        // Atomic conditional decrement of the real inventory field; throws (and rolls back) on insufficient stock.
+        reserved = await reserveStock(priced.orderItems.map(i => ({ productId: i.productId, quantity: i.quantity, name: i.productName })));
+    } catch (err) {
+        if (intent) {
+            // Deterministic rejections cannot succeed on retry -> FAILED (manual review/refund); infra errors stay retryable.
+            if (err instanceof CartError || err instanceof PaymentRejected) await failIntent(intent, (err as Error).message);
+            else await releaseIntent(intent);
+        }
+        throw err;
     }
 
-    // 4. Razorpay Verification (only for prepaid)
-    if (method === 'prepaid') {
-        if (!input.razorpayOrderId || !input.razorpayPaymentId || !input.razorpaySignature) {
-            throw new Error('Razorpay payment details are missing for prepaid order.');
+    // Phase 2: persist. A failure here releases the reservation; the payment stays retryable.
+    try {
+        order = await Order.create({
+            orderId: `#V2-${Date.now()}`,
+            userId: new mongoose.Types.ObjectId(input.userId),
+            total: priced.total,
+            method: input.method,
+            address: input.address,
+            phone: input.phone,
+            couponCode: input.couponCode,
+            discount: priced.discount,
+            items: priced.orderItems,
+            razorpayOrderId: isPrepaid ? intent!.razorpayOrderId : undefined,
+            razorpayPaymentId: isPrepaid ? intent!.razorpayPaymentId : undefined,
+            razorpaySignature: isPrepaid ? input.razorpaySignature : undefined,
+            paymentStatus: isPrepaid ? 'PAID' : 'PENDING',
+            status: isPrepaid ? 'CONFIRMED' : 'PENDING',
+        });
+    } catch (err: any) {
+        await releaseStock(reserved);
+        if (err?.code === 11000 && intent) {
+            // Unique index on the payment/provider order: it already backs an order (replay race).
+            const existing = await findOrderForPayment(input.userId, intent.razorpayPaymentId, intent.razorpayOrderId);
+            if (existing) return { ...existing.toObject(), id: existing._id.toString() };
+            await failIntent(intent, 'Duplicate payment replay');
+            throw new PaymentRejected('This payment has already been used.');
         }
-        const isVerified = verifyRazorpaySignature(
-            input.razorpayOrderId,
-            input.razorpayPaymentId,
-            input.razorpaySignature
-        );
-        if (!isVerified) {
-            throw new Error('Payment verification failed. Please contact support.');
-        }
+        if (intent) await releaseIntent(intent);
+        throw err;
     }
+    if (intent) await completeIntent(intent, order._id);
 
-    const total = Math.max(0, subtotal - discount);
-    const orderIdCode = `#V2-${Date.now()}`;
-
-    // 5. Create order
-    const order = await Order.create({
-        orderId: orderIdCode,
-        userId: new mongoose.Types.ObjectId(input.userId),
-        total,
-        method: input.method,
-        address: input.address,
-        phone: input.phone,
-        couponCode: input.couponCode,
-        discount,
-        items: orderItems,
-        razorpayOrderId: input.razorpayOrderId,
-        razorpayPaymentId: input.razorpayPaymentId,
-        razorpaySignature: input.razorpaySignature,
-        paymentStatus: method === 'prepaid' ? 'PAID' : 'PENDING',
-        status: method === 'prepaid' ? 'CONFIRMED' : 'PENDING',
-    });
-
-    // 6. Deduct stock
-    for (const item of input.items) {
-        if (item.size) {
-            await Product.updateOne(
-                { _id: item.productId, 'variants.size': item.size },
-                { $inc: { 'variants.$.quantity': -item.quantity } }
-            );
-        }
-    }
+    const { orderItems, total, discount } = priced;
+    const orderIdCode = order.orderId;
 
     // 7. Send Order Placed confirmation email (non-blocking)
     try {

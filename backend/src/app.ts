@@ -24,6 +24,7 @@ import { filtersRoutes } from './modules/filters/filters.routes';
 import { attributesRoutes } from './modules/attributes/attributes.routes';
 import sitemapRoutes from './modules/sitemap/sitemap.routes';
 import { Product } from './models/Product';
+import { isActiveStatus } from './utils/productStatus';
 import { Category } from './models/Category';
 import fs from 'fs';
 
@@ -173,7 +174,7 @@ if (env.NODE_ENV === 'production') {
                 if (productId && productId.length >= 12) { // Basic MongoID check
                     try {
                         const product = await Product.findById(productId);
-                        if (product) {
+                        if (product && isActiveStatus(product.status)) {
                             meta.title = `${product.name} | V2 Enterprise`;
                             meta.description = product.description ? product.description.slice(0, 160) : meta.description;
                             meta.image = product.photo || DEFAULT_LOGO;

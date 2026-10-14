@@ -75,4 +75,9 @@ const OrderSchema = new Schema<IOrder>(
     { timestamps: true }
 );
 
+// A provider payment / provider order can back at most one order (replay protection).
+// Partial so the many non-prepaid orders (no Razorpay ids) are not indexed as duplicates of each other.
+OrderSchema.index({ razorpayPaymentId: 1 }, { unique: true, partialFilterExpression: { razorpayPaymentId: { $type: 'string' } } });
+OrderSchema.index({ razorpayOrderId: 1 }, { unique: true, partialFilterExpression: { razorpayOrderId: { $type: 'string' } } });
+
 export const Order = mongoose.model<IOrder>('Order', OrderSchema);

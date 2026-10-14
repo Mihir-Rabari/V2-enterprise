@@ -13,9 +13,19 @@ import FormData from 'form-data';
 import axios from 'axios';
 import { env } from '../../config/env';
 import fs from 'fs';
+import { getAdminProducts, getAdminProduct } from '../products/products.controller';
 import { uploadToR2, listR2Objects, isR2Configured } from '../../utils/r2';
 
 const router = Router();
+
+// Admin product reads include inactive products: never cacheable by browsers' shared/CDN caches.
+// Set before auth so 401/403 responses are not cacheable either.
+router.use('/products', (_req: Request, res: Response, next) => {
+    res.setHeader('Cache-Control', 'private, no-store');
+    next();
+});
+router.get('/products', protect, adminOnly, getAdminProducts);
+router.get('/products/:id', protect, adminOnly, getAdminProduct);
 
 // Standard Disk Storage for all Admin Uploads (Temporary before R2)
 const tempStorage = multer.diskStorage({

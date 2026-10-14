@@ -129,7 +129,9 @@ export const authAPI = {
 };
 
 export const productsAPI = {
-    getAll: (params?: Record<string, string | number | boolean>) =>
+    // string[] params (mainCategories/subCategories) were already passed here at
+    // runtime by ShopView's fetchParams — the declared type just didn't allow them.
+    getAll: (params?: Record<string, string | number | boolean | string[]>) =>
         IS_MOCK
             ? mockResponse({ products: [] })
             : api.get('/products', { params }),

@@ -40,6 +40,11 @@
  *    passed `originalPrice={...}`, but `ProductCard` never declared/consumed
  *    that prop (a latent type error in a codebase that never ran tsc); dropping
  *    it is behaviour-neutral (React ignored the extra prop at runtime).
+ *  - FEATURE (client request 2026-10-14): filter facets are category-scoped —
+ *    derived from the products in the active category scope (lib/facets.ts)
+ *    instead of the global suggestions doc, which is catalog-wide and had gone
+ *    stale (offering e.g. Color "Ivory" on the all-Indigo Denim page). See the
+ *    "Category-scoped filter facets" block below.
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -50,7 +55,8 @@ import { X, Filter } from 'lucide-react';
 import ProductCard from '@/components/ProductCard';
 import FilterAccordion from '@/components/FilterAccordion';
 import { useProducts, type ApiProduct } from '@/hooks/useProducts';
-import { categoriesAPI, filtersAPI } from '@/lib/apiClient';
+import { categoriesAPI, filtersAPI, productsAPI } from '@/lib/apiClient';
+import { deriveFacets } from '@/lib/facets';
 import { Category } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { safeDecode } from '@/lib/paramUtils';
@@ -142,21 +148,14 @@ const ShopView: React.FC<ShopViewProps> = ({ variant, category, subcategory }) =
     const [allCategories, setAllCategories] = useState<Category[]>([]);
     const [filterSuggestions, setFilterSuggestions] = useState<Record<string, string[]>>({});
 
-    // ─── Fetch Params Construction ──────────────────────────────────────────
-
-    const fetchParams = useMemo(() => {
-        const params: any = {
-            page,
-            limit: 20,
-            status: 'ACTIVE',
-            groupByColor: true,
-            sort: sortBy,
-            search: searchQuery,
-            // Map Sort
-            ...(sortBy === 'Trending' && { isTrending: 'true' }),
-        };
-
-        // Categories mapping
+    // ─── Category Constraint (shared by the product fetch and the scoped facet baseline) ──
+    // Resolves the checked/route categories into the backend's main/sub category
+    // params. Extracted from fetchParams so the facet-baseline fetch below
+    // queries the exact same scope the product grid does — the client
+    // requirement is that filters reflect the products in the current scope.
+    const categoryConstraint = useMemo(() => {
+        const mainCategories: string[] = [];
+        const subCategories: string[] = [];
         if (selectedCategories.length > 0) {
             // Case-insensitive so slug-style URLs (/mens/tshirt) resolve to the same category as /MENS/TSHIRT.
             const findCategory = (name: string) =>
@@ -173,10 +172,29 @@ const ShopView: React.FC<ShopViewProps> = ({ variant, category, subcategory }) =
                 const cat = findCategory(name);
                 return cat && cat.parentId;
             }) : (subcategory ? selectedCategories.filter(name => name === initialCategory) : []);
-
-            if (mainCats.length > 0) params.mainCategories = mainCats;
-            if (subCats.length > 0) params.subCategories = subCats;
+            mainCategories.push(...mainCats);
+            subCategories.push(...subCats);
         }
+        return { mainCategories, subCategories };
+    }, [selectedCategories, allCategories, subcategory, initialCategory]);
+
+    // ─── Fetch Params Construction ──────────────────────────────────────────
+
+    const fetchParams = useMemo(() => {
+        const params: any = {
+            page,
+            limit: 20,
+            status: 'ACTIVE',
+            groupByColor: true,
+            sort: sortBy,
+            search: searchQuery,
+            // Map Sort
+            ...(sortBy === 'Trending' && { isTrending: 'true' }),
+        };
+
+        // Categories mapping
+        if (categoryConstraint.mainCategories.length > 0) params.mainCategories = categoryConstraint.mainCategories;
+        if (categoryConstraint.subCategories.length > 0) params.subCategories = categoryConstraint.subCategories;
 
         // Price Mapping
         if (selectedPriceRanges.length > 0) {
@@ -210,11 +228,61 @@ const ShopView: React.FC<ShopViewProps> = ({ variant, category, subcategory }) =
         });
 
         return params;
-    }, [page, isNewArrivalsPage, searchQuery, sortBy, selectedCategories, selectedPriceRanges, selectedFilters, allCategories, subcategory, initialCategory]);
+    }, [page, isNewArrivalsPage, searchQuery, sortBy, selectedPriceRanges, selectedFilters, categoryConstraint]);
 
     // Data Hook (Server-Side)
     const { products: fetchedProducts, loading: productsLoading, loadingMore, hasMore, total } = useProducts(fetchParams);
     const products = fetchedProducts as CatalogProduct[];
+
+    // ─── Category-scoped filter facets (client requirement, 2026-10-14) ────
+    // Filter sections must offer only values that exist among the products in
+    // the current category scope — never the stale global suggestions (the
+    // Denim page used to offer Color "Ivory" while its only product is Indigo).
+    // While a category constraint is active, facets come from ONE bounded
+    // query for that scope: independent of pagination and of the user's facet
+    // selections, so option lists never collapse while narrowing. Without a
+    // constraint (/shop, /new-arrivals) facets are derived from the loaded
+    // products and snapshotted while facet selections are active (same
+    // no-collapse guarantee, no extra request).
+    const [scopeFacets, setScopeFacets] = useState<Record<string, string[]> | null>(null);
+    const [unscopedFacets, setUnscopedFacets] = useState<Record<string, string[]> | null>(null);
+    // JSON round-trip on purpose: the effect must run on scope-VALUE changes
+    // only, not on categoryConstraint identity churn (e.g. when the category
+    // list loads and re-resolves to an identical constraint).
+    const facetScopeKey = JSON.stringify(categoryConstraint);
+
+    useEffect(() => {
+        setScopeFacets(null);
+        const { mainCategories, subCategories }: { mainCategories: string[]; subCategories: string[] } = JSON.parse(facetScopeKey);
+        if (mainCategories.length === 0 && subCategories.length === 0) return;
+        let cancelled = false;
+        productsAPI.getAll({
+            page: 1,
+            limit: 1000,
+            status: 'ACTIVE',
+            groupByColor: true,
+            ...(mainCategories.length > 0 ? { mainCategories } : {}),
+            ...(subCategories.length > 0 ? { subCategories } : {}),
+        })
+            .then(res => {
+                if (!cancelled) setScopeFacets(deriveFacets(res.data?.data?.products ?? []));
+            })
+            .catch(() => {
+                // Fail open to the loaded-products snapshot / legacy suggestions.
+                if (!cancelled) setScopeFacets(null);
+            });
+        return () => { cancelled = true; };
+    }, [facetScopeKey]);
+
+    useEffect(() => {
+        if (scopeFacets !== null) return;
+        if (Object.keys(selectedFilters).length === 0 && selectedPriceRanges.length === 0) {
+            setUnscopedFacets(deriveFacets(products));
+        }
+    }, [products, selectedFilters, selectedPriceRanges, scopeFacets]);
+
+    const facetBaseline = scopeFacets ?? unscopedFacets;
+    const facetsDerived = facetBaseline !== null;
 
     // ─── Effects ───────────────────────────────────────────────────────────
 
@@ -290,6 +358,13 @@ const ShopView: React.FC<ShopViewProps> = ({ variant, category, subcategory }) =
     }, [allCategories]);
 
     const getOptionsFor = (key: string, customValues?: string[]) => {
+        // Client requirement: filter options must reflect the products in the
+        // current scope. A derived facet entry wins — including EMPTY entries,
+        // which hide sections no in-scope product carries (no Fabric "Tencel"
+        // on the Denim page). The suggestion/product fallbacks below only
+        // serve the pre-derivation window (initial load) and fetch failures.
+        const baseline = facetBaseline?.[key];
+        if (baseline !== undefined) return baseline;
         // Custom attribute keys (prefixed with "custom_")
         if (key.startsWith('custom_')) {
             return Array.isArray(customValues) ? customValues : [];
@@ -318,6 +393,10 @@ const ShopView: React.FC<ShopViewProps> = ({ variant, category, subcategory }) =
 
     const hardcodedFilterKeys = new Set(['color', 'size', 'patternType', 'fabric', 'collar', 'sleeve', 'neck', 'pocket', 'length', 'chest', 'waist', 'shoulder', 'sleeveLength']);
 
+    const customFacetLabel = (rawKey: string) => rawKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+    const suggestionCustomAttributes = (filterSuggestions?.customAttributes as unknown as Record<string, string[]>) || {};
+
     const dynamicFiltersList = [
         { key: 'color', label: 'Color' },
         { key: 'size', label: 'Size' },
@@ -332,10 +411,21 @@ const ShopView: React.FC<ShopViewProps> = ({ variant, category, subcategory }) =
         { key: 'waist', label: 'Waist' },
         { key: 'shoulder', label: 'Shoulder' },
         { key: 'sleeveLength', label: 'Sleeve Length' },
-        // Dynamic custom attribute filters (not already in hardcoded list)
-        ...Object.entries((filterSuggestions?.customAttributes as unknown as Record<string, string[]>) || {})
+        // Dynamic custom attribute filters from the admin suggestions. Once a
+        // product-derived baseline exists they are suppressed unless the scope
+        // carries values for them, so scoped pages never offer catalog-wide
+        // custom options that yield zero in-scope results.
+        ...Object.entries(suggestionCustomAttributes)
             .filter(([key]) => !hardcodedFilterKeys.has(key))
-            .map(([key, values]) => ({ key: `custom_${key}`, label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), _customValues: values })),
+            .filter(([key]) => !facetsDerived || facetBaseline?.[`custom_${key}`] !== undefined)
+            .map(([key, values]) => ({ key: `custom_${key}`, label: customFacetLabel(key), _customValues: values })),
+        // Custom attributes discovered on the in-scope products themselves
+        // (present in the payload but not covered by the suggestions doc).
+        ...Object.keys(facetBaseline ?? {})
+            .filter(key => key.startsWith('custom_'))
+            .filter(key => !hardcodedFilterKeys.has(key.slice('custom_'.length)))
+            .filter(key => !(key.slice('custom_'.length) in suggestionCustomAttributes))
+            .map(key => ({ key, label: customFacetLabel(key.slice('custom_'.length)), _customValues: facetBaseline?.[key] })),
     ];
 
     const activeFilterCount = selectedCategories.length + selectedPriceRanges.length + Object.values(selectedFilters).reduce((acc: number, curr: string[]) => acc + curr.length, 0);

@@ -1,8 +1,16 @@
 /**
+ * client-only module
+ *
+ * Reads the auth token from localStorage and uploads from the browser;
+ * only import from client components / event handlers.
+ *
  * Cloudflare R2 Upload Utility
  *
  * Architecture:
  *   Browser → POST /api/v1/admin/upload (our backend) → Cloudflare R2
+ *
+ * Ported from frontend/lib/r2.ts (Vite → Next.js): the only Vite-ism was
+ * `import.meta.env.VITE_API_URL`, replaced with process.env.NEXT_PUBLIC_API_URL.
  */
 
 const IS_LOCALHOST = typeof window !== 'undefined' &&

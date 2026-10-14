@@ -1,18 +1,25 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { sendSuccess, sendError } from '../../utils/response';
-import { createRazorpayOrderService } from './payments.service';
+import { AuthRequest } from '../../middlewares/auth.middleware';
+import { createPaymentIntentService, PaymentProviderError } from './payments.service';
 
-export const createRazorpayOrder = async (req: Request, res: Response) => {
+/**
+ * Body: { items: [{ productId, quantity, size?, color? }], couponCode? }.
+ * Any client-supplied `amount`/`currency`/`receipt` is ignored: the server prices the cart.
+ */
+export const createRazorpayOrder = async (req: AuthRequest, res: Response) => {
     try {
-        const { amount, receipt } = req.body;
-
-        if (!amount || amount <= 0) {
-            return sendError(res, 'Valid amount is required', 400);
+        const { items, couponCode } = req.body ?? {};
+        if (!Array.isArray(items)) {
+            return sendError(res, 'Cart items are required to create a payment', 400);
         }
-
-        const order = await createRazorpayOrderService(amount, receipt || `rcpt_${Date.now()}`);
+        const order = await createPaymentIntentService(
+            req.user!.userId,
+            items,
+            typeof couponCode === 'string' ? couponCode : undefined
+        );
         return sendSuccess(res, order, 'Razorpay order created');
     } catch (err: any) {
-        return sendError(res, err.message, 500);
+        return sendError(res, err.message, err instanceof PaymentProviderError ? 500 : 400);
     }
 };

@@ -1,6 +1,7 @@
 import { Product } from '../../models/Product';
 import mongoose from 'mongoose';
 import { escapeRegex } from '../../utils/query';
+import { isActiveStatus, ACTIVE_STATUS_FILTER } from '../../utils/productStatus';
 import { syncFiltersFromProducts, rebuildFiltersFromAllProducts } from '../filters/filters.service';
 
 export interface ProductFilters {
@@ -161,7 +162,14 @@ export const getProductsService = async (filters: ProductFilters) => {
     return { products: productsWithId, total, page, limit, totalPages: Math.ceil(total / limit) };
 };
 
-export const getProductByIdService = async (id: string | number) => {
+export const PRODUCT_NOT_FOUND = 'Product not found.';
+
+/**
+ * Public callers (default) only ever see ACTIVE products; an inactive product is reported with the
+ * exact same error as a missing one so its existence is not disclosed. `includeInactive` is for the
+ * admin-only route and must never be wired to a public handler.
+ */
+export const getProductByIdService = async (id: string | number, opts: { includeInactive?: boolean } = {}) => {
     let product;
 
     const idStr = String(id);
@@ -179,7 +187,7 @@ export const getProductByIdService = async (id: string | number) => {
         });
     }
 
-    if (!product) throw new Error('Product not found.');
+    if (!product || (!opts.includeInactive && !isActiveStatus(product.status))) throw new Error(PRODUCT_NOT_FOUND);
 
     const obj = product.toObject({ flattenMaps: true });
     const productWithId = { ...obj, id: product._id.toString() };
@@ -190,7 +198,7 @@ export const getProductByIdService = async (id: string | number) => {
         const siblingDocs = await Product.find({
             styleCode: product.styleCode,
             _id: { $ne: product._id },
-            status: 'ACTIVE',
+            ...(opts.includeInactive ? {} : { status: ACTIVE_STATUS_FILTER }),
         }).select('_id name color colorHex size photo price quantity styleCode');
 
         siblings = siblingDocs.map(s => {

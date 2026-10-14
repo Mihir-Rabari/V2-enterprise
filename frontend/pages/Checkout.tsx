@@ -160,8 +160,7 @@ const Checkout: React.FC = () => {
                 try {
                     // 1. Create Razorpay order on server
                     const rzpOrderRes = await paymentsAPI.createRazorpayOrder({
-                        amount: total,
-                        receipt: `rcpt_${Date.now()}`
+                        items: baseOrderData.items,
                     });
                     const rzpOrder = rzpOrderRes.data.data;
 

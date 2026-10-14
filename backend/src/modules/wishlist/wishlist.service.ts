@@ -1,17 +1,19 @@
 import { User } from '../../models/User';
 import { Product } from '../../models/Product';
 import mongoose from 'mongoose';
+import { isActiveStatus, ACTIVE_STATUS_FILTER } from '../../utils/productStatus';
 
 export const getWishlist = async (userId: string) => {
     // ('[Wishlist] Fetching for user:', userId);
     try {
-        const user = await User.findById(userId).populate('wishlist');
+        const user = await User.findById(userId).populate({ path: 'wishlist', match: { status: ACTIVE_STATUS_FILTER } });
         if (!user) {
             console.warn('[Wishlist] User not found:', userId);
             throw new Error('User not found');
         }
         // console.log('[Wishlist] Found user, wishlist size:', user.wishlist?.length || 0);
-        return user.wishlist;
+        // populate leaves null for products excluded by `match` (inactive/deleted)
+        return (user.wishlist || []).filter(Boolean);
     } catch (err: any) {
         console.error('[Wishlist] Error in getWishlist:', err.message);
         throw err;
@@ -25,7 +27,7 @@ export const addToWishlist = async (userId: string, productId: string) => {
     }
 
     const product = await Product.findById(productId);
-    if (!product) {
+    if (!product || !isActiveStatus(product.status)) {
         console.warn('[Wishlist] Product not found:', productId);
         throw new Error('Product not found');
     }

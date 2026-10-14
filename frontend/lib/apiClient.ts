@@ -259,6 +259,12 @@ export const adminAPI = {
             ? mockResponse({ revenue: 50000, orders: 12, customers: 5 })
             : api.get('/admin/stats'),
 
+    /** Admin catalog listing (includes inactive). Public `/products` ignores `status`. */
+    getProducts: (params?: Record<string, string | number | boolean>) =>
+        IS_MOCK
+            ? mockResponse({ products: [] })
+            : api.get('/admin/products', { params }),
+
     getCustomers: (params?: Record<string, number>) =>
         IS_MOCK
             ? mockResponse([])
@@ -335,9 +341,10 @@ export const wishlistAPI = {
 };
 
 export const paymentsAPI = {
-    createRazorpayOrder: (data: { amount: number; receipt?: string }) =>
+    /** The server prices the cart itself; the client never supplies the payable amount. */
+    createRazorpayOrder: (data: { items: { productId: string | number; quantity: number; size?: string; color?: string }[]; couponCode?: string }) =>
         IS_MOCK
-            ? mockResponse({ id: 'order_mock_' + Date.now(), amount: data.amount * 100 })
+            ? mockResponse({ id: 'order_mock_' + Date.now(), amount: 0 })
             : api.post('/payments/create-order', data),
 };
 

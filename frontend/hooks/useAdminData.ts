@@ -86,7 +86,7 @@ export function useAdminData() {
     const fetchProducts = useCallback(async (page = 1, limit = 10, search = '') => {
         setLoading(true);
         try {
-            const res = await productsAPI.getAll({ page, limit, status: 'ALL' as any, ...(search ? { search } : {}) });
+            const res = await adminAPI.getProducts({ page, limit, status: 'ALL', ...(search ? { search } : {}) });
             setProducts(res.data.data.products);
             setProductPagination({
                 page: res.data.data.page,

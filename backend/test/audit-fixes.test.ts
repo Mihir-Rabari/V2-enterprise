@@ -54,17 +54,4 @@ test('pickProfileUpdate strips role/password/token fields (F-01)', () => {
     assert.deepEqual(pickProfileUpdate({ name: { $ne: 1 } as any }), {});
 });
 
-test('resolveListStatus only honours non-ACTIVE status for admin tokens (F-03)', async () => {
-    const { resolveListStatus } = await import('../src/modules/products/products.controller');
-    const { signToken } = await import('../src/utils/jwt');
-    const admin = 'Bearer ' + signToken({ userId: '507f1f77bcf86cd799439011', role: 'ADMIN' });
-    const cust = 'Bearer ' + signToken({ userId: '507f1f77bcf86cd799439011', role: 'CUSTOMER' });
-    assert.equal(resolveListStatus(undefined, 'ALL'), 'ACTIVE');
-    assert.equal(resolveListStatus(undefined, 'INACTIVE'), 'ACTIVE');
-    assert.equal(resolveListStatus(cust, 'ALL'), 'ACTIVE');
-    assert.equal(resolveListStatus('Bearer garbage', 'ALL'), 'ACTIVE');
-    assert.equal(resolveListStatus(admin, 'ALL'), 'ALL');
-    assert.equal(resolveListStatus(admin, 'inactive'), 'INACTIVE');
-    assert.equal(resolveListStatus(admin, undefined), 'ACTIVE');
-    assert.equal(resolveListStatus(admin, 'bogus'), 'ACTIVE');
-});
+// F-03 (admin-only non-ACTIVE listing) is now enforced by route separation; see test/products-visibility.test.ts.

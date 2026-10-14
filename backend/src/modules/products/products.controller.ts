@@ -1,28 +1,15 @@
 import { Request, Response } from 'express';
 import { sendSuccess, sendError } from '../../utils/response';
-import { verifyToken } from '../../utils/jwt';
 import { parseIntParam, asString } from '../../utils/query';
 import {
-    getProductsService, getProductByIdService, createProductService,
+    getProductsService, getProductByIdService, ProductFilters, createProductService,
     updateProductService, deleteProductService,
 } from './products.service';
 
-/** Non-ACTIVE catalog data is only visible to a valid admin token (public callers always get ACTIVE). */
-export const resolveListStatus = (authHeader: string | undefined, requested: string | undefined): 'ACTIVE' | 'INACTIVE' | 'ALL' => {
-    const wanted = requested?.toUpperCase();
-    if (wanted !== 'ALL' && wanted !== 'INACTIVE' && wanted !== 'ACTIVE') return 'ACTIVE';
-    try {
-        if (!authHeader?.startsWith('Bearer ')) return 'ACTIVE';
-        return verifyToken(authHeader.split(' ')[1]).role === 'ADMIN' ? wanted : 'ACTIVE';
-    } catch {
-        return 'ACTIVE';
-    }
-};
-
 export const MAX_PRODUCTS_LIMIT = 500;
 
-export const getProducts = async (req: Request, res: Response) => {
-    try {
+/** Parses the shared list/filter query string. Deliberately does NOT read `status`: callers decide visibility. */
+const parseProductFilters = (req: Request): Omit<ProductFilters, 'status'> => {
         const getParam = (key: string) => req.query[key] || req.query[`${key}[]`];
 
         // Only plain strings are accepted; `?x[$ne]=1` style objects are dropped.
@@ -33,16 +20,13 @@ export const getProducts = async (req: Request, res: Response) => {
             return strs.length > 0 ? strs : undefined;
         };
 
-        const status = resolveListStatus(req.headers.authorization, asString(getParam('status')));
-
-        const result = await getProductsService({
+        return {
             mainCategories: toArray(getParam('mainCategories') || getParam('mainCategory')),
             subCategories: toArray(getParam('subCategories') || getParam('subCategory')),
             isTrending: getParam('isTrending') === 'true' ? true : getParam('isTrending') === 'false' ? false : undefined,
             isNewArrival: getParam('isNew') === 'true' ? true : getParam('isNew') === 'false' ? false : undefined,
             tag: asString(getParam('tag')),
             search: asString(getParam('search')),
-            status,
             page: parseIntParam(getParam('page'), 1, 1, 100000),
             limit: parseIntParam(getParam('limit'), 12, 1, MAX_PRODUCTS_LIMIT),
             groupByColor: getParam('groupByColor') === 'true',
@@ -76,7 +60,25 @@ export const getProducts = async (req: Request, res: Response) => {
                 });
                 return Object.keys(custom).length > 0 ? custom : undefined;
             })(),
-        });
+        };
+};
+
+/** Public listing: ALWAYS ACTIVE only. The `status` query param and any Authorization header are ignored. */
+export const getProducts = async (req: Request, res: Response) => {
+    try {
+        const result = await getProductsService({ ...parseProductFilters(req), status: 'ACTIVE' });
+        return sendSuccess(res, result);
+    } catch (err: unknown) {
+        return sendError(res, (err as Error).message);
+    }
+};
+
+/** Admin listing (route is behind protect + adminOnly). `status` = ACTIVE | INACTIVE | ALL (default ALL). */
+export const getAdminProducts = async (req: Request, res: Response) => {
+    try {
+        const wanted = asString(req.query.status)?.toUpperCase();
+        const status = wanted === 'ACTIVE' || wanted === 'INACTIVE' ? wanted : 'ALL';
+        const result = await getProductsService({ ...parseProductFilters(req), status });
         return sendSuccess(res, result);
     } catch (err: unknown) {
         return sendError(res, (err as Error).message);
@@ -86,6 +88,16 @@ export const getProducts = async (req: Request, res: Response) => {
 export const getProduct = async (req: Request, res: Response) => {
     try {
         const product = await getProductByIdService(req.params.id);
+        return sendSuccess(res, product);
+    } catch (err: unknown) {
+        return sendError(res, (err as Error).message, 404);
+    }
+};
+
+/** Admin detail (route is behind protect + adminOnly): may return inactive products. */
+export const getAdminProduct = async (req: Request, res: Response) => {
+    try {
+        const product = await getProductByIdService(req.params.id, { includeInactive: true });
         return sendSuccess(res, product);
     } catch (err: unknown) {
         return sendError(res, (err as Error).message, 404);

@@ -3,7 +3,7 @@
 /*
  * Ported from frontend/index.css (Tailwind CSS 4).
  * All design tokens are preserved verbatim. The only adaptation for the
- * Next.js app: the font stacks consume the next/font/google CSS variables
+ * Next.js app: the font stacks consume the next/font/local CSS variables
  * (--font-inter / --font-playfair) declared in app/layout.tsx instead of
  * referencing the Google Fonts CDN by family name.
  */

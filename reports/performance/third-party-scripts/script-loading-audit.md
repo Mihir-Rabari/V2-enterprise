@@ -1,0 +1,13 @@
+# Script loading audit (`frontend/index.html`)
+
+| Item | Finding | Evidence |
+|---|---|---|
+| GTM snippet | Standard async snippet, first script in `<head>`. Initialises `dataLayer`, pushes `gtm.start`, injects `gtm.js` immediately. Container `GTM-PLX86FB7`. No `<noscript>` GTM iframe in the body. | `index.html` lines 5-11 |
+| Meta Pixel | Standard stub; `fbevents.js` injected async right away; `fbq('init','1887679655474555')` and `fbq('track','PageView')` once, at load. Pixel `<noscript>` image fallback present. | `index.html` Meta block |
+| Blocking the parser | Neither blocks parsing (both async, injected). They do compete for bandwidth and CPU with the app bundles from 0.63 s (throttled): FCP 4.0 s -> 3.6 s when either is deferred. | `before-after.csv` fcp |
+| Redundant / duplicate init | None observed: one `gtm.js`, one `fbevents.js`, `fbq.queue` drained, `dataLayer` = `gtm.js, gtm.dom, gtm.load` in both control and GTM-deferred variant. GTM does not load a second Pixel (fbevents requested once). | browser check |
+| Chain | `fbevents.js` (114 KB) -> `signals/config/<id>` (164 KB, requested only after fbevents runs) -> `signals.birchub.us/events` (server-side gateway) and `facebook.com/tr` PageView beacon. Throttled, control: PageView beacon at about 6.0 s. | `runs.csv` pageview_hit_start |
+| App-level events | **None.** Search finds no `fbq`, `dataLayer`, `gtag`, `Purchase`, `AddToCart`, `InitiateCheckout` calls in application code. SPA route changes do not send PageView. Any ecommerce/conversion tags must live inside the GTM container or the Pixel's server-side setup, which I could not inspect. | repo grep |
+| Consent | **No consent mechanism in the codebase** (no banner, no `fbq('consent')`, no Consent Mode default). Both vendors load unconditionally today. Deferral cannot bypass an existing consent gate, but it adds none either; if consent is enforced inside GTM, its logic is unaffected by timing. | repo grep |
+| Order dependence | Only requirement found: `dataLayer`/`gtm.start` and the `fbq` stub must exist before use; both are still created synchronously. App code does not use them. Attribution parameters (fbclid/UTM) are read from `location` at vendor load; the SPA does not rewrite the landing URL before load, but a very late load after in-app navigation could see a different URL (not tested). | analysis |
+| Early-exit risk | Users who leave before `load` + idle never fire the deferred script. Deferral widens that window (throttled phone: GTM starts at about 6.4 s instead of 0.63 s; Meta variant: PageView at about 12.5 s instead of about 6.0 s). | `runs.csv` |

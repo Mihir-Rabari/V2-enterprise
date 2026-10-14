@@ -1,16 +1,16 @@
 import React from 'react';
+import { useSettings } from '../context/SettingsContext';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 // No initialData imports allowed. 100% dynamic.
-import { SiteSettings } from '../types';
-import { categoriesAPI, settingsAPI } from '../lib/apiClient';
+import { categoriesAPI } from '../lib/apiClient';
 import { useState, useEffect } from 'react';
 
 const Categories: React.FC = () => {
     const [categories, setCategories] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [siteSettings, setSiteSettings] = useState<SiteSettings>({} as SiteSettings);
+    const { settings: siteSettings } = useSettings();
 
     useEffect(() => {
         categoriesAPI.getAll()
@@ -22,11 +22,6 @@ const Categories: React.FC = () => {
             })
             .catch(() => setLoading(false));
 
-        settingsAPI.get().then(res => {
-            if (res.data.success && res.data.data) {
-                setSiteSettings(res.data.data);
-            }
-        }).catch(err => console.error(err));
     }, []);
 
     return (

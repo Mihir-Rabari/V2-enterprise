@@ -363,6 +363,14 @@ const Home: React.FC = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
+                // The secondary requests do not depend on hero/categories, so start them together instead of after.
+                const secondaryRequests = Promise.allSettled([
+                    reviewsAPI.getHomepage(),
+                    sliderAPI.getPromotional(),
+                    sliderAPI.getMarquee(),
+                    filtersAPI.getSuggestions(),
+                    contentAPI.getByType('LOOKBOOK_ITEM')
+                ]);
                 const [heroRes, categoriesRes] = await Promise.allSettled([
                     sliderAPI.getHero(),
                     categoriesAPI.getAll()
@@ -379,13 +387,7 @@ const Home: React.FC = () => {
                     setCategories(sortedCats.filter((c: any) => !c.parentId || c.parentId === "" || c.parentId === null));
                 }
 
-                const [reviewsRes, promoRes, marqueeRes, filtersRes, lookbookRes] = await Promise.allSettled([
-                    reviewsAPI.getHomepage(),
-                    sliderAPI.getPromotional(),
-                    sliderAPI.getMarquee(),
-                    filtersAPI.getSuggestions(),
-                    contentAPI.getByType('LOOKBOOK_ITEM')
-                ]);
+                const [reviewsRes, promoRes, marqueeRes, filtersRes, lookbookRes] = await secondaryRequests;
 
                 if (reviewsRes.status === 'fulfilled') {
                     setAllReviews(reviewsRes.value.data.data ?? []);

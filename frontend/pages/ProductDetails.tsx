@@ -9,6 +9,7 @@ import { useProduct, useProducts } from '../hooks/useProducts';
 import { reviewsAPI, wishlistAPI } from '../lib/apiClient';
 import { useAuth } from '../context/AuthContext';
 import { usePageMeta } from '../hooks/usePageMeta';
+import { getImageSrcSet, getOptimizedImageUrl } from '../src/utils/mediaUtils';
 
 const RelatedProducts: React.FC<{ currentId: string | number; categoryName?: string }> = ({ currentId, categoryName }) => {
     const { products, loading } = useProducts({
@@ -118,6 +119,9 @@ const ProductDetails: React.FC = () => {
     const [isVideoActive, setIsVideoActive] = useState(false);
     const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
     const [isZooming, setIsZooming] = useState(false);
+    // Thumbnails/swatches wait for the main image so they do not compete with it for bandwidth (LCP).
+    const [mainImageLoaded, setMainImageLoaded] = useState(false);
+    const secondaryImagesReady = mainImageLoaded || isVideoActive;
 
     // For the palette: Get one representative product for each unique color among siblings
     const colorOptions = product ? [
@@ -357,7 +361,16 @@ const ProductDetails: React.FC = () => {
                                     initial={{ opacity: 0, scale: 1.05 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     transition={{ duration: 0.8, ease: "easeOut" }}
-                                    src={galleryImages[activeImage]}
+                                    src={getOptimizedImageUrl(galleryImages[activeImage], { width: 800 })}
+                                    srcSet={getImageSrcSet(galleryImages[activeImage], [800, 1200, 1600])}
+                                    sizes="(min-width: 1024px) 50vw, 100vw"
+                                    width={800}
+                                    height={1000}
+                                    loading="eager"
+                                    fetchPriority="high"
+                                    onLoad={() => setMainImageLoaded(true)}
+                                    onError={() => setMainImageLoaded(true)}
+                                    decoding="async"
                                     alt={product.name}
                                     className="w-full h-full object-cover"
                                 />
@@ -408,7 +421,7 @@ const ProductDetails: React.FC = () => {
                                     }}
                                     className={`relative w-20 h-28 md:w-24 md:h-32 transition-all duration-500 overflow-hidden group ${activeImage === idx && !isVideoActive ? 'ring-2 ring-luxury-gold ring-offset-4 ring-offset-[#F6F3EF]' : 'opacity-60 hover:opacity-100'}`}
                                 >
-                                    <img src={img} alt="Thumbnail" className="w-full h-full object-cover grayscale-[0.5] group-hover:grayscale-0 transition-all duration-700" />
+                                    <img src={secondaryImagesReady ? getOptimizedImageUrl(img, { width: 400 }) : undefined} width={96} height={128} loading="lazy" decoding="async" alt={secondaryImagesReady ? "Thumbnail" : ""} className="w-full h-full object-cover grayscale-[0.5] group-hover:grayscale-0 transition-all duration-700" />
                                     {activeImage === idx && !isVideoActive && (
                                         <div className="absolute inset-0 bg-luxury-gold/5" />
                                     )}
@@ -475,7 +488,7 @@ const ProductDetails: React.FC = () => {
                                                 >
                                                     <div className={`w-11 h-11 rounded-lg overflow-hidden border-2 transition-all duration-300 ${isActive ? 'border-luxury-gold ring-2 ring-luxury-gold ring-offset-2 ring-offset-[#F6F3EF]' : 'border-transparent hover:border-[#2A1E17]/20'}`}>
                                                         {opt.photo ? (
-                                                            <img src={opt.photo} alt={opt.color} className="w-full h-full object-cover" />
+                                                            <img src={secondaryImagesReady ? getOptimizedImageUrl(opt.photo, { width: 400 }) : undefined} width={44} height={44} loading="lazy" decoding="async" alt={secondaryImagesReady ? opt.color : ""} className="w-full h-full object-cover" />
                                                         ) : (
                                                             <div className="w-full h-full" style={{ backgroundColor: (opt as any).colorHex || '#ccc' }} />
                                                         )}

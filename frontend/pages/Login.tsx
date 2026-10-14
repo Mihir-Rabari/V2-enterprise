@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
+import { useSettings } from '../context/SettingsContext';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Mail, Lock, ArrowRight, Shield, ChevronLeft } from 'lucide-react';
-import { settingsAPI } from '../lib/apiClient';
-import { SiteSettings } from '../types';
 // No initialData imports allowed. 100% dynamic.
-import { useEffect } from 'react';
 import { validateEmail } from '../lib/validation';
 
 const Login: React.FC = () => {
@@ -21,15 +19,8 @@ const Login: React.FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
-    const [siteSettings, setSiteSettings] = useState<SiteSettings>({} as SiteSettings);
+    const { settings: siteSettings } = useSettings();
 
-    useEffect(() => {
-        settingsAPI.get().then(res => {
-            if (res.data.success && res.data.data) {
-                setSiteSettings(res.data.data);
-            }
-        }).catch(err => console.error('Error fetching settings for login:', err));
-    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

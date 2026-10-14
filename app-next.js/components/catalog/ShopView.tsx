@@ -333,7 +333,7 @@ const ShopView: React.FC<ShopViewProps> = ({ variant, category, subcategory }) =
         { key: 'shoulder', label: 'Shoulder' },
         { key: 'sleeveLength', label: 'Sleeve Length' },
         // Dynamic custom attribute filters (not already in hardcoded list)
-        ...Object.entries((filterSuggestions?.customAttributes as Record<string, string[]>) || {})
+        ...Object.entries((filterSuggestions?.customAttributes as unknown as Record<string, string[]>) || {})
             .filter(([key]) => !hardcodedFilterKeys.has(key))
             .map(([key, values]) => ({ key: `custom_${key}`, label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), _customValues: values })),
     ];

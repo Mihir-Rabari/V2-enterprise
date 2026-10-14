@@ -211,12 +211,12 @@ Rules of thumb:
 | ✅ `/contact` (landed) | informational | `Contact Us \| V2 Enterprise` | `Get in touch with V2 Enterprise. Visit our Smart Fashion Hub in Bhavnagar, or reach out to our team of style experts.` | `/contact` | default OG |
 | `/cart` | cart-checkout | e.g. `Your Cart \| V2 Enterprise` | — | **no canonical** (non-indexable) | `robots: { index: false }` |
 | `/checkout` | cart-checkout | `Checkout \| V2 Enterprise` (legacy) | — | **no canonical** (legacy had `/checkout` — pointless on a blocked page) | `robots: { index: false }` |
-| `/login` | auth-account | e.g. `Login \| V2 Enterprise` | — | `/login` or none | low-value page; consider `robots: { index: false }` |
-| `/signup` | auth-account | e.g. `Create Account \| V2 Enterprise` | — | `/signup` or none | consider `robots: { index: false }` |
+| ✅ `/login` `(storefront)/login/page.tsx` (landed) | auth-account | `Login \| V2 Enterprise` | — | **no canonical** | `robots: { index: false }` (low-value page) |
+| ✅ `/signup` `(storefront)/signup/page.tsx` (landed) | auth-account | `Create Account \| V2 Enterprise` | — | **no canonical** | `robots: { index: false }` |
 | ✅ `/privacy` `/terms` `/shipping` `/returns` (landed) | informational | e.g. `Privacy Policy \| V2 Enterprise` etc. (legacy variant titles were **visual `<h1>` only**) | 1-line summary each | `/privacy` … `/returns` | default OG |
 | ✅ `/size-guide` (landed) | informational | e.g. `Size Guide \| V2 Enterprise` | — | `/size-guide` | default OG |
 | `/account/*`, `/liked` | auth-account | minimal | — | **no canonical** | `robots: { index: false }` |
-| `/forgot-password`, `/reset-password/[token]` | auth-account | minimal | — | **no canonical** | `robots: { index: false }` |
+| ✅ `/forgot-password` + `/reset-password/[token]` (landed) | auth-account | `Reset Access \| V2 Enterprise` / `New Password \| V2 Enterprise` | — | **no canonical** | `robots: { index: false }` (static export covers every token) |
 | `/admin/**` | admin | minimal | — | **no canonical** | `robots: { index: false, follow: false }` |
 
 ### 6.4 Product JSON-LD (the only schema the legacy app emitted)

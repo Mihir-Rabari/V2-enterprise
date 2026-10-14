@@ -19,8 +19,8 @@ replaces the React Router "registration order" behavior (see MIGRATION_PLAN.md �
 | `/checkout` | `(storefront)/checkout/page.tsx` | `pages/Checkout.tsx` | pending | cart-checkout |
 | `/login` | `(storefront)/login/page.tsx` | `pages/Login.tsx` | pending | auth-account |
 | `/signup` | `(storefront)/signup/page.tsx` | `pages/Signup.tsx` | pending | auth-account |
-| `/liked` | `(storefront)/liked/page.tsx` | `pages/Account.tsx` wishlist (`Navigate → /account/wishlist` in Vite) | pending (redirect to `/account/wishlist`) | auth-account |
-| `/account/*` | `(storefront)/account/[[...path]]/page.tsx` | `pages/Account.tsx` | pending — verify internal tab nav when porting | auth-account |
+| `/liked` | `(storefront)/liked/page.tsx` | `pages/Account.tsx` wishlist (`Navigate → /account/wishlist` in Vite) | ✅ landed — server `redirect('/account/wishlist')` (307, permanent=false) | auth-account |
+| `/account/*` | `(storefront)/account/{page,layout}.tsx` + `orders/`, `wishlist/`, `addresses/`, `[...rest]/` | `pages/Account.tsx` | ✅ landed — each Vite nested Route is its own route folder (deep links + refresh work); `[...rest]` reproduces the Vite empty-content 200; auth gate in `account/layout.tsx` | auth-account |
 | `/privacy` | `(storefront)/privacy/page.tsx` | `pages/LegalPage.tsx` (variant) | pending | informational |
 | `/returns` | `(storefront)/returns/page.tsx` | `pages/LegalPage.tsx` (variant) | pending | informational |
 | `/shipping` | `(storefront)/shipping/page.tsx` | `pages/LegalPage.tsx` (variant) | pending | informational |

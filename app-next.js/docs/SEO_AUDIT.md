@@ -215,7 +215,7 @@ Rules of thumb:
 | ✅ `/signup` `(storefront)/signup/page.tsx` (landed) | auth-account | `Create Account \| V2 Enterprise` | — | **no canonical** | `robots: { index: false }` |
 | ✅ `/privacy` `/terms` `/shipping` `/returns` (landed) | informational | e.g. `Privacy Policy \| V2 Enterprise` etc. (legacy variant titles were **visual `<h1>` only**) | 1-line summary each | `/privacy` … `/returns` | default OG |
 | ✅ `/size-guide` (landed) | informational | e.g. `Size Guide \| V2 Enterprise` | — | `/size-guide` | default OG |
-| `/account/*`, `/liked` | auth-account | minimal | — | **no canonical** | `robots: { index: false }` |
+| ✅ `/account/*` + `/liked` `(storefront)/account/**` + `liked/page.tsx` (landed) | auth-account | `My Account \| V2 Enterprise` (+ per-subpage `My Orders` / `My Wishlist` / `My Addresses` — legacy had none) | — | **no canonical** | `robots: { index: false }` on every account page + the `/liked` redirect stub (307 → `/account/wishlist`) |
 | ✅ `/forgot-password` + `/reset-password/[token]` (landed) | auth-account | `Reset Access \| V2 Enterprise` / `New Password \| V2 Enterprise` | — | **no canonical** | `robots: { index: false }` (static export covers every token) |
 | `/admin/**` | admin | minimal | — | **no canonical** | `robots: { index: false, follow: false }` |
 

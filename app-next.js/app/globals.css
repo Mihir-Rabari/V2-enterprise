@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+/*
+ * Ported from frontend/index.css (Tailwind CSS 4).
+ * All design tokens are preserved verbatim. The only adaptation for the
+ * Next.js app: the font stacks consume the next/font/google CSS variables
+ * (--font-inter / --font-playfair) declared in app/layout.tsx instead of
+ * referencing the Google Fonts CDN by family name.
+ */
+@theme {
+  --color-luxury-black: #0a0a0a;
+  --color-luxury-charcoal: #111111;
+  --color-luxury-gold: #bfa37a;
+  --color-luxury-gray: #f5f5f5;
+
+  --font-sans: var(--font-inter), "Inter", "system-ui", "sans-serif";
+  --font-serif: var(--font-playfair), "Playfair Display", "serif";
+
+  --tracking-luxury: 0.2em;
+  --tracking-luxury-widest: 0.4em;
+
+  --max-width: 1440px;
+  --spacing-gutter: 20px;
+  --spacing-gutter-sm: 24px;
+  --spacing-gutter-lg: 64px;
+  --spacing-gutter-xl: 120px;
+
+  --animate-fade-in: fadeIn 1s ease-out;
+  --animate-fade-in-up: fadeInUp 1.2s ease-out forwards;
+  --animate-slow-zoom: slowZoom 20s ease-in-out infinite alternate;
+
+  @keyframes fadeIn {
+    0% {
+      opacity: 0;
+    }
+
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes fadeInUp {
+    0% {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slowZoom {
+    0% {
+      transform: scale(1);
+    }
+
+    100% {
+      transform: scale(1.1);
+    }
+  }
+}
+
+@layer base {
+  body {
+    @apply antialiased text-luxury-black bg-white selection:bg-luxury-black selection:text-white;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+@layer utilities {
+  .luxury-hr {
+    @apply border-t border-gray-100 w-full;
+  }
+
+  .luxury-divider {
+    @apply h-[1px] bg-gray-200 w-12;
+  }
+
+  .animate-delay-100 {
+    animation-delay: 100ms;
+  }
+
+  .animate-delay-200 {
+    animation-delay: 200ms;
+  }
+
+  .animate-delay-300 {
+    animation-delay: 300ms;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #0a0a0a;
+    border-radius: 3px;
+  }
+
+  .stroke-text {
+    -webkit-text-stroke: 1px white;
+  }
+
+  .text-shadow-luxury {
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 0, 0, 0.3);
+  }
+}

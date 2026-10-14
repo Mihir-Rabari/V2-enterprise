@@ -235,7 +235,8 @@ export const MediaManagerModal: React.FC<MediaManagerModalProps> = ({ isOpen, on
                                     className="group relative aspect-square bg-white rounded-2xl overflow-hidden border border-gray-100 hover:border-luxury-gold transition-all hover:shadow-xl flex flex-col items-center justify-center gap-2 p-4"
                                 >
                                     <div className="w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center text-luxury-gold transition-transform group-hover:scale-110">
-                                        <svg viewBox="0 0 24 24" size="32" fill="currentColor" className="w-10 h-10">
+                                        {/* 'size' is not a typed SVG prop; kept via spread for DOM fidelity with the original Vite build */}
+                                        <svg viewBox="0 0 24 24" {...({ size: '32' } as any)} fill="currentColor" className="w-10 h-10">
                                             <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
                                         </svg>
                                     </div>

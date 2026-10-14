@@ -328,8 +328,12 @@ const AdminDashboard: React.FC = () => {
     const [categorySliders, setCategorySliders] = useState<Slider[]>([]);
     const [bestCategorySliders, setBestCategorySliders] = useState<Slider[]>([]);
     const [newArrivalSliders, setNewArrivalSliders] = useState<Slider[]>([]);
-    const [mainCategories, setMainCategories] = useState<Category[]>([]);
-    const [subCategories, setSubCategories] = useState<Category[]>([]);
+    // Backend category objects carry a Mongo _id alongside id (same convention
+    // as Product/Order in types.ts); the dashboard reads c._id at several
+    // sites. Type-only widening — runtime unchanged.
+    type AdminCategory = Category & { _id?: string };
+    const [mainCategories, setMainCategories] = useState<AdminCategory[]>([]);
+    const [subCategories, setSubCategories] = useState<AdminCategory[]>([]);
     const [bestsellers, setBestsellers] = useState<BestsellerHeading[]>([]);
     const [logos, setLogos] = useState<Logo[]>([]);
     const [pages, setPages] = useState<StaticPage[]>([]);
@@ -2520,7 +2524,7 @@ const AdminDashboard: React.FC = () => {
                 return (
                     <DataTable
                         title="Products"
-                        data={products}
+                        data={products as unknown as Product[]}
                         columns={productColumns}
                         onAdd={() => handleAdd('product')}
                         addButtonLabel="Add Product"
@@ -2559,7 +2563,7 @@ const AdminDashboard: React.FC = () => {
                         onPageChange={(page) => fetchOrders(page, 15)}
                         limit={15}
                         onRowClick={(row) => {
-                            setSelectedOrderDetails(row);
+                            setSelectedOrderDetails(row as unknown as Order);
                             setOrderDetailOpen(true);
                         }}
                     />

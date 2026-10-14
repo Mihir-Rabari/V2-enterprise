@@ -131,7 +131,7 @@ export const AdminHomeSectionsTab: React.FC<AdminHomeSectionsTabProps> = ({ home
                                         newStandard: {
                                             ...(formData.newStandard || {}),
                                             isVisible: e.target.checked
-                                        }
+                                        } as HomeSectionContent['newStandard']
                                     })}
                                     className="accent-luxury-gold"
                                 />
@@ -142,33 +142,33 @@ export const AdminHomeSectionsTab: React.FC<AdminHomeSectionsTabProps> = ({ home
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-400 mb-1">Tagline</label>
-                                    <input type="text" className="w-full border border-gray-200 p-2.5 rounded-lg text-sm focus:border-luxury-gold focus:ring-1 focus:ring-luxury-gold transition-colors outline-none" value={formData.newStandard?.tagline || ''} onChange={e => setFormData({ ...formData, newStandard: { ...(formData.newStandard || {}), tagline: e.target.value } })} placeholder="The New Standard" />
+                                    <input type="text" className="w-full border border-gray-200 p-2.5 rounded-lg text-sm focus:border-luxury-gold focus:ring-1 focus:ring-luxury-gold transition-colors outline-none" value={formData.newStandard?.tagline || ''} onChange={e => setFormData({ ...formData, newStandard: { ...(formData.newStandard || {}), tagline: e.target.value } as HomeSectionContent['newStandard'] })} placeholder="The New Standard" />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-gray-400 mb-1">Title (use \n for break)</label>
-                                    <input type="text" className="w-full border border-gray-200 p-2.5 rounded-lg text-sm focus:border-luxury-gold focus:ring-1 focus:ring-luxury-gold transition-colors outline-none" value={formData.newStandard?.title || ''} onChange={e => setFormData({ ...formData, newStandard: { ...(formData.newStandard || {}), title: e.target.value } })} placeholder="Elevate Your \n Everyday." />
+                                    <input type="text" className="w-full border border-gray-200 p-2.5 rounded-lg text-sm focus:border-luxury-gold focus:ring-1 focus:ring-luxury-gold transition-colors outline-none" value={formData.newStandard?.title || ''} onChange={e => setFormData({ ...formData, newStandard: { ...(formData.newStandard || {}), title: e.target.value } as HomeSectionContent['newStandard'] })} placeholder="Elevate Your \n Everyday." />
                                 </div>
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-gray-400 mb-1">Description</label>
-                                <textarea className="w-full border border-gray-200 p-2.5 rounded-lg text-sm h-20 focus:border-luxury-gold focus:ring-1 focus:ring-luxury-gold transition-colors outline-none" value={formData.newStandard?.description || ''} onChange={e => setFormData({ ...formData, newStandard: { ...(formData.newStandard || {}), description: e.target.value } })} placeholder="Discover the latest additions..." />
+                                <textarea className="w-full border border-gray-200 p-2.5 rounded-lg text-sm h-20 focus:border-luxury-gold focus:ring-1 focus:ring-luxury-gold transition-colors outline-none" value={formData.newStandard?.description || ''} onChange={e => setFormData({ ...formData, newStandard: { ...(formData.newStandard || {}), description: e.target.value } as HomeSectionContent['newStandard'] })} placeholder="Discover the latest additions..." />
                             </div>
                             <div className="pt-2 border-t border-gray-50">
                                 <ImageUploader
                                     label="Banner Image Overlay (Leave blank for auto-picked new arrival)"
                                     value={formData.newStandard?.image || ''}
-                                    onChange={url => setFormData({ ...formData, newStandard: { ...(formData.newStandard || {}), image: url } })}
+                                    onChange={url => setFormData({ ...formData, newStandard: { ...(formData.newStandard || {}), image: url } as HomeSectionContent['newStandard'] })}
                                     folder="v2-banners"
                                 />
                             </div>
                             <div className="grid grid-cols-2 gap-4 border-t border-gray-50 pt-4">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-400 mb-1">Button Text</label>
-                                    <input type="text" className="w-full border border-gray-200 p-2.5 rounded-lg text-sm focus:border-luxury-gold focus:ring-1 focus:ring-luxury-gold transition-colors outline-none" value={formData.newStandard?.buttonText || ''} onChange={e => setFormData({ ...formData, newStandard: { ...(formData.newStandard || {}), buttonText: e.target.value } })} placeholder="The New Collection" />
+                                    <input type="text" className="w-full border border-gray-200 p-2.5 rounded-lg text-sm focus:border-luxury-gold focus:ring-1 focus:ring-luxury-gold transition-colors outline-none" value={formData.newStandard?.buttonText || ''} onChange={e => setFormData({ ...formData, newStandard: { ...(formData.newStandard || {}), buttonText: e.target.value } as HomeSectionContent['newStandard'] })} placeholder="The New Collection" />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-gray-400 mb-1">Target Link</label>
-                                    <input type="text" className="w-full border border-gray-200 p-2.5 rounded-lg text-sm focus:border-luxury-gold focus:ring-1 focus:ring-luxury-gold transition-colors outline-none" value={formData.newStandard?.link || ''} onChange={e => setFormData({ ...formData, newStandard: { ...(formData.newStandard || {}), link: e.target.value } })} placeholder="/new-arrivals" />
+                                    <input type="text" className="w-full border border-gray-200 p-2.5 rounded-lg text-sm focus:border-luxury-gold focus:ring-1 focus:ring-luxury-gold transition-colors outline-none" value={formData.newStandard?.link || ''} onChange={e => setFormData({ ...formData, newStandard: { ...(formData.newStandard || {}), link: e.target.value } as HomeSectionContent['newStandard'] })} placeholder="/new-arrivals" />
                                 </div>
                             </div>
                         </div>

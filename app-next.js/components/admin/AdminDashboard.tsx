@@ -97,7 +97,7 @@ import {
     SocialPost,
     LookbookItem,
     Attribute
-} from '../types';
+} from '../../types';
 // No initialData imports allowed. 100% dynamic.
 
 // Initial data moved to ../data/initialData.ts
@@ -1752,14 +1752,15 @@ const AdminDashboard: React.FC = () => {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 {(() => {
                                     const type = (formData.type || 'PROMOTIONAL').toUpperCase();
-                                    const hints = {
+                                    const hintsByType: Record<string, { l: string; t: string; m: string }> = {
                                         HERO: { l: '1920x1080', t: '1024x1366', m: '750x1334' },
                                         PROMOTIONAL: { l: '1920x600', t: '1024x450', m: '750x800' },
                                         BOTTOM_PROMOTIONAL: { l: '1920x800', t: '1024x600', m: '750x1000' },
                                         CATEGORY: { l: '1920x600', t: '1024x450', m: '750x800' },
                                         BEST_CATEGORY: { l: '1920x600', t: '1024x450', m: '750x800' },
                                         NEW_ARRIVAL: { l: '1920x600', t: '1024x450', m: '750x800' }
-                                    }[type as keyof typeof hints] || { l: '1920x800', t: '1024x600', m: '750x1000' };
+                                    };
+                                    const hints = hintsByType[type] || { l: '1920x800', t: '1024x600', m: '750x1000' };
 
                                     return (
                                         <>
@@ -2840,7 +2841,7 @@ const AdminDashboard: React.FC = () => {
                 return <SocialSettingsPage siteSettings={siteSettings} setSiteSettings={setSiteSettings} />;
 
             case 'settings-home':
-                return <AdminHomeSectionsTab homeSections={homeSections} setHomeSections={setHomeSections} products={products} setActivePage={setActivePage} />;
+                return <AdminHomeSectionsTab homeSections={homeSections} setHomeSections={setHomeSections} products={products as unknown as Product[]} setActivePage={setActivePage} />;
 
             case 'settings-about':
                 return <AboutSettingsPage aboutContent={aboutContent} onEdit={() => handleEdit('about-content', aboutContent)} />;

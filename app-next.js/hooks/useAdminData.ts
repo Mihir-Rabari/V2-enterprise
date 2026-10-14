@@ -8,6 +8,14 @@ import {
 // ─── Types (minimal, matches backend response shape) ─────────────────────────
 
 export interface AdminStats {
+    // Top-level convenience fields (dashboard stat cards read these directly,
+    // e.g. apiStats?.totalProducts). Kept optional — backend nests the same
+    // values under `stats` and the dashboard falls back to client-side counts.
+    totalProducts?: number;
+    totalOrders?: number;
+    totalContacts?: number;
+    totalReviews?: number;
+    totalRevenue?: number;
     stats: {
         totalProducts: number;
         totalOrders: number;
@@ -37,6 +45,9 @@ export interface AdminOrder {
     paymentMethod: string; createdAt: string;
     user?: { name: string; email: string };
     items: { productName: string; quantity: number; priceAtTime: number }[];
+    // Waybill/shipping tracking (read by dashboard waybill sync effect)
+    awbNumber?: string;
+    trackingLink?: string;
 }
 
 export interface AdminReview {

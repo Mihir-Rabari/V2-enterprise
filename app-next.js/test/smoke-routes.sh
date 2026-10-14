@@ -165,8 +165,14 @@ check "/cat/sub" 200
 check "/cat/sub/1" 200
 # Admin
 check "/admin/login" 200
-# Unknown route must be a 404 (not a 500 / redirect)
-check "/totally-bogus-route" 404
+# Vite parity (verified): an unknown SINGLE-segment path resolves to the
+# dynamic [category] route with a 200 (SubCategories shell), exactly like the
+# React Router ":category" route did in the Vite app — the page then
+# client-redirects to /<category>/All (Shop's "No matches found" state).
+check "/totally-bogus-route" 200
+# A path deeper than any defined route (4 segments > [category]/[subcategory]/[id])
+# must be a genuine 404 (not a 500 / redirect)
+check "/deep/bogus/path/here" 404
 
 # ── 4. Summary ──────────────────────────────────────────────────────────────
 TOTAL=$((PASS_COUNT + FAIL_COUNT))

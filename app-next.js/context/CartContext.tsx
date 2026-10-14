@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { CartItem, Product } from '../types';
 
 interface ToastState {
@@ -42,7 +42,25 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [cart, setCart] = useState<CartItem[]>([]);
     const [hydrated, setHydrated] = useState(false);
 
+    // Set when a cart mutation runs before hydration completed (only possible
+    // from a child mount effect — React runs child effects before this
+    // provider's own effects). In that case the fresh mutation wins and the
+    // stale stored value is NOT read over it. The mutation also persists
+    // normally once `hydrated` flips.
+    const cartMutatedBeforeHydration = useRef(false);
+
+    // All cart mutations go through this wrapper (identical functional-update
+    // semantics to the original setCart calls).
+    const mutateCart = (updater: (prev: CartItem[]) => CartItem[]) => {
+        cartMutatedBeforeHydration.current = true;
+        setCart(updater);
+    };
+
     useEffect(() => {
+        if (cartMutatedBeforeHydration.current) {
+            setHydrated(true);
+            return;
+        }
         try {
             const savedCart = localStorage.getItem(CART_STORAGE_KEY);
             if (savedCart) {
@@ -109,7 +127,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             showToast(`Added ${product.name} to your collection.`);
         }
 
-        setCart(prev => {
+        mutateCart(prev => {
             const existingItem = prev.find(item =>
                 String(item.id || item._id) === productId &&
                 item.selectedSize === size &&
@@ -129,13 +147,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const removeFromCart = (productId: string | number, size?: string, color?: string) => {
-        setCart(prev => prev.filter(item =>
+        mutateCart(prev => prev.filter(item =>
             !(item.id === productId && item.selectedSize === size && item.selectedColor === color)
         ));
     };
 
     const updateQuantity = (productId: string | number, delta: number, size?: string, color?: string) => {
-        setCart(prev => prev.map(item => {
+        mutateCart(prev => prev.map(item => {
             if (item.id === productId && item.selectedSize === size && item.selectedColor === color) {
                 const newQty = item.quantity + delta;
                 return newQty > 0 ? { ...item, quantity: newQty } : item;
@@ -144,7 +162,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }));
     };
 
-    const clearCart = () => setCart([]);
+    const clearCart = () => mutateCart(() => []);
 
     const cartCount = cart.reduce((total, item) => total + item.quantity, 0);
     const cartTotal = cart.reduce((total, item) => total + item.price * item.quantity, 0);

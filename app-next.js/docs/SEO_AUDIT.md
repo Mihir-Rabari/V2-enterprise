@@ -207,14 +207,14 @@ Rules of thumb:
 | `/[category]` | catalog | `generateMetadata`: `` `${paramToLabel(category)} \| V2 Enterprise` `` (legacy had none) | derived category copy | `` `/${category}` `` | default OG |
 | `/[category]/[subcategory]` | catalog | `generateMetadata` (**fix:** legacy reused `/shop`'s) | derived copy | `` `/${category}/${subcategory}` `` (**fix:** legacy pointed at `/shop`) | default OG |
 | `/product/[id]` | catalog | `generateMetadata`: `` `${product.name} \| V2 Enterprise` `` (fallback `Product Details \| V2 Enterprise`) | `product.description.slice(0, 160)` (fallback `Premium luxury fashion from V2 Enterprise.`) | `` `/product/${id}` `` | `openGraph.images: [product.photo]`, `openGraph.type: 'website'` (OG has no `product` type; keep Product JSON-LD — §6.4); nested `/[category]/[subcategory]/[id]` should canonicalize to `/product/[id]` like the legacy app did |
-| `/about` | informational | `Our Heritage \| V2 Enterprise` | `Discover the story behind V2 Enterprise. A legacy of premium craftsmanship, luxury fabrics, and timeless menswear from Bhavnagar.` | `/about` | default OG |
-| `/contact` | informational | `Contact Us \| V2 Enterprise` | `Get in touch with V2 Enterprise. Visit our Smart Fashion Hub in Bhavnagar, or reach out to our team of style experts.` | `/contact` | default OG |
+| ✅ `/about` (landed) | informational | `Our Heritage \| V2 Enterprise` | `Discover the story behind V2 Enterprise. A legacy of premium craftsmanship, luxury fabrics, and timeless menswear from Bhavnagar.` | `/about` | default OG |
+| ✅ `/contact` (landed) | informational | `Contact Us \| V2 Enterprise` | `Get in touch with V2 Enterprise. Visit our Smart Fashion Hub in Bhavnagar, or reach out to our team of style experts.` | `/contact` | default OG |
 | `/cart` | cart-checkout | e.g. `Your Cart \| V2 Enterprise` | — | **no canonical** (non-indexable) | `robots: { index: false }` |
 | `/checkout` | cart-checkout | `Checkout \| V2 Enterprise` (legacy) | — | **no canonical** (legacy had `/checkout` — pointless on a blocked page) | `robots: { index: false }` |
 | `/login` | auth-account | e.g. `Login \| V2 Enterprise` | — | `/login` or none | low-value page; consider `robots: { index: false }` |
 | `/signup` | auth-account | e.g. `Create Account \| V2 Enterprise` | — | `/signup` or none | consider `robots: { index: false }` |
-| `/privacy` `/terms` `/shipping` `/returns` | informational | e.g. `Privacy Policy \| V2 Enterprise` etc. (legacy variant titles were **visual `<h1>` only**) | 1-line summary each | `/privacy` … `/returns` | default OG |
-| `/size-guide` | informational | e.g. `Size Guide \| V2 Enterprise` | — | `/size-guide` | default OG |
+| ✅ `/privacy` `/terms` `/shipping` `/returns` (landed) | informational | e.g. `Privacy Policy \| V2 Enterprise` etc. (legacy variant titles were **visual `<h1>` only**) | 1-line summary each | `/privacy` … `/returns` | default OG |
+| ✅ `/size-guide` (landed) | informational | e.g. `Size Guide \| V2 Enterprise` | — | `/size-guide` | default OG |
 | `/account/*`, `/liked` | auth-account | minimal | — | **no canonical** | `robots: { index: false }` |
 | `/forgot-password`, `/reset-password/[token]` | auth-account | minimal | — | **no canonical** | `robots: { index: false }` |
 | `/admin/**` | admin | minimal | — | **no canonical** | `robots: { index: false, follow: false }` |

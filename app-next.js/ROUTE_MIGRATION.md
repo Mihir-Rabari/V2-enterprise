@@ -1,5 +1,11 @@
 # Route Migration Matrix
 
+> **✅ ALL ROUTES MIGRATED + VERIFIED (2026-10-14) — 22/22 smoke PASS on integrated
+> dev.** The per-row Status column below was authored at Phase 1 and kept for
+> history; the authoritative completion evidence is the merged PR ledger +
+> verification results in `MIGRATION_STATUS.md`, and the 22/22 green run of
+> `test/smoke-routes.sh` (every route: ported → verified).
+
 Per-route tracking for the Vite (`frontend/`, React Router) → Next.js (`app-next.js/`,
 App Router) migration. Status values: `pending` → `in progress` → `ported` → `verified`.
 

@@ -28,7 +28,7 @@ interface CategoriesSectionProps {
 
 const CategoriesSection: React.FC<CategoriesSectionProps> = ({ homeSections, displayCategories }) => {
     return (
-        <section className="py-20 md:py-28 bg-zinc-50">
+        <section className="py-12 md:py-16 bg-zinc-50">
             <div className="max-w-[1800px] mx-auto px-6 lg:px-12">
                 <div className="flex flex-col md:flex-row justify-between items-center md:items-end mb-16 gap-8">
                     <div className="space-y-4 text-center md:text-left">

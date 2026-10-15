@@ -28,9 +28,9 @@ const EssentialsSection: React.FC<EssentialsSectionProps> = ({
 }) => {
 
     return (
-        <section key="essentials" className="py-24 md:py-32 bg-white min-h-[800px]">
+        <section key="essentials" className="py-12 md:py-20 bg-white">
             <div className="max-w-[1800px] mx-auto px-6 lg:px-12">
-                <div className="flex flex-col gap-10 mb-16">
+                <div className="flex flex-col gap-10 mb-10">
                     <div className="flex flex-col md:flex-row justify-between items-center md:items-end gap-8">
                         <div className="space-y-4 text-center md:text-left">
                             <span className="text-luxury-gold text-[10px] font-bold uppercase tracking-[0.4em] block">
@@ -76,16 +76,21 @@ const EssentialsSection: React.FC<EssentialsSectionProps> = ({
                         </div>
                         <div className="hidden lg:flex items-center gap-4">
                             <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Sort:</span>
-                            <select
-                                className="bg-transparent border-none text-[10px] font-bold uppercase tracking-widest focus:ring-0 cursor-pointer text-luxury-black hover:text-luxury-gold transition-colors pr-8"
-                                value={essentialsSortBy}
-                                onChange={(e) => setEssentialsSortBy(e.target.value)}
-                            >
-                                <option value="Newest">Newest</option>
-                                <option value="Price: Low to High">Price: Low to High</option>
-                                <option value="Price: High to Low">Price: High to Low</option>
-                                <option value="Trending">Trending</option>
-                            </select>
+                            {/* appearance-none + explicit chevron: the bare native <select> shipped with the OS
+                                arrow AND a pr-8 reserve for a custom chevron that was never rendered. */}
+                            <div className="relative flex items-center">
+                                <select
+                                    className="appearance-none bg-transparent border-none text-[10px] font-bold uppercase tracking-widest focus:ring-0 cursor-pointer text-luxury-black hover:text-luxury-gold transition-colors pr-5"
+                                    value={essentialsSortBy}
+                                    onChange={(e) => setEssentialsSortBy(e.target.value)}
+                                >
+                                    <option value="Newest">Newest</option>
+                                    <option value="Price: Low to High">Price: Low to High</option>
+                                    <option value="Price: High to Low">Price: High to Low</option>
+                                    <option value="Trending">Trending</option>
+                                </select>
+                                <ChevronDown size={12} className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-luxury-gold" />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -126,7 +131,7 @@ const EssentialsSection: React.FC<EssentialsSectionProps> = ({
                                 <motion.div
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
-                                    className="py-40 text-center space-y-6"
+                                    className="py-24 text-center space-y-6"
                                 >
                                     <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-8">
                                         <Search size={32} className="text-gray-200" />

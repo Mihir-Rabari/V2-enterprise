@@ -17,7 +17,7 @@ import { Star } from 'lucide-react';
 import { Review } from '../../types';
 
 const ClientVoicesSection: React.FC<{ reviews: Review[] }> = ({ reviews }) => (
-    <section className="py-24 md:py-40 bg-white">
+    <section className="py-12 md:py-20 bg-white">
         <div className="max-w-[1800px] mx-auto px-6 lg:px-12">
             <div className="flex flex-col md:flex-row justify-between items-center md:items-end mb-16 md:mb-24 gap-8">
                 <div className="space-y-4 text-center md:text-left w-full md:w-auto">

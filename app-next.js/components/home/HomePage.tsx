@@ -654,7 +654,7 @@ const HomePage: React.FC = () => {
                             return <PromotionalSlider key="new-arrival-slider" slides={newArrivalSlides} />;
                         case 'promotional':
                             return homeSections.promotionalBanner?.isVisible && (
-                                <section key="promotional" className="py-24 bg-white overflow-hidden">
+                                <section key="promotional" className="py-12 bg-white overflow-hidden">
                                     <div className="max-w-[1800px] mx-auto px-6 lg:px-12">
                                         <PromotionalSlider slides={bottomPromoSlides} />
                                     </div>
@@ -679,9 +679,9 @@ const HomePage: React.FC = () => {
                             const trendingProducts = products.filter(p => p.isTrending).slice(0, 4);
                             if (trendingProducts.length === 0) return null;
                             return (
-                                <section key="trending" className="bg-white text-luxury-black py-24 md:py-40 overflow-hidden relative border-t border-gray-100">
+                                <section key="trending" className="bg-white text-luxury-black py-12 md:py-20 overflow-hidden relative border-t border-gray-100">
                                     <div className="max-w-[1800px] mx-auto px-6 lg:px-12 relative z-10">
-                                        <div className="flex justify-between items-center mb-16 md:mb-24">
+                                        <div className="flex justify-between items-center mb-10 md:mb-12">
                                             <h2 className="font-serif text-4xl md:text-7xl italic tracking-tighter text-luxury-black leading-tight">Trending Now</h2>
                                         </div>
                                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-10">
@@ -707,7 +707,7 @@ const HomePage: React.FC = () => {
                                             ))}
                                         </div>
 
-                                        <div className="mt-20 flex justify-center">
+                                        <div className="mt-12 flex justify-center">
                                             <Link
                                                 href="/shop?sort=Trending"
                                                 className="group flex items-center gap-3 bg-luxury-black text-white px-10 py-5 text-[10px] font-bold uppercase tracking-[0.4em] rounded-full hover:bg-luxury-gold transition-all transform hover:scale-105 active:scale-95 shadow-xl"

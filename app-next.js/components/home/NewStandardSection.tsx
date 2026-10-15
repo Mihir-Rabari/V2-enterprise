@@ -36,7 +36,7 @@ interface NewStandardSectionProps {
 
 const NewStandardSection: React.FC<NewStandardSectionProps> = ({ ns, newDropProduct, isHovered, setIsHovered }) => {
     return (
-        <section className="py-20 md:py-40 max-w-[1600px] mx-auto px-6 lg:px-12">
+        <section className="py-12 md:py-20 max-w-[1600px] mx-auto px-6 lg:px-12">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-24 items-center">
                 <div className="space-y-6 md:space-y-10 order-2 md:order-1">
                     <span className="text-luxury-gold text-[10px] font-bold uppercase tracking-[0.4em] block">{ns?.tagline || 'The New Standard'}</span>

@@ -12,7 +12,7 @@ interface CommitmentSectionProps {
 
 const CommitmentSection: React.FC<CommitmentSectionProps> = ({ commitment }) => {
     return (
-        <section className="py-32 md:py-60 max-w-[1200px] mx-auto px-6 text-center flex flex-col items-center gap-10">
+        <section className="py-16 md:py-24 max-w-[1200px] mx-auto px-6 text-center flex flex-col items-center gap-10">
             <span className="text-luxury-gold text-[10px] font-bold uppercase tracking-[0.5em]">{commitment.tagline}</span>
             <h2 className="font-serif text-5xl md:text-7xl lg:text-8xl italic text-luxury-black tracking-tighter leading-tight max-w-4xl">
                 {commitment.title}

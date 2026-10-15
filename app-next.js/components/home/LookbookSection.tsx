@@ -31,7 +31,7 @@ interface LookbookSectionProps {
 
 const LookbookSection: React.FC<LookbookSectionProps> = ({ lookbookItems }) => {
     return (
-        <section className="py-24 md:py-32 bg-stone-50 overflow-hidden">
+        <section className="py-12 md:py-20 bg-stone-50 overflow-hidden">
             <div className="max-w-[1800px] mx-auto px-6 lg:px-12">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {lookbookItems.slice(0, 4).map((item, i) => (

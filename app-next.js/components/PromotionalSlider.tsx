@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
@@ -12,15 +12,64 @@ interface PromotionalSliderProps {
     slides: PromotionalSlide[];
 }
 
+const VIDEO_URL = /\.(mp4|mov|webm|ogg)(\?|#|$)/i;
+
+/**
+ * Slide video that fades in once it has a frame to show. Mounted only when the
+ * slider is near the viewport (see `nearViewport` below), so below-the-fold
+ * videos don't download during the initial page load.
+ */
+const PromoVideo: React.FC<{ src: string }> = ({ src }) => {
+    const ref = useRef<HTMLVideoElement>(null);
+    const [ready, setReady] = useState(false);
+
+    // The video may already have data by the time React attaches handlers.
+    useEffect(() => {
+        if (ref.current && ref.current.readyState >= 2) setReady(true);
+    }, []);
+
+    return (
+        <video
+            ref={ref}
+            src={src}
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            onLoadedData={() => setReady(true)}
+            className={`absolute inset-0 h-full w-full object-cover transition-all duration-[2000ms] group-hover/slide:scale-105 ${ready ? 'opacity-100' : 'opacity-0'}`}
+            style={{ transition: 'opacity 1s ease-in-out' }}
+        />
+    );
+};
+
 const PromotionalSlider: React.FC<PromotionalSliderProps> = ({ slides }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [width, setWidth] = useState(() => typeof window !== 'undefined' ? window.innerWidth : 1024);
+    // Server-rendered: start at the server's width and read the real one after
+    // hydration (it picks the mobile/tablet/laptop video).
+    const [width, setWidth] = useState(1024);
+    const sectionRef = useRef<HTMLElement>(null);
+    const [nearViewport, setNearViewport] = useState(false);
 
     useEffect(() => {
         const handleResize = () => setWidth(window.innerWidth);
+        handleResize();
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
+
+    // Videos load only once the slider is within ~300px of the screen.
+    useEffect(() => {
+        const el = sectionRef.current;
+        if (!el || nearViewport) return;
+        if (typeof IntersectionObserver === 'undefined') { setNearViewport(true); return; }
+        const io = new IntersectionObserver(([entry]) => {
+            if (entry.isIntersecting) { setNearViewport(true); io.disconnect(); }
+        }, { rootMargin: '300px 0px' });
+        io.observe(el);
+        return () => io.disconnect();
+    }, [nearViewport, slides.length]);
 
     useEffect(() => {
         if (slides.length <= 1) return;
@@ -46,10 +95,14 @@ const PromotionalSlider: React.FC<PromotionalSliderProps> = ({ slides }) => {
         return currentSlide.laptopUrl || currentSlide.image;
     })();
 
-    const isVideo = currentSlide.mediaType === 'video' || videoUrl.toLowerCase().match(/\.(mp4|mov|webm|ogg)$/i);
+    const isVideo = currentSlide.mediaType === 'video' || VIDEO_URL.test(videoUrl || '');
+    // `image` often holds the video URL itself; only a real image can be a poster.
+    const posterUrl = currentSlide.image && !VIDEO_URL.test(currentSlide.image)
+        ? resolveLocalAssetUrl(getOptimizedImageUrl(currentSlide.image, { width: 1200, quality: 75 }))
+        : '';
 
     return (
-        <section className="relative h-[450px] sm:h-[550px] lg:h-[600px] w-full overflow-hidden bg-luxury-gray">
+        <section ref={sectionRef} className="relative h-[450px] sm:h-[550px] lg:h-[600px] w-full overflow-hidden bg-luxury-gray">
             <AnimatePresence initial={false}>
                 <motion.div
                     key={currentIndex}
@@ -63,31 +116,22 @@ const PromotionalSlider: React.FC<PromotionalSliderProps> = ({ slides }) => {
                         <div className="relative h-full w-full overflow-hidden">
                             {isVideo ? (
                                 <div className="relative h-full w-full">
-                                    <video
-                                        key={videoUrl}
-                                        src={resolveLocalAssetUrl(videoUrl)}
-                                        autoPlay
-                                        loop
-                                        muted
-                                        playsInline
-                                        poster={resolveLocalAssetUrl(getOptimizedImageUrl(currentSlide.image, { width: 1200, quality: 75 }))}
-                                        onCanPlayThrough={(e) => {
-                                            const video = e.target as HTMLVideoElement;
-                                            video.style.opacity = '1';
-                                        }}
-                                        className="h-full w-full object-cover transition-all duration-[2000ms] group-hover/slide:scale-105 opacity-0"
-                                        style={{ transition: 'opacity 1s ease-in-out' }}
-                                    />
-                                    <img
-                                        src={resolveLocalAssetUrl(getOptimizedImageUrl(currentSlide.image, { width: 1200, quality: 75 }))}
-                                        alt={currentSlide.title}
-                                        className="absolute inset-0 h-full w-full object-cover transition-transform duration-[2000ms] group-hover/slide:scale-105"
-                                    />
+                                    {/* Poster image (when the slide has one) sits behind the video until it fades in. */}
+                                    {posterUrl && (
+                                        <img
+                                            src={posterUrl}
+                                            alt={currentSlide.title}
+                                            loading="lazy"
+                                            className="absolute inset-0 h-full w-full object-cover transition-transform duration-[2000ms] group-hover/slide:scale-105"
+                                        />
+                                    )}
+                                    {nearViewport && <PromoVideo key={videoUrl} src={resolveLocalAssetUrl(videoUrl)} />}
                                 </div>
                             ) : (
                                 <img
                                     src={resolveLocalAssetUrl(getOptimizedImageUrl(currentSlide.image, { width: 1200, quality: 75 }))}
                                     alt={currentSlide.title}
+                                    loading="lazy"
                                     className="h-full w-full object-cover transition-transform duration-[2000ms] group-hover/slide:scale-105"
                                 />
                             )}

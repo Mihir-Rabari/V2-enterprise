@@ -92,13 +92,16 @@ interface HeroProps {
 }
 
 interface HeroVideoProps {
-    src: string;
+    slide: HeroSlide;
     poster?: string;
     isCurrent: boolean;
 }
 
 // Only the visible slide downloads/plays; the upcoming slide just fetches metadata.
-const HeroVideo: React.FC<HeroVideoProps> = ({ src, poster, isCurrent }) => {
+// One <source> per breakpoint (media queries), so the server-rendered HTML lets
+// the browser pick the mobile/tablet/laptop file and start loading it before
+// any JavaScript runs. Browsers that ignore `media` on <source> take the first.
+const HeroVideo: React.FC<HeroVideoProps> = ({ slide, poster, isCurrent }) => {
     const ref = React.useRef<HTMLVideoElement>(null);
 
     React.useEffect(() => {
@@ -124,28 +127,17 @@ const HeroVideo: React.FC<HeroVideoProps> = ({ src, poster, isCurrent }) => {
             poster={poster}
             className="w-full h-full object-cover scale-105 transition-transform duration-[3000ms] group-hover/hero:scale-110"
         >
-            <source src={src} type="video/mp4" />
+            <source src={resolveLocalAssetUrl(slide.mobileUrl || slide.url)} media="(max-width: 639px)" type="video/mp4" />
+            <source src={resolveLocalAssetUrl(slide.tabletUrl || slide.url)} media="(max-width: 1023px)" type="video/mp4" />
+            <source src={resolveLocalAssetUrl(slide.laptopUrl || slide.url)} type="video/mp4" />
         </video>
     );
 };
 
 const Hero: React.FC<HeroProps> = ({ slides }) => {
     const [index, setIndex] = React.useState(0);
-    // The hero is server-rendered, so the first render must match the server:
-    // the real viewport width (which picks the mobile/tablet/laptop video) is
-    // read after hydration, and videos only mount then.
-    const [width, setWidth] = React.useState(1024);
-    const [mounted, setMounted] = React.useState(false);
     const activeSlides = slides.filter(s => String(s.status || '').toUpperCase() === 'ACTIVE');
     const current = activeSlides[index] || activeSlides[0];
-
-    React.useEffect(() => {
-        const handleResize = () => setWidth(window.innerWidth);
-        handleResize();
-        setMounted(true);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
 
     React.useEffect(() => {
         if (activeSlides.length <= 1) return;
@@ -172,12 +164,8 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
                     // Only render current and next to optimize performance, or all if few slides
                     if (!isCurrent && !isNext) return null;
 
-                    const slideMediaUrl =
-                        width < 640 ? slide.mobileUrl || slide.url :
-                        width < 1024 ? slide.tabletUrl || slide.url :
-                        slide.laptopUrl || slide.url;
-
-                    const isVideoSlide = slide.type === 'video' || /\.(mp4|mov|webm|ogg)$/i.test(slideMediaUrl);
+                    const isVideoSlide = slide.type === 'video' ||
+                        [slide.url, slide.laptopUrl, slide.tabletUrl, slide.mobileUrl].some(u => /\.(mp4|mov|webm|ogg)$/i.test(u || ''));
 
                     return (
                         <div
@@ -186,11 +174,8 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
                         >
                             <div className="absolute inset-0 overflow-hidden">
                                 {isVideoSlide ? (
-                                    !mounted ? null : <HeroVideo
-                                        // Remount when the breakpoint swaps the source — a changed
-                                        // <source> child alone doesn't make the <video> reload.
-                                        key={slideMediaUrl}
-                                        src={resolveLocalAssetUrl(slideMediaUrl)}
+                                    <HeroVideo
+                                        slide={slide}
                                         poster={slide.poster ? resolveLocalAssetUrl(getOptimizedImageUrl(slide.poster, { width: 1920, quality: 75 })) : undefined}
                                         isCurrent={isCurrent}
                                     />

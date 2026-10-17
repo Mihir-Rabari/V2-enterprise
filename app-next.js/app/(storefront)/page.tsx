@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import HomePage from '../../components/home/HomePage';
 import { DEFAULT_DESCRIPTION, DEFAULT_TITLE } from '../../lib/seo';
+import type { HeroSlide } from '../../types';
 
 /**
  * "/" — server entry for the storefront home page (Next.js port of
@@ -21,7 +22,33 @@ import { DEFAULT_DESCRIPTION, DEFAULT_TITLE } from '../../lib/seo';
  * (title/description from lib/seo.ts, canonical "/"), which the root
  * `metadataBase` resolves to https://v2enterprise.in/. OG/Twitter/robots are
  * inherited from the root layout (identical values for "/").
+ *
+ * ── Server-rendered hero ────────────────────────────────────────────────────
+ * The hero slides are fetched here, straight from the backend on the same
+ * machine, so the first HTML response already contains the hero instead of
+ * waiting for a browser API call. The page is cached and regenerated in the
+ * background at most every 60s, so admin edits to the hero show up within a
+ * minute. If the backend is unreachable (e.g. during a build with the API
+ * down) HomePage gets `null` and fetches the slides in the browser.
  */
+
+export const revalidate = 60;
+
+const BACKEND_URL = process.env.BACKEND_INTERNAL_URL || 'http://127.0.0.1:5000';
+
+async function getHeroSlides(): Promise<HeroSlide[] | null> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/v1/sliders/hero`, {
+      next: { revalidate: 60 },
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!res.ok) return null;
+    const body = await res.json();
+    return body?.success && Array.isArray(body.data) ? body.data : null;
+  } catch {
+    return null;
+  }
+}
 
 export const metadata: Metadata = {
   title: DEFAULT_TITLE,
@@ -31,6 +58,6 @@ export const metadata: Metadata = {
   },
 };
 
-export default function StorefrontHomePage() {
-  return <HomePage />;
+export default async function StorefrontHomePage() {
+  return <HomePage initialHeroSlides={await getHeroSlides()} />;
 }

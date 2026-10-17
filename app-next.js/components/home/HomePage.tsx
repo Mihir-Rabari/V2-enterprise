@@ -12,8 +12,13 @@
  * Vite app: only the visible slide autoplays (muted, looped, inline) and
  * preloads fully; the upcoming slide fetches metadata only. The bundled Dior
  * campaign clip from `frontend/public` is still not copied into this app —
- * slides must point at uploaded media. The splash screen resolves on the
- * current video's `canplaythrough`, or the 5s fallback timer.
+ * slides must point at uploaded media.
+ *
+ * ── Server-rendered hero ────────────────────────────────────────────────────
+ * The route (app/(storefront)/page.tsx) fetches the hero slides on the server
+ * (cached, revalidated every 60s) and passes them as `initialHeroSlides`, so
+ * the hero text is in the first HTML response. If that fetch failed
+ * (`null`), the slides are fetched in the browser as before.
  *
  * ── Other adaptations (behavior-identical) ──────────────────────────────────
  *  - `Link` from next/link (`to` → `href`); `React.lazy` + `Suspense` replaced
@@ -43,7 +48,6 @@ import FilterAccordion from '../FilterAccordion';
 import { useProducts, ApiProduct } from '../../hooks/useProducts';
 import { reviewsAPI, sliderAPI, categoriesAPI, contentAPI, filtersAPI, resolveLocalAssetUrl } from '../../lib/apiClient';
 import { getOptimizedImageUrl } from '../../utils/mediaUtils';
-import { useInitialLoad } from '../../context/InitialLoadContext';
 import { useSettings } from '../../context/SettingsContext';
 import {
     CommitmentContent, HomeSectionContent,
@@ -88,11 +92,10 @@ interface HeroVideoProps {
     src: string;
     poster?: string;
     isCurrent: boolean;
-    onReady: () => void;
 }
 
 // Only the visible slide downloads/plays; the upcoming slide just fetches metadata.
-const HeroVideo: React.FC<HeroVideoProps> = ({ src, poster, isCurrent, onReady }) => {
+const HeroVideo: React.FC<HeroVideoProps> = ({ src, poster, isCurrent }) => {
     const ref = React.useRef<HTMLVideoElement>(null);
 
     React.useEffect(() => {
@@ -116,7 +119,6 @@ const HeroVideo: React.FC<HeroVideoProps> = ({ src, poster, isCurrent, onReady }
             width="1920"
             height="1080"
             poster={poster}
-            onCanPlayThrough={() => { if (isCurrent) onReady(); }}
             className="w-full h-full object-cover scale-105 transition-transform duration-[3000ms] group-hover/hero:scale-110"
         >
             <source src={src} type="video/mp4" />
@@ -126,28 +128,21 @@ const HeroVideo: React.FC<HeroVideoProps> = ({ src, poster, isCurrent, onReady }
 
 const Hero: React.FC<HeroProps> = ({ slides }) => {
     const [index, setIndex] = React.useState(0);
-    // SSR-safe lazy initializer — avoids window access before hydration
-    const [width, setWidth] = React.useState(() =>
-        typeof window !== 'undefined' ? window.innerWidth : 1024
-    );
-    const { setIsInitialLoad } = useInitialLoad();
+    // The hero is server-rendered, so the first render must match the server:
+    // the real viewport width (which picks the mobile/tablet/laptop video) is
+    // read after hydration, and videos only mount then.
+    const [width, setWidth] = React.useState(1024);
+    const [mounted, setMounted] = React.useState(false);
     const activeSlides = slides.filter(s => String(s.status || '').toUpperCase() === 'ACTIVE');
     const current = activeSlides[index] || activeSlides[0];
 
     React.useEffect(() => {
         const handleResize = () => setWidth(window.innerWidth);
+        handleResize();
+        setMounted(true);
         window.addEventListener('resize', handleResize);
-
-        // Fallback timeout: Resolve initial load if media takes too long
-        const fallbackTimer = setTimeout(() => {
-            setIsInitialLoad(false);
-        }, 5000);
-
-        return () => {
-            window.removeEventListener('resize', handleResize);
-            clearTimeout(fallbackTimer);
-        };
-    }, [setIsInitialLoad]);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     React.useEffect(() => {
         if (activeSlides.length <= 1) return;
@@ -188,14 +183,13 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
                         >
                             <div className="absolute inset-0 overflow-hidden">
                                 {isVideoSlide ? (
-                                    <HeroVideo
+                                    !mounted ? null : <HeroVideo
                                         // Remount when the breakpoint swaps the source — a changed
                                         // <source> child alone doesn't make the <video> reload.
                                         key={slideMediaUrl}
                                         src={resolveLocalAssetUrl(slideMediaUrl)}
                                         poster={slide.poster ? resolveLocalAssetUrl(getOptimizedImageUrl(slide.poster, { width: 1920, quality: 75 })) : undefined}
                                         isCurrent={isCurrent}
-                                        onReady={() => setIsInitialLoad(false)}
                                     />
                                 ) : (
                                     <img
@@ -303,7 +297,7 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
     );
 };
 
-const HomePage: React.FC = () => {
+const HomePage: React.FC<{ initialHeroSlides?: HeroSlide[] | null }> = ({ initialHeroSlides = null }) => {
     // API Hooks
     const { products } = useProducts({ limit: 300, groupByColor: true });
     const [allReviews, setAllReviews] = useState<Review[]>([]);
@@ -381,7 +375,7 @@ const HomePage: React.FC = () => {
 
     // Configuration States
     const [homeSections, setHomeSections] = useState<HomeSectionContent>({} as HomeSectionContent);
-    const [heroLoaded, setHeroLoaded] = useState(false);
+    const [heroLoaded, setHeroLoaded] = useState(initialHeroSlides !== null);
     const [marqueeItems, setMarqueeItems] = useState<MarqueeItem[]>([]);
     const [lookbookItems, setLookbookItems] = useState<LookbookItem[]>([]);
     const [commitment, setCommitment] = useState<CommitmentContent>({} as CommitmentContent);
@@ -391,7 +385,7 @@ const HomePage: React.FC = () => {
         if (runtimeSettings.homeSections) setHomeSections(runtimeSettings.homeSections);
         if (runtimeSettings.commitment) setCommitment(runtimeSettings.commitment);
     }, [siteSettings]);
-    const [heroSlides, setHeroSlides] = useState<HeroSlide[]>([]);
+    const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(initialHeroSlides ?? []);
     const [promotionalSlides, setPromotionalSlides] = useState<PromotionalSlide[]>([]);
     const [bottomPromoSlides, setBottomPromoSlides] = useState<PromotionalSlide[]>([]);
     const [categorySlides, setCategorySlides] = useState<PromotionalSlide[]>([]);
@@ -412,15 +406,16 @@ const HomePage: React.FC = () => {
                     filtersAPI.getSuggestions(),
                     contentAPI.getByType('LOOKBOOK_ITEM')
                 ]);
-                const [heroRes, categoriesRes] = await Promise.allSettled([
-                    sliderAPI.getHero(),
+                // Hero only when the server couldn't provide it; it doesn't wait on categories.
+                if (initialHeroSlides === null) {
+                    sliderAPI.getHero()
+                        .then(res => { if (res.data.success) setHeroSlides(res.data.data); })
+                        .catch(() => { /* hero stays empty */ })
+                        .finally(() => setHeroLoaded(true));
+                }
+                const [categoriesRes] = await Promise.allSettled([
                     categoriesAPI.getAll()
                 ]);
-
-                if (heroRes.status === 'fulfilled' && heroRes.value.data.success) {
-                    setHeroSlides(heroRes.value.data.data);
-                }
-                setHeroLoaded(true);
 
                 if (categoriesRes.status === 'fulfilled' && categoriesRes.value.data.success) {
                     const sortedCats = categoriesRes.value.data.data;

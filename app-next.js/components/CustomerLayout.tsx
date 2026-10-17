@@ -12,7 +12,6 @@ import { useCart } from '../context/CartContext';
 import { contentAPI } from '../lib/apiClient';
 import { useSettings } from '../context/SettingsContext';
 import { SiteSettings } from '../types';
-import { useInitialLoad } from '../context/InitialLoadContext';
 // No initialData imports allowed. 100% dynamic.
 
 interface CustomerLayoutProps {
@@ -28,7 +27,6 @@ interface CustomerLayoutProps {
 const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children, onSwitchToAdmin }) => {
     const pathname = usePathname();
     const { toast, hideToast } = useCart();
-    const { isInitialLoad, setIsInitialLoad } = useInitialLoad();
     const { settings: siteSettings } = useSettings();
 
     useEffect(() => {
@@ -38,14 +36,7 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children, onSwitchToAdm
         setTimeout(() => {
             window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
         }, 0);
-
-        // FALLBACK: If we are NOT on the home page, the Home.tsx video trigger won't fire.
-        // We should automatically clear the splash after a standard premium delay.
-        if (pathname !== '/') {
-            const timer = setTimeout(() => setIsInitialLoad(false), 2000);
-            return () => clearTimeout(timer);
-        }
-    }, [pathname, setIsInitialLoad]);
+    }, [pathname]);
 
     // Dynamic Taglines Logic
     const [taglines, setTaglines] = React.useState<{ text: string }[]>([]);
@@ -79,34 +70,6 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children, onSwitchToAdm
 
     return (
         <div className="min-h-screen bg-white text-luxury-black font-sans flex flex-col">
-            <AnimatePresence>
-                {isInitialLoad && (
-                    <motion.div
-                        initial={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 1, ease: "easeInOut" }}
-                        className="fixed inset-0 z-[200] bg-white flex flex-col items-center justify-center space-y-8"
-                    >
-                        <motion.div
-                            initial={{ scale: 0.8, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            transition={{ duration: 1.5, ease: "easeOut" }}
-                            className="flex flex-col items-center gap-6"
-                        >
-                            {siteSettings.logoImage ? (
-                                <img src={siteSettings.logoImage} alt={siteSettings.logoText} className="h-16 sm:h-20 w-auto object-contain" />
-                            ) : (
-                                <img src="/v2_logo.webp" width="1188" height="183" alt="V2 Logo" className="h-16 sm:h-20 w-auto object-contain" />
-                            )}
-                            <div className="w-12 h-[1px] bg-luxury-gold/30" />
-                        </motion.div>
-                        <div className="absolute bottom-20 flex flex-col items-center gap-4">
-                            <span className="text-[8px] font-bold tracking-[0.3em] uppercase text-gray-300">Smart Fashion Hub</span>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
             <LoadingBar />
 
             <div className="bg-luxury-black text-white text-[8px] sm:text-[9px] text-center py-3 sm:py-2.5 font-bold uppercase tracking-[0.1em] sm:tracking-[0.3em] z-[60] px-6 min-h-[40px] flex items-center justify-center overflow-hidden">

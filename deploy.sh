@@ -23,7 +23,7 @@ err()  { echo -e "${RED}[✗]${NC} $1"; exit 1; }
 # ── Config ──────────────────────────────────────────────────────────────────────
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$REPO_DIR/backend"
-FRONTEND_DIR="$REPO_DIR/frontend"
+FRONTEND_DIR="$REPO_DIR/app-next.js"
 LOG_DIR="$REPO_DIR/logs"
 
 # ── Step 0: Create necessary directories ───────────────────────────────────────
@@ -57,10 +57,13 @@ cd "$FRONTEND_DIR"
 npm ci
 ok "Frontend dependencies installed"
 
-# ── Step 4: Build frontend → outputs to backend/public/ ───────────────────────
-log "Building frontend (Vite)..."
-npm run build
-ok "Frontend built → backend/public/"
+# ── Step 4: Build Next.js frontend → app-next.js/.next/ ───────────────────────
+# NEXT_PUBLIC_* values are baked in at build time. NEXT_PUBLIC_API_URL stays
+# unset on purpose: the browser calls same-origin /api/v1 (nginx → backend) and
+# server-side sitemap fetches fall back to http://localhost:5000/api/v1.
+log "Building frontend (Next.js)..."
+NEXT_PUBLIC_SITE_URL="${NEXT_PUBLIC_SITE_URL:-https://v2enterprise.in}" npm run build
+ok "Frontend built → app-next.js/.next/"
 
 # ── Step 5: Compile backend TypeScript ─────────────────────────────────────────
 log "Compiling backend TypeScript..."
@@ -82,13 +85,15 @@ ok ".env file found"
 log "Starting server with PM2..."
 cd "$REPO_DIR"
 
-if pm2 list | grep -q "v2-app"; then
-    pm2 delete v2-app
-    ok "Removed old PM2 instance"
-fi
+for app in v2-app v2-frontend; do
+    if pm2 list | grep -q "$app"; then
+        pm2 delete "$app"
+        ok "Removed old PM2 instance '$app'"
+    fi
+done
 
 pm2 start ecosystem.config.js --env production
-ok "PM2 app 'v2-app' started"
+ok "PM2 apps 'v2-app' (API :5000) and 'v2-frontend' (Next :3001) started"
 
 # ── Step 8: Save PM2 process list ──────────────────────────────────────────────
 pm2 save

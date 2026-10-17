@@ -95,6 +95,22 @@ done
 pm2 start ecosystem.config.js --env production
 ok "PM2 apps 'v2-app' (API :5000) and 'v2-frontend' (Next :3001) started"
 
+# ── Step 7b: Warm the homepage cache ───────────────────────────────────────────
+# The homepage is cached by Next. Once both apps answer, expire that cache (in
+# case the build ran while the API was down) and render "/" once, so the first
+# visitor gets a ready page.
+log "Warming homepage cache..."
+warmed=false
+for _ in $(seq 1 30); do
+    if curl -sf -o /dev/null http://127.0.0.1:5000/health && curl -sf -o /dev/null http://127.0.0.1:3001/; then
+        curl -sf -o /dev/null -X POST ${REVALIDATE_SECRET:+-H "x-revalidate-secret: $REVALIDATE_SECRET"} http://127.0.0.1:3001/api/revalidate \
+            && curl -sf -o /dev/null http://127.0.0.1:3001/ && warmed=true
+        break
+    fi
+    sleep 1
+done
+if [ "$warmed" = true ]; then ok "Homepage cache warmed"; else warn "Could not warm homepage cache (site still works; first visitor renders it)"; fi
+
 # ── Step 8: Save PM2 process list ──────────────────────────────────────────────
 pm2 save
 ok "PM2 process list saved"

@@ -40,14 +40,15 @@ import { AuthProvider } from '../context/AuthContext';
 import { InitialLoadProvider } from '../context/InitialLoadContext';
 import { QuickViewProvider } from '../context/QuickViewContext';
 import { CartProvider } from '../context/CartContext';
+import type { SiteSettings } from '../types';
 
 // Re-exports for the (storefront) layout agent — compose in the order
 // documented above (Auth > InitialLoad > QuickView > Cart).
 export { SettingsProvider, AuthProvider, InitialLoadProvider, QuickViewProvider, CartProvider };
 
-export default function Providers({ children }: { children: React.ReactNode }) {
+export default function Providers({ children, initialSettings = null }: { children: React.ReactNode; initialSettings?: SiteSettings | null }) {
   return (
-    <SettingsProvider>
+    <SettingsProvider initialSettings={initialSettings}>
       {children}
       <Toaster
         position="top-right"

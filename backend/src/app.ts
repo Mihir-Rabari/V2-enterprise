@@ -23,6 +23,7 @@ import addressRoutes from './modules/addresses/addresses.routes';
 import { filtersRoutes } from './modules/filters/filters.routes';
 import { attributesRoutes } from './modules/attributes/attributes.routes';
 import sitemapRoutes from './modules/sitemap/sitemap.routes';
+import { notifyStorefrontChanged } from './utils/storefrontRevalidate';
 import { Product } from './models/Product';
 import { isActiveStatus } from './utils/productStatus';
 import { Category } from './models/Category';
@@ -83,6 +84,16 @@ app.use(`${API}/auth/forgot-password`, forgotPasswordLimiter);
 app.use(`${API}/auth/reset-password`, authLimiter);
 app.post(`${API}/contacts`, contactLimiter);
 app.use(`${API}/payments`, paymentLimiter);
+
+// Refresh the storefront's cached homepage after any successful write to data
+// it shows (products, categories, reviews, settings, sliders, content, filters).
+const STOREFRONT_DATA_ROUTES = ['/products', '/categories', '/reviews', '/settings', '/admin', '/sliders', '/content', '/filters', '/attributes'];
+app.use(API, (req, res, next) => {
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && STOREFRONT_DATA_ROUTES.some(p => req.path.startsWith(p))) {
+        res.on('finish', () => { if (res.statusCode < 400) notifyStorefrontChanged(); });
+    }
+    next();
+});
 
 app.use(`${API}/auth`, authRoutes);
 app.use(`${API}/products`, productRoutes);

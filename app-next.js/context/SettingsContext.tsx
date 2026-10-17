@@ -22,11 +22,14 @@ const SettingsContext = createContext<SettingsContextValue>({ settings: {} as Si
  * never throws — consumers outside a provider get the safe default
  * `{ settings: {}, loaded: false }`, exactly like the Vite version.
  */
-export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [settings, setSettings] = useState<SiteSettings>({} as SiteSettings);
-    const [loaded, setLoaded] = useState(false);
+export const SettingsProvider: React.FC<{ children: React.ReactNode; initialSettings?: SiteSettings | null }> = ({ children, initialSettings = null }) => {
+    // The root layout fetches settings on the server (cached), so the first
+    // HTML already has the navbar/section order; fetch here only if that failed.
+    const [settings, setSettings] = useState<SiteSettings>(initialSettings ?? ({} as SiteSettings));
+    const [loaded, setLoaded] = useState(initialSettings !== null);
 
     useEffect(() => {
+        if (initialSettings !== null) return;
         let cancelled = false;
         settingsAPI.get()
             .then(res => {
@@ -35,7 +38,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             .catch(err => console.error('Error fetching site settings:', err))
             .finally(() => { if (!cancelled) setLoaded(true); });
         return () => { cancelled = true; };
-    }, []);
+    }, [initialSettings]);
 
     return <SettingsContext.Provider value={{ settings, loaded }}>{children}</SettingsContext.Provider>;
 };

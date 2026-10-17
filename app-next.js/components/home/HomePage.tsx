@@ -14,11 +14,13 @@
  * campaign clip from `frontend/public` is still not copied into this app —
  * slides must point at uploaded media.
  *
- * ── Server-rendered hero ────────────────────────────────────────────────────
- * The route (app/(storefront)/page.tsx) fetches the hero slides on the server
- * (cached, revalidated every 60s) and passes them as `initialHeroSlides`, so
- * the hero text is in the first HTML response. If that fetch failed
- * (`null`), the slides are fetched in the browser as before.
+ * ── Server-rendered data ────────────────────────────────────────────────────
+ * The route (app/(storefront)/page.tsx) fetches all homepage data on the
+ * server (cached) and passes it as `initialData`, so the whole page is in the
+ * first HTML response; settings (section order, home content) come from the
+ * SettingsProvider, also server-fed. Any piece the server couldn't load is
+ * `null` and fetched here in the browser. Products start as the small subset
+ * the first screens need; the full list loads in the background for filters.
  *
  * ── Other adaptations (behavior-identical) ──────────────────────────────────
  *  - `Link` from next/link (`to` → `href`); `React.lazy` + `Suspense` replaced
@@ -48,6 +50,10 @@ import FilterAccordion from '../FilterAccordion';
 import { useProducts, ApiProduct } from '../../hooks/useProducts';
 import { reviewsAPI, sliderAPI, categoriesAPI, contentAPI, filtersAPI, resolveLocalAssetUrl } from '../../lib/apiClient';
 import { getOptimizedImageUrl } from '../../utils/mediaUtils';
+import {
+    EMPTY_PROMO_GROUPS, splitPromoSlides, topLevelCategories,
+    type FilterSuggestions, type HomeInitialData, type PromoGroups,
+} from './homeData';
 import { useSettings } from '../../context/SettingsContext';
 import {
     CommitmentContent, HomeSectionContent,
@@ -67,9 +73,6 @@ const MarqueeSection = dynamic(() => import('./MarqueeSection'), { loading: () =
 const PromotionalSlider = dynamic(() => import('../PromotionalSlider'), { loading: () => <div className="h-96 bg-white animate-pulse" /> });
 const ClientVoicesSection = dynamic(() => import('./ClientVoicesSection'), { loading: () => <div className="h-96 bg-zinc-50 animate-pulse" /> });
 
-/** Suggestions payload from filtersAPI.getSuggestions() — per-key option lists
- *  plus the `customAttributes` map the Vite source accessed via a cast. */
-type FilterSuggestions = Record<string, string[]> & { customAttributes?: Record<string, string[]> };
 
 /**
  * Runtime shape of the settings document this page reads. The Vite source
@@ -204,8 +207,9 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
                     );
                 })}
             </div>
-            {/* Content Transition Layer */}
-            <AnimatePresence mode="wait">
+            {/* Content Transition Layer — initial={false}: the first slide's text is
+                server-rendered visible instead of fading in only after hydration. */}
+            <AnimatePresence mode="wait" initial={false}>
                 <motion.div
                     key={current.id}
                     initial={{ opacity: 0 }}
@@ -297,11 +301,13 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
     );
 };
 
-const HomePage: React.FC<{ initialHeroSlides?: HeroSlide[] | null }> = ({ initialHeroSlides = null }) => {
-    // API Hooks
-    const { products } = useProducts({ limit: 300, groupByColor: true });
-    const [allReviews, setAllReviews] = useState<Review[]>([]);
-    const [reviewsLoading, setReviewsLoading] = useState(true);
+const HomePage: React.FC<{ initialData?: HomeInitialData | null }> = ({ initialData = null }) => {
+    // API Hooks — the full list is for the Essentials filters; until it arrives
+    // the server-picked subset renders the same default items.
+    const { products: fetchedProducts, loading: productsLoading } = useProducts({ limit: 300, groupByColor: true });
+    const products = productsLoading && fetchedProducts.length === 0 ? (initialData?.products ?? []) : fetchedProducts;
+    const [allReviews, setAllReviews] = useState<Review[]>(initialData?.reviews ?? []);
+    const [reviewsLoading, setReviewsLoading] = useState(!initialData?.reviews);
     const [essentialsSearchQuery, setEssentialsSearchQuery] = useState('');
     const [essentialsSortBy, setEssentialsSortBy] = useState('Newest');
     const [selectedEssentialsCategories, setSelectedEssentialsCategories] = useState<string[]>([]);
@@ -309,7 +315,7 @@ const HomePage: React.FC<{ initialHeroSlides?: HeroSlide[] | null }> = ({ initia
     const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({});
     const [isHovered, setIsHovered] = useState(false);
     const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
-    const [filterSuggestions, setFilterSuggestions] = useState<FilterSuggestions>({});
+    const [filterSuggestions, setFilterSuggestions] = useState<FilterSuggestions>(initialData?.filterSuggestions ?? {});
 
     const hardcodedFilterKeys = new Set(['color', 'size', 'patternType', 'fabric', 'collar', 'sleeve', 'neck', 'pocket', 'length', 'chest', 'waist', 'shoulder', 'sleeveLength']);
 
@@ -374,92 +380,65 @@ const HomePage: React.FC<{ initialHeroSlides?: HeroSlide[] | null }> = ({ initia
     };
 
     // Configuration States
-    const [homeSections, setHomeSections] = useState<HomeSectionContent>({} as HomeSectionContent);
-    const [heroLoaded, setHeroLoaded] = useState(initialHeroSlides !== null);
-    const [marqueeItems, setMarqueeItems] = useState<MarqueeItem[]>([]);
-    const [lookbookItems, setLookbookItems] = useState<LookbookItem[]>([]);
-    const [commitment, setCommitment] = useState<CommitmentContent>({} as CommitmentContent);
+    // Read straight from settings (server-fed) so the first render already has
+    // the section order — no effect, no empty first pass.
     const { settings: siteSettings } = useSettings();
+    const runtimeSettings = siteSettings as SettingsWithHomeContent;
+    const homeSections = runtimeSettings.homeSections ?? ({} as HomeSectionContent);
+    const commitment = runtimeSettings.commitment ?? ({} as CommitmentContent);
+    const [heroLoaded, setHeroLoaded] = useState(!!initialData?.heroSlides);
+    const [marqueeItems, setMarqueeItems] = useState<MarqueeItem[]>(initialData?.marquee ?? []);
+    const [lookbookItems, setLookbookItems] = useState<LookbookItem[]>(initialData?.lookbook ?? []);
+    const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(initialData?.heroSlides ?? []);
+    const [promo, setPromo] = useState<PromoGroups>(() =>
+        initialData?.promoSlides ? splitPromoSlides(initialData.promoSlides) : EMPTY_PROMO_GROUPS
+    );
+    const [journalPosts] = useState<JournalPost[]>([]);
+    const [allCategories, setAllCategories] = useState<Category[]>(initialData?.categories ?? []);
+    const categories = useMemo(() => topLevelCategories(allCategories), [allCategories]);
+
+    // Browser fallback: fetch only what the server couldn't provide (normally nothing).
     useEffect(() => {
-        const runtimeSettings = siteSettings as SettingsWithHomeContent;
-        if (runtimeSettings.homeSections) setHomeSections(runtimeSettings.homeSections);
-        if (runtimeSettings.commitment) setCommitment(runtimeSettings.commitment);
-    }, [siteSettings]);
-    const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(initialHeroSlides ?? []);
-    const [promotionalSlides, setPromotionalSlides] = useState<PromotionalSlide[]>([]);
-    const [bottomPromoSlides, setBottomPromoSlides] = useState<PromotionalSlide[]>([]);
-    const [categorySlides, setCategorySlides] = useState<PromotionalSlide[]>([]);
-    const [bestCategorySlides, setBestCategorySlides] = useState<PromotionalSlide[]>([]);
-    const [newArrivalSlides, setNewArrivalSlides] = useState<PromotionalSlide[]>([]);
-    const [journalPosts, setJournalPosts] = useState<JournalPost[]>([]);
-    const [categories, setCategories] = useState<Category[]>([]);
-    const [allCategories, setAllCategories] = useState<Category[]>([]);
-
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                // The secondary requests do not depend on hero/categories, so start them together instead of after.
-                const secondaryRequests = Promise.allSettled([
-                    reviewsAPI.getHomepage(),
-                    sliderAPI.getPromotional(),
-                    sliderAPI.getMarquee(),
-                    filtersAPI.getSuggestions(),
-                    contentAPI.getByType('LOOKBOOK_ITEM')
-                ]);
-                // Hero only when the server couldn't provide it; it doesn't wait on categories.
-                if (initialHeroSlides === null) {
-                    sliderAPI.getHero()
-                        .then(res => { if (res.data.success) setHeroSlides(res.data.data); })
-                        .catch(() => { /* hero stays empty */ })
-                        .finally(() => setHeroLoaded(true));
-                }
-                const [categoriesRes] = await Promise.allSettled([
-                    categoriesAPI.getAll()
-                ]);
-
-                if (categoriesRes.status === 'fulfilled' && categoriesRes.value.data.success) {
-                    const sortedCats = categoriesRes.value.data.data;
-                    setAllCategories(sortedCats);
-                    setCategories(sortedCats.filter((c: any) => !c.parentId || c.parentId === "" || c.parentId === null));
-                }
-
-                const [reviewsRes, promoRes, marqueeRes, filtersRes, lookbookRes] = await secondaryRequests;
-
-                if (reviewsRes.status === 'fulfilled') {
-                    setAllReviews(reviewsRes.value.data.data ?? []);
-                }
-                setReviewsLoading(false);
-
-                if (promoRes.status === 'fulfilled' && promoRes.value.data.success) {
-                    const pData = promoRes.value.data.data || [];
-                    setPromotionalSlides(pData.filter((s: any) => {
-                        const t = String(s.type || '').toUpperCase();
-                        return (t === 'PROMOTIONAL' || !s.type) && String(s.status || '').toUpperCase() === 'ACTIVE';
-                    }));
-                    setBottomPromoSlides(pData.filter((s: any) => String(s.type || '').toUpperCase() === 'BOTTOM_PROMOTIONAL' && String(s.status || '').toUpperCase() === 'ACTIVE'));
-                    setCategorySlides(pData.filter((s: any) => String(s.type || '').toUpperCase() === 'CATEGORY' && String(s.status || '').toUpperCase() === 'ACTIVE'));
-                    setBestCategorySlides(pData.filter((s: any) => String(s.type || '').toUpperCase() === 'BEST_CATEGORY' && String(s.status || '').toUpperCase() === 'ACTIVE'));
-                    setNewArrivalSlides(pData.filter((s: any) => String(s.type || '').toUpperCase() === 'NEW_ARRIVAL' && String(s.status || '').toUpperCase() === 'ACTIVE'));
-                }
-
-                if (marqueeRes.status === 'fulfilled' && marqueeRes.value.data.success) {
-                    setMarqueeItems(marqueeRes.value.data.data);
-                }
-
-                if (filtersRes.status === 'fulfilled' && filtersRes.value.data.success) {
-                    setFilterSuggestions(filtersRes.value.data.data);
-                }
-
-                if (lookbookRes.status === 'fulfilled' && lookbookRes.value.data.success) {
-                    setLookbookItems(lookbookRes.value.data.data);
-                }
-            } catch (err) {
-                console.error("Home Data Fetch Error:", err);
-                setReviewsLoading(false);
-            }
-        };
-
-        fetchData();
+        const d = initialData;
+        const logError = (what: string) => (err: unknown) => console.error(`Home ${what} fetch error:`, err);
+        if (!d?.heroSlides) {
+            sliderAPI.getHero()
+                .then(res => { if (res.data.success) setHeroSlides(res.data.data); })
+                .catch(logError('hero'))
+                .finally(() => setHeroLoaded(true));
+        }
+        if (!d?.categories) {
+            categoriesAPI.getAll()
+                .then(res => { if (res.data.success) setAllCategories(res.data.data); })
+                .catch(logError('categories'));
+        }
+        if (!d?.reviews) {
+            reviewsAPI.getHomepage()
+                .then(res => setAllReviews(res.data.data ?? []))
+                .catch(logError('reviews'))
+                .finally(() => setReviewsLoading(false));
+        }
+        if (!d?.promoSlides) {
+            sliderAPI.getPromotional()
+                .then(res => { if (res.data.success) setPromo(splitPromoSlides(res.data.data || [])); })
+                .catch(logError('promotional'));
+        }
+        if (!d?.marquee) {
+            sliderAPI.getMarquee()
+                .then(res => { if (res.data.success) setMarqueeItems(res.data.data); })
+                .catch(logError('marquee'));
+        }
+        if (!d?.filterSuggestions) {
+            filtersAPI.getSuggestions()
+                .then(res => { if (res.data.success) setFilterSuggestions(res.data.data); })
+                .catch(logError('filters'));
+        }
+        if (!d?.lookbook) {
+            contentAPI.getByType('LOOKBOOK_ITEM')
+                .then(res => { if (res.data.success) setLookbookItems(res.data.data); })
+                .catch(logError('lookbook'));
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // DERIVE DYNAMIC OPTIONS
@@ -637,21 +616,21 @@ const HomePage: React.FC<{ initialHeroSlides?: HeroSlide[] | null }> = ({ initia
                                 />
                             );
                         case 'promotional_slider':
-                            return <PromotionalSlider key="promotional_slider" slides={promotionalSlides} />;
+                            return <PromotionalSlider key="promotional_slider" slides={promo.promotional} />;
                         case 'category-slider':
-                            if (categorySlides.length === 0) return null;
-                            return <PromotionalSlider key="category-slider" slides={categorySlides} />;
+                            if (promo.category.length === 0) return null;
+                            return <PromotionalSlider key="category-slider" slides={promo.category} />;
                         case 'best-category-slider':
-                            if (bestCategorySlides.length === 0) return null;
-                            return <PromotionalSlider key="best-category-slider" slides={bestCategorySlides} />;
+                            if (promo.best.length === 0) return null;
+                            return <PromotionalSlider key="best-category-slider" slides={promo.best} />;
                         case 'new-arrival-slider':
-                            if (newArrivalSlides.length === 0) return null;
-                            return <PromotionalSlider key="new-arrival-slider" slides={newArrivalSlides} />;
+                            if (promo.newArrival.length === 0) return null;
+                            return <PromotionalSlider key="new-arrival-slider" slides={promo.newArrival} />;
                         case 'promotional':
                             return homeSections.promotionalBanner?.isVisible && (
                                 <section key="promotional" className="py-12 bg-white overflow-hidden">
                                     <div className="max-w-[1800px] mx-auto px-6 lg:px-12">
-                                        <PromotionalSlider slides={bottomPromoSlides} />
+                                        <PromotionalSlider slides={promo.bottom} />
                                     </div>
                                 </section>
                             );

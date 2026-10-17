@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 import HomePage from '../../components/home/HomePage';
 import { DEFAULT_DESCRIPTION, DEFAULT_TITLE } from '../../lib/seo';
-import type { HeroSlide } from '../../types';
+import { backendGet } from '../../lib/serverApi';
+import { pickInitialProducts, type HomeInitialData } from '../../components/home/homeData';
+import type { ApiProduct } from '../../hooks/useProducts';
 
 /**
  * "/" — server entry for the storefront home page (Next.js port of
@@ -23,31 +25,37 @@ import type { HeroSlide } from '../../types';
  * `metadataBase` resolves to https://v2enterprise.in/. OG/Twitter/robots are
  * inherited from the root layout (identical values for "/").
  *
- * ── Server-rendered hero ────────────────────────────────────────────────────
- * The hero slides are fetched here, straight from the backend on the same
- * machine, so the first HTML response already contains the hero instead of
- * waiting for a browser API call. The page is cached and regenerated in the
- * background at most every 60s, so admin edits to the hero show up within a
- * minute. If the backend is unreachable (e.g. during a build with the API
- * down) HomePage gets `null` and fetches the slides in the browser.
+ * ── Server-rendered, cached homepage ───────────────────────────────────────
+ * All homepage data is fetched here, in parallel, straight from the backend on
+ * the same machine (lib/serverApi.ts), so the first HTML response contains the
+ * whole page instead of an empty shell that waits for ~10 browser API calls.
+ * The page is rendered at build time (warm from the first visitor), cached,
+ * and regenerated in the background at most every 10 minutes; admin edits
+ * expire the cache immediately (app/api/revalidate/route.ts). Only the
+ * products the first screens show go into the HTML — HomePage loads the full
+ * list in the background for the Essentials filters. Any piece that fails to
+ * load here is `null` and fetched in the browser instead.
  */
 
-export const revalidate = 60;
+// Must be a literal; keep in sync with HOME_REVALIDATE_SECONDS.
+export const revalidate = 600;
 
-const BACKEND_URL = process.env.BACKEND_INTERNAL_URL || 'http://127.0.0.1:5000';
-
-async function getHeroSlides(): Promise<HeroSlide[] | null> {
-  try {
-    const res = await fetch(`${BACKEND_URL}/api/v1/sliders/hero`, {
-      next: { revalidate: 60 },
-      signal: AbortSignal.timeout(3000),
-    });
-    if (!res.ok) return null;
-    const body = await res.json();
-    return body?.success && Array.isArray(body.data) ? body.data : null;
-  } catch {
-    return null;
-  }
+async function getHomeData(): Promise<HomeInitialData> {
+  const [heroSlides, promoSlides, marquee, categories, reviews, filterSuggestions, lookbook, productPage] =
+    await Promise.all([
+      backendGet<HomeInitialData['heroSlides']>('/sliders/hero'),
+      backendGet<HomeInitialData['promoSlides']>('/sliders/promotional'),
+      backendGet<HomeInitialData['marquee']>('/content/MARQUEE'),
+      backendGet<HomeInitialData['categories']>('/categories'),
+      backendGet<HomeInitialData['reviews']>('/reviews/homepage'),
+      backendGet<HomeInitialData['filterSuggestions']>('/filters/suggestions'),
+      backendGet<HomeInitialData['lookbook']>('/content/LOOKBOOK_ITEM'),
+      backendGet<{ products?: ApiProduct[] }>('/products?limit=300&groupByColor=true'),
+    ]);
+  return {
+    heroSlides, promoSlides, marquee, categories, reviews, filterSuggestions, lookbook,
+    products: productPage?.products ? pickInitialProducts(productPage.products) : null,
+  };
 }
 
 export const metadata: Metadata = {
@@ -59,5 +67,5 @@ export const metadata: Metadata = {
 };
 
 export default async function StorefrontHomePage() {
-  return <HomePage initialHeroSlides={await getHeroSlides()} />;
+  return <HomePage initialData={await getHomeData()} />;
 }

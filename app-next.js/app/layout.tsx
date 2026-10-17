@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
 import Providers from './providers';
+import { backendGet } from '@/lib/serverApi';
+import type { SiteSettings } from '@/types';
 import {
   DEFAULT_DESCRIPTION,
   DEFAULT_OG_DESCRIPTION,
@@ -125,7 +127,7 @@ export const viewport: Viewport = {
   themeColor: THEME_COLOR,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
@@ -135,11 +137,14 @@ export default function RootLayout({
   // time ON :root, where --font-inter was undefined while these classes lived
   // on <body> — every font token then computed to the guaranteed-invalid empty
   // value and the whole page silently rendered in the system font stack.
+  // Public site settings, fetched on the server and cached (lib/serverApi.ts),
+  // so pages render with the real navbar/section order in the first HTML.
+  const settings = await backendGet<SiteSettings>('/settings');
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
       <body>
         {/* Shared client providers (toast, and later the context stack) live in Providers. */}
-        <Providers>{children}</Providers>
+        <Providers initialSettings={settings}>{children}</Providers>
       </body>
     </html>
   );

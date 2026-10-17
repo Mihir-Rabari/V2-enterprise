@@ -6,30 +6,14 @@
  * Route: app/(storefront)/page.tsx (server component, owns route metadata) →
  * this client component (hooks, framer-motion, browser APIs).
  *
- * ── MEDIA EXCLUSION — bundled Dior video ────────────────────────────────────
- * The Vite hero's <video> layer existed to autoplay the bundled campaign clip
- * `frontend/public/The_Dior_Men_s_Summer_2022_Campaign_Video_720P.mp4`
- * (referenced by the backend seed data as the first hero slide and a
- * BOTTOM_PROMOTIONAL slide). Per the migration media mandate, that file is NOT
- * copied into the Next.js app and NO video element ships with this port:
- *
- *  - The `HeroVideo` component (autoplaying <video> + canplaythrough handling)
- *    is removed entirely.
- *  - Video-type hero slides (and slides whose URL ends in a video extension)
- *    keep the exact same layout/typography/spacing via a lightweight,
- *    non-video treatment:
- *      • if the slide provides API/runtime poster art, that still image renders
- *        with the original cover/scale/hover classes (no new media, no
- *        replacement video);
- *      • otherwise a clean static treatment (subtle luxury gold/black CSS
- *        gradient on the existing `bg-luxury-black` canvas) fills the layer.
- *  - Image slides are untouched — they already render runtime backend/CDN
- *    media returned by `sliderAPI.getHero()`.
- *  - Initial-load resolution: the Vite app resolved the splash screen on the
- *    bundled video's `canplaythrough` (or a 5s fallback timer). With static
- *    media there is nothing to buffer, so poster slides resolve on the poster
- *    img's `onLoad` and poster-less video slides resolve immediately; the 5s
- *    fallback timer is preserved for image slides exactly like the original.
+ * ── Hero video ──────────────────────────────────────────────────────────────
+ * Video-type hero slides (and slides whose URL ends in a video extension) play
+ * the slide's runtime backend/CDN video through `HeroVideo`, ported from the
+ * Vite app: only the visible slide autoplays (muted, looped, inline) and
+ * preloads fully; the upcoming slide fetches metadata only. The bundled Dior
+ * campaign clip from `frontend/public` is still not copied into this app —
+ * slides must point at uploaded media. The splash screen resolves on the
+ * current video's `canplaythrough`, or the 5s fallback timer.
  *
  * ── Other adaptations (behavior-identical) ──────────────────────────────────
  *  - `Link` from next/link (`to` → `href`); `React.lazy` + `Suspense` replaced
@@ -100,6 +84,46 @@ interface HeroProps {
     slides: HeroSlide[];
 }
 
+interface HeroVideoProps {
+    src: string;
+    poster?: string;
+    isCurrent: boolean;
+    onReady: () => void;
+}
+
+// Only the visible slide downloads/plays; the upcoming slide just fetches metadata.
+const HeroVideo: React.FC<HeroVideoProps> = ({ src, poster, isCurrent, onReady }) => {
+    const ref = React.useRef<HTMLVideoElement>(null);
+
+    React.useEffect(() => {
+        const v = ref.current;
+        if (!v) return;
+        if (isCurrent) {
+            v.play().catch(() => { /* autoplay blocked: poster/first frame stays */ });
+        } else {
+            v.pause();
+        }
+    }, [isCurrent]);
+
+    return (
+        <video
+            ref={ref}
+            autoPlay={isCurrent}
+            loop
+            muted
+            playsInline
+            preload={isCurrent ? 'auto' : 'metadata'}
+            width="1920"
+            height="1080"
+            poster={poster}
+            onCanPlayThrough={() => { if (isCurrent) onReady(); }}
+            className="w-full h-full object-cover scale-105 transition-transform duration-[3000ms] group-hover/hero:scale-110"
+        >
+            <source src={src} type="video/mp4" />
+        </video>
+    );
+};
+
 const Hero: React.FC<HeroProps> = ({ slides }) => {
     const [index, setIndex] = React.useState(0);
     // SSR-safe lazy initializer — avoids window access before hydration
@@ -137,17 +161,6 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
         return () => clearInterval(timer);
     }, [activeSlides.length, index, current?.duration]);
 
-    // Static media has nothing to buffer: a video slide without poster art
-    // resolves the initial load immediately (see MEDIA EXCLUSION above);
-    // poster-backed and image slides resolve via onLoad / the 5s fallback.
-    React.useEffect(() => {
-        if (!current) return;
-        const isVideoSlide = current.type === 'video' || /\.(mp4|mov|webm|ogg)$/i.test(current.url);
-        if (isVideoSlide && !current.poster) {
-            setIsInitialLoad(false);
-        }
-    }, [current, setIsInitialLoad]);
-
     if (!current) return null;
 
     return (
@@ -175,28 +188,15 @@ const Hero: React.FC<HeroProps> = ({ slides }) => {
                         >
                             <div className="absolute inset-0 overflow-hidden">
                                 {isVideoSlide ? (
-                                    slide.poster ? (
-                                        // Video slide (media excluded) — static treatment with the
-                                        // slide's own runtime poster art, original cover/scale classes.
-                                        <img
-                                            src={resolveLocalAssetUrl(getOptimizedImageUrl(slide.poster, { width: 1920, quality: 75 }))}
-                                            alt={slide.title}
-                                            fetchPriority={isCurrent ? 'high' : 'low'}
-                                            onLoad={() => { if (isCurrent) setIsInitialLoad(false); }}
-                                            className="w-full h-full object-cover scale-105 transition-transform duration-[3000ms] group-hover/hero:scale-110"
-                                        />
-                                    ) : (
-                                        // Video slide without poster — clean static treatment of the
-                                        // same layer: subtle gold/charcoal gradient on the black canvas.
-                                        <div
-                                            aria-hidden="true"
-                                            className="w-full h-full scale-105 transition-transform duration-[3000ms] group-hover/hero:scale-110"
-                                            style={{
-                                                background:
-                                                    'radial-gradient(120% 90% at 70% 20%, rgba(191, 163, 122, 0.15), transparent 60%), radial-gradient(100% 80% at 20% 85%, rgba(255, 255, 255, 0.06), transparent 55%), #0a0a0a',
-                                            }}
-                                        />
-                                    )
+                                    <HeroVideo
+                                        // Remount when the breakpoint swaps the source — a changed
+                                        // <source> child alone doesn't make the <video> reload.
+                                        key={slideMediaUrl}
+                                        src={resolveLocalAssetUrl(slideMediaUrl)}
+                                        poster={slide.poster ? resolveLocalAssetUrl(getOptimizedImageUrl(slide.poster, { width: 1920, quality: 75 })) : undefined}
+                                        isCurrent={isCurrent}
+                                        onReady={() => setIsInitialLoad(false)}
+                                    />
                                 ) : (
                                     <img
                                         src={resolveLocalAssetUrl(getOptimizedImageUrl(slide.url, { width: 1920, quality: 75 }))}

@@ -57,6 +57,7 @@ import FilterAccordion from '@/components/FilterAccordion';
 import { useProducts, type ApiProduct } from '@/hooks/useProducts';
 import { categoriesAPI, filtersAPI, productsAPI } from '@/lib/apiClient';
 import { deriveFacets } from '@/lib/facets';
+import { resolveCategoryScope } from '@/lib/categoryScope';
 import { Category } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { safeDecode } from '@/lib/paramUtils';
@@ -92,6 +93,22 @@ const ShopView: React.FC<ShopViewProps> = ({ variant, category, subcategory }) =
     else if (category) defaultCat = safeDecode(category);
 
     const initialCategory = (defaultCat && defaultCat.toLowerCase() !== 'all') ? defaultCat : 'All';
+
+    // On the `category` variant (/[category]/[subcategory]) the first route
+    // segment always names the MAIN category — even when the subcategory is
+    // "All" (the SubCategories page forwards a main category with no children
+    // to /<category>/All). The checkbox-driven `selectedCategories` only
+    // carries the subcategory in that case, so without this the main category
+    // is dropped entirely: the grid shows the whole catalog and the sidebar
+    // offers catalog-wide ("dead") facets. Capturing it here lets the scope
+    // below constrain both the product query and the facet baseline to the
+    // category the user actually opened. Empty string when not on a category
+    // route or when the segment itself is "All".
+    const routeMainCategory = useMemo(() => {
+        if (variant !== 'category' || !category) return '';
+        const decoded = safeDecode(category);
+        return decoded.toLowerCase() === 'all' ? '' : decoded;
+    }, [variant, category]);
 
     // Filter States (Synced with URL Search Params)
     const [selectedCategories, setSelectedCategories] = useState<string[]>(() => {
@@ -153,30 +170,17 @@ const ShopView: React.FC<ShopViewProps> = ({ variant, category, subcategory }) =
     // params. Extracted from fetchParams so the facet-baseline fetch below
     // queries the exact same scope the product grid does — the client
     // requirement is that filters reflect the products in the current scope.
-    const categoryConstraint = useMemo(() => {
-        const mainCategories: string[] = [];
-        const subCategories: string[] = [];
-        if (selectedCategories.length > 0) {
-            // Case-insensitive so slug-style URLs (/mens/tshirt) resolve to the same category as /MENS/TSHIRT.
-            const findCategory = (name: string) =>
-                allCategories.find(c => c.name === name) ||
-                allCategories.find(c => c.name?.toLowerCase() === name.toLowerCase());
-            // On /:category/:subcategory routes the URL already names the sub-category, so the first product
-            // request can be sent in parallel with /categories instead of unfiltered (and then repeated).
-            const categoriesLoaded = allCategories.length > 0;
-            const mainCats = categoriesLoaded ? selectedCategories.filter(name => {
-                const cat = findCategory(name);
-                return cat && !cat.parentId;
-            }) : [];
-            const subCats = categoriesLoaded ? selectedCategories.filter(name => {
-                const cat = findCategory(name);
-                return cat && cat.parentId;
-            }) : (subcategory ? selectedCategories.filter(name => name === initialCategory) : []);
-            mainCategories.push(...mainCats);
-            subCategories.push(...subCats);
-        }
-        return { mainCategories, subCategories };
-    }, [selectedCategories, allCategories, subcategory, initialCategory]);
+    const categoryConstraint = useMemo(
+        () =>
+            resolveCategoryScope({
+                selectedCategories,
+                allCategories,
+                subcategory,
+                initialCategory,
+                routeMainCategory,
+            }),
+        [selectedCategories, allCategories, subcategory, initialCategory, routeMainCategory],
+    );
 
     // ─── Fetch Params Construction ──────────────────────────────────────────
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import Navbar from './Navbar';
@@ -8,6 +8,7 @@ import Footer from './Footer';
 import LoadingBar from './LoadingBar';
 import Toast from './Toast';
 import QuickView from './QuickView';
+import ScrollRestoration from './ScrollRestoration';
 import { useCart } from '../context/CartContext';
 import { contentAPI } from '../lib/apiClient';
 import { useSettings } from '../context/SettingsContext';
@@ -29,14 +30,10 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children, onSwitchToAdm
     const { toast, hideToast } = useCart();
     const { settings: siteSettings } = useSettings();
 
-    useEffect(() => {
-        if ('scrollRestoration' in window.history) {
-            window.history.scrollRestoration = 'manual';
-        }
-        setTimeout(() => {
-            window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-        }, 0);
-    }, [pathname]);
+    // Scroll handling is delegated to <ScrollRestoration /> (mounted below):
+    // forward navigations go to the top, Back/Forward restores the saved
+    // position. The previous unconditional scrollTo(0,0) on every pathname
+    // change is intentionally removed — it defeated back-button restoration.
 
     // Dynamic Taglines Logic
     const [taglines, setTaglines] = React.useState<{ text: string }[]>([]);
@@ -70,6 +67,9 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children, onSwitchToAdm
 
     return (
         <div className="min-h-screen bg-white text-luxury-black font-sans flex flex-col">
+            <Suspense fallback={null}>
+                <ScrollRestoration />
+            </Suspense>
             <LoadingBar />
 
             <div className="bg-luxury-black text-white text-[8px] sm:text-[9px] text-center py-3 sm:py-2.5 font-bold uppercase tracking-[0.1em] sm:tracking-[0.3em] z-[60] px-6 min-h-[40px] flex items-center justify-center overflow-hidden">

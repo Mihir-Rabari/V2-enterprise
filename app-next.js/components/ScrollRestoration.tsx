@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 
 /**
@@ -51,6 +51,17 @@ function urlKey(pathname: string, search: string): string {
     return search ? `${pathname}?${search}` : pathname;
 }
 
+/**
+ * Saved scroll Y for a given pathname+search, if the user had scrolled it and
+ * is now returning (Back/Forward). Listing pages read this to reserve layout
+ * height while their client-fetched content loads, so the footer never flashes
+ * into the viewport at the top before the grid fills in and scroll is restored.
+ * Returns 0 when there's nothing to restore (a genuine forward navigation).
+ */
+export function getSavedScroll(pathname: string, search: string): number {
+    return positions.get(urlKey(pathname, search)) ?? 0;
+}
+
 export default function ScrollRestoration() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -92,7 +103,7 @@ export default function ScrollRestoration() {
         };
     }, []);
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         const key = urlKey(pathname, search);
         const target = positions.get(key);
         activeKeyRef.current = key;

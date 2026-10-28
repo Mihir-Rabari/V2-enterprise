@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, Suspense } from 'react';
-import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import Navbar from './Navbar';
 import Footer from './Footer';
@@ -26,7 +25,6 @@ interface CustomerLayoutProps {
 }
 
 const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children, onSwitchToAdmin }) => {
-    const pathname = usePathname();
     const { toast, hideToast } = useCart();
     const { settings: siteSettings } = useSettings();
 
@@ -90,17 +88,7 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children, onSwitchToAdm
             <Navbar onSwitchToAdmin={onSwitchToAdmin} />
 
             <main className="flex-grow relative min-h-screen">
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        key={pathname}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-                    >
-                        {children}
-                    </motion.div>
-                </AnimatePresence>
+                {children}
             </main>
 
             <Footer onSwitchToAdmin={onSwitchToAdmin} />

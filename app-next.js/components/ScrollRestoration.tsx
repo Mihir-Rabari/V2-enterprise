@@ -10,131 +10,134 @@ import { usePathname, useSearchParams } from 'next/navigation';
  * ---------------
  * The Vite SPA (and the first Next port in CustomerLayout) forced
  * `history.scrollRestoration = 'manual'` and then `scrollTo(0, 0)` on EVERY
- * pathname change. That is correct for forward navigation but it also fired on
- * browser Back/Forward, so returning from a product page always slammed the
- * shopper back to the top of the listing — the bug we are fixing.
+ * pathname change. That fires on browser Back/Forward too, so returning from a
+ * product page always slammed the shopper back to the top of the listing.
  *
- * WHAT IT DOES
- * ------------
- * We take over scroll restoration deterministically:
- *   • PUSH navigation (clicking a product, a link, a new filter URL) → top.
- *   • POP navigation (browser Back/Forward) → restore the Y we saved for that
- *     history entry.
+ * WHY THE EARLIER FIXES DIDN'T WORK (both verified with a headless repro)
+ * ----------------------------------------------------------------------
+ * 1. Keying saved positions by an id in `history.state`: Next's App Router
+ *    rewrites `history.state` on its soft navigations, so the id was lost and
+ *    every Back generated a fresh id with no saved position → scroll to top.
+ * 2. Keying by URL but saving on every `scroll` event: when the user clicks a
+ *    product the outgoing shop page is scrolled to 0 (Next's default link
+ *    scroll + the layout's AnimatePresence remount) BEFORE the route key
+ *    switches, so a `scroll → 0` event overwrote the saved 1600 with 0. The
+ *    repro showed exactly: `save /shop = 1600` then `save /shop = 0`.
  *
- * Next's App Router does soft client navigations, so the browser's native
- * restoration is unreliable here; we manage positions ourselves in a Map keyed
- * by a per-entry id persisted in `history.state`.
+ * WHAT IT DOES NOW
+ * ----------------
+ * Positions are keyed by URL (survives Next's history churn) and the leaving
+ * position is captured at NAVIGATION INTENT — a capture-phase listener on
+ * `click` (and `keydown` Enter) reads `window.scrollY` the instant a link is
+ * activated, before any scroll reset or remount can zero it. That frozen value
+ * is stored for the URL being left. We also snapshot on `pagehide`.
+ *
+ * On each route change we restore the saved position for the URL we landed on
+ * (the hallmark of Back/Forward to an already-scrolled page); otherwise we go
+ * to the top (a genuine forward navigation, including product pages).
  *
  * LAZY CONTENT
  * ------------
- * The shop grid is client-fetched and resets to page 1 on Back, so immediately
- * after a POP the document is far shorter than it was when the user left. A
- * single `scrollTo` would be clamped to the short page and lose the position.
- * We therefore re-apply the target Y across a short window (rAF + a few timed
- * retries) as more products stream in and the document grows, stopping early
- * once the target is actually reachable. This is best-effort and self-limiting;
- * it never scrolls past the current document height.
+ * The shop grid is client-fetched and rebuilt on Back, so briefly the document
+ * is shorter than the saved Y. We re-apply the target across a short window
+ * (rAF + timed retries) and keep a MutationObserver running briefly so
+ * late-arriving rows still get the scroll re-applied. Never scrolls past the
+ * current document height.
  */
 
-const KEY = '__v2_scroll_key';
 const positions = new Map<string, number>();
 
-/** Stable id for the current history entry (created lazily, survives Back/Forward). */
-function currentKey(): string {
-    if (typeof window === 'undefined') return 'ssr';
-    const state = window.history.state as Record<string, unknown> | null;
-    const existing = state && typeof state[KEY] === 'string' ? (state[KEY] as string) : null;
-    if (existing) return existing;
-    const generated = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    try {
-        window.history.replaceState({ ...(state ?? {}), [KEY]: generated }, '');
-    } catch {
-        /* replaceState can throw in rare sandboxed contexts — degrade gracefully. */
-    }
-    return generated;
+function urlKey(pathname: string, search: string): string {
+    return search ? `${pathname}?${search}` : pathname;
 }
 
 export default function ScrollRestoration() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
-    // Tracks whether the NEXT route change came from a browser Back/Forward.
-    const popRef = useRef(false);
-    // The key of the entry we are currently on (so we save against the right id).
+    const search = searchParams.toString();
     const activeKeyRef = useRef<string>('');
 
-    // Own scroll restoration; the browser must not also try to restore.
     useEffect(() => {
         if ('scrollRestoration' in window.history) {
             window.history.scrollRestoration = 'manual';
         }
-        activeKeyRef.current = currentKey();
 
-        const onPopState = () => {
-            popRef.current = true;
+        // Freeze the current URL's scroll position at the moment the user
+        // intends to navigate — before any programmatic scroll-to-top or the
+        // layout's route remount can zero it out. Capture phase so we run
+        // ahead of React/Next click handlers.
+        const snapshot = () => {
+            if (activeKeyRef.current) positions.set(activeKeyRef.current, window.scrollY);
         };
-        window.addEventListener('popstate', onPopState);
+        const onClickCapture = (e: MouseEvent) => {
+            const el = e.target as Element | null;
+            if (el && el.closest('a[href]')) snapshot();
+        };
+        const onKeyDownCapture = (e: KeyboardEvent) => {
+            if (e.key === 'Enter') {
+                const el = e.target as Element | null;
+                if (el && el.closest('a[href]')) snapshot();
+            }
+        };
+        const onPageHide = () => snapshot();
 
-        // Continuously record the current entry's scroll position so a later
-        // Back to it lands where the user was. Passive + the ref write is cheap.
-        const onScroll = () => {
-            positions.set(activeKeyRef.current, window.scrollY);
-        };
-        window.addEventListener('scroll', onScroll, { passive: true });
+        document.addEventListener('click', onClickCapture, true);
+        document.addEventListener('keydown', onKeyDownCapture, true);
+        window.addEventListener('pagehide', onPageHide);
 
         return () => {
-            window.removeEventListener('popstate', onPopState);
-            window.removeEventListener('scroll', onScroll);
+            document.removeEventListener('click', onClickCapture, true);
+            document.removeEventListener('keydown', onKeyDownCapture, true);
+            window.removeEventListener('pagehide', onPageHide);
         };
     }, []);
 
-    // React to route changes (pathname OR query string — filter changes on the
-    // shop page keep the same pathname but are still forward navigations).
     useEffect(() => {
-        const key = currentKey();
+        const key = urlKey(pathname, search);
+        const target = positions.get(key);
         activeKeyRef.current = key;
 
-        const isPop = popRef.current;
-        popRef.current = false;
-
-        if (!isPop) {
-            // Forward navigation: start a fresh entry at the top.
+        if (target === undefined || target === 0) {
+            // Forward navigation to a URL we haven't scrolled (incl. product
+            // pages), or one last left at the top: start at the top.
             positions.set(key, 0);
             window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
             return;
         }
 
-        // Back/Forward: restore the saved position, retrying while lazily
-        // fetched content grows the document tall enough to reach it.
-        const target = positions.get(key) ?? 0;
-        if (target === 0) {
-            window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
-            return;
-        }
-
+        // Returning to a scrolled URL: restore, retrying while the client-fetched
+        // grid grows the document tall enough to reach the saved Y.
         let cancelled = false;
-        const delays = [0, 60, 120, 240, 400, 700, 1000];
-        const timers: ReturnType<typeof setTimeout>[] = [];
+        let settled = false;
+
+        const maxScroll = () =>
+            Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
 
         const apply = () => {
             if (cancelled) return;
-            const maxScroll = Math.max(
-                0,
-                document.documentElement.scrollHeight - window.innerHeight,
-            );
-            window.scrollTo({ top: Math.min(target, maxScroll), left: 0, behavior: 'instant' as ScrollBehavior });
+            window.scrollTo({ top: Math.min(target, maxScroll()), left: 0, behavior: 'instant' as ScrollBehavior });
+            if (maxScroll() >= target - 2) settled = true;
         };
 
-        // rAF for the first paint, then timed retries as more products load.
         const raf = requestAnimationFrame(apply);
-        for (const d of delays) timers.push(setTimeout(apply, d));
+        const delays = [0, 50, 120, 220, 360, 550, 800, 1100, 1500, 2000, 2600];
+        const timers = delays.map((d) => setTimeout(apply, d));
+
+        const mo = new MutationObserver(() => {
+            if (!settled) apply();
+        });
+        mo.observe(document.body, { childList: true, subtree: true });
+        const moStop = setTimeout(() => mo.disconnect(), 3500);
 
         return () => {
             cancelled = true;
             cancelAnimationFrame(raf);
             timers.forEach(clearTimeout);
+            clearTimeout(moStop);
+            mo.disconnect();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [pathname, searchParams]);
+    }, [pathname, search]);
 
     return null;
 }

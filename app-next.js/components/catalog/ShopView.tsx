@@ -58,6 +58,7 @@ import { useProducts, type ApiProduct } from '@/hooks/useProducts';
 import { categoriesAPI, filtersAPI, productsAPI } from '@/lib/apiClient';
 import { deriveFacets } from '@/lib/facets';
 import { resolveCategoryScope } from '@/lib/categoryScope';
+import { getSavedScroll } from '@/components/ScrollRestoration';
 import { Category } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { safeDecode } from '@/lib/paramUtils';
@@ -434,6 +435,20 @@ const ShopView: React.FC<ShopViewProps> = ({ variant, category, subcategory }) =
 
     const activeFilterCount = selectedCategories.length + selectedPriceRanges.length + Object.values(selectedFilters).reduce((acc: number, curr: string[]) => acc + curr.length, 0);
 
+    // While the first page of products is loading on a Back/Forward return,
+    // reserve enough column height to cover the scroll position we're about to
+    // restore to — plus a viewport. Without this the freshly-mounted grid is
+    // short for a beat, so the footer flashes up into view at y=0 before the
+    // list fills in. Only applied during the page-1 load and only when there's
+    // a saved position (a genuine forward navigation reserves nothing).
+    const reservedMinHeight = useMemo(() => {
+        if (!(productsLoading && page === 1)) return 0;
+        if (typeof window === 'undefined') return 0;
+        const savedY = getSavedScroll(pathname, searchParams.toString());
+        return savedY > 0 ? savedY + window.innerHeight : 0;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [productsLoading, page, pathname, searchParams]);
+
     const renderSidebarContent = () => (
         <div className="w-full">
             <FilterAccordion title="Sort By" isSort currentSort={sortBy} onSortChange={setSortBy} options={[]} selected={[]} onToggle={() => { }} />
@@ -457,7 +472,7 @@ const ShopView: React.FC<ShopViewProps> = ({ variant, category, subcategory }) =
     );
 
     return (
-        <div className="bg-white min-h-screen animate-fade-in relative">
+        <div className="bg-white min-h-screen relative">
             <div className="lg:hidden sticky top-[72px] z-30 bg-white/90 backdrop-blur-md border-b border-gray-100 py-3 shadow-sm">
                 <div className="px-6 flex items-center justify-between w-full">
                     <button
@@ -509,7 +524,10 @@ const ShopView: React.FC<ShopViewProps> = ({ variant, category, subcategory }) =
                         <div className="flex-1 overflow-y-auto w-full no-scrollbar pr-2 pb-8">{renderSidebarContent()}</div>
                     </div>
 
-                    <div className="flex-1 min-w-0 w-full">
+                    <div
+                        className="flex-1 min-w-0 w-full"
+                        style={reservedMinHeight ? { minHeight: reservedMinHeight } : undefined}
+                    >
                         {productsLoading && page === 1 ? (
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-12 animate-pulse">
                                 {[...Array(8)].map((_, i) => (

@@ -9,6 +9,11 @@ import type { NextConfig } from 'next';
  * once the image pipeline is finalized by the storefront/catalog agents.
  * We intentionally avoid a permissive wildcard remotePatterns config.
  */
-const nextConfig: NextConfig = {};
+const nextConfig: NextConfig = {
+    experimental: {
+        // Set by `next upgrade --agent=security` (16.4.0 → 16.4.3 security patch).
+        agentUpgrade: 'security',
+    },
+};
 
 export default nextConfig;

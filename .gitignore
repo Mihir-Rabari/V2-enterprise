@@ -51,3 +51,25 @@ brain/
 # Generated Files
 backend/src/**/*.js
 backend/src/**/*.js.map
+
+# Performance-audit run output (generated benchmark artifacts, not source).
+# Lighthouse/DevTools traces, HAR dumps, raw run data and experiment patches
+# are large (~800MB) and regenerable — keep them local, out of the repo.
+# Hand-written *.md summaries in reports/ stay tracked (not matched below).
+reports/performance/**/raw/
+reports/performance/**/lighthouse/
+reports/performance/**/superseded/
+reports/performance/**/after/
+reports/performance/**/run-after/
+reports/performance/**/run-after2/
+reports/performance/**/run-control/
+reports/performance/**/v-after/
+reports/performance/**/v-control/
+reports/performance/**/w-after/
+reports/performance/**/w-after2/
+reports/performance/**/w-control/
+reports/performance/**/discarded-concurrent-runs/
+reports/performance/**/discarded-network-outage-runs/
+reports/performance/**/*.report.html
+reports/performance/**/*.report.json
+reports/performance/**/lighthouse-results.csv

@@ -23,6 +23,7 @@ import addressRoutes from './modules/addresses/addresses.routes';
 import { filtersRoutes } from './modules/filters/filters.routes';
 import { attributesRoutes } from './modules/attributes/attributes.routes';
 import sitemapRoutes from './modules/sitemap/sitemap.routes';
+import chatRoutes from './modules/chat/chat.routes';
 import { notifyStorefrontChanged } from './utils/storefrontRevalidate';
 import { Product } from './models/Product';
 import { isActiveStatus } from './utils/productStatus';
@@ -110,6 +111,7 @@ app.use(`${API}/payments`, paymentRoutes);
 app.use(`${API}/addresses`, addressRoutes);
 app.use(`${API}/filters`, filtersRoutes);
 app.use(`${API}/attributes`, attributesRoutes);
+app.use(`${API}/chat`, chatRoutes);
 
 // ── Serve Videos Locally (Persistent) ────────────────────────────────────────
 // This ensures /videos/filename.mp4 works in both dev and prod

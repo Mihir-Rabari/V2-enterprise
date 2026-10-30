@@ -31,6 +31,13 @@ const envSchema = z.object({
     R2_PUBLIC_URL: z.string().optional(),
     // Verified legacy->canonical media mapping exported by `media-migrate export-mapping` (JSONL). Optional.
     MEDIA_MAPPING_FILE: z.string().optional(),
+
+    // Shopping assistant (chat widget). The widget is disabled unless CHAT_ENABLED=true and a key is set.
+    ANTHROPIC_API_KEY: z.string().optional(),
+    CHAT_ENABLED: z.string().default('false').transform(s => s === 'true'),
+    CHAT_MODEL: z.string().default('claude-haiku-5-5'),
+    // Hard ceiling on estimated model spend per UTC day, across all users. Chat returns 503 once reached.
+    CHAT_DAILY_BUDGET_USD: z.coerce.number().positive().default(5),
 });
 
 const parsed = envSchema.safeParse(process.env);

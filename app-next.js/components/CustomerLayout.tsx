@@ -8,6 +8,7 @@ import LoadingBar from './LoadingBar';
 import Toast from './Toast';
 import QuickView from './QuickView';
 import ScrollRestoration from './ScrollRestoration';
+import ChatWidget from './chat/ChatWidget';
 import { useCart } from '../context/CartContext';
 import { contentAPI } from '../lib/apiClient';
 import { useSettings } from '../context/SettingsContext';
@@ -94,6 +95,8 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children, onSwitchToAdm
             <Footer onSwitchToAdmin={onSwitchToAdmin} />
 
             <QuickView />
+
+            <ChatWidget />
 
             <Toast
                 message={toast.message}

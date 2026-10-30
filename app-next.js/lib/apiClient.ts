@@ -400,6 +400,13 @@ export const addressesAPI = {
             : api.patch(`/addresses/${id}/default`),
 };
 
+/** Shopping assistant. The cart is sent as ids/quantities only; the server looks up names and prices itself. */
+export const chatAPI = {
+    status: () => api.get('/chat/status'),
+    send: (data: { sessionId?: string; message: string; cart: { productId: string; quantity: number; size?: string }[] }) =>
+        api.post('/chat/message', data, { timeout: 60000 }),
+};
+
 // --- NEW FILTERS API ---
 export const filtersAPI = {
     getSuggestions: () =>

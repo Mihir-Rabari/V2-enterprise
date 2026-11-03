@@ -24,10 +24,26 @@ import {
 } from './chat.providers';
 
 const DEFAULT_MODELS = {
-    gemini: 'gemini-3.1-flash-lite',
+    gemini: 'gemini-3.5-flash-lite',
     'bedrock-mantle': 'zai.glm-5',
     anthropic: 'claude-haiku-5-5',
 } as const;
+
+// Google restricts Gemini 2.5 models for new API users. Migrate the stale
+// runtime override to Google's recommended Gemini 3.5 Flash-Lite model.
+const GEMINI_MODEL_UPGRADES: Record<string, string> = {
+    'gemini-2.5-flash-lite': DEFAULT_MODELS.gemini,
+};
+
+const configuredModel = (): string => {
+    const configured = env.CHAT_MODEL;
+    if (env.CHAT_PROVIDER === 'gemini' && configured && GEMINI_MODEL_UPGRADES[configured]) {
+        const replacement = GEMINI_MODEL_UPGRADES[configured];
+        console.warn(`[Chat] Upgrading restricted Gemini model ${configured} to ${replacement}.`);
+        return replacement;
+    }
+    return configured || DEFAULT_MODELS[env.CHAT_PROVIDER];
+};
 
 const providerKey = () => ({
     gemini: env.GEMINI_API_KEY,
@@ -40,7 +56,7 @@ export const isChatAvailable = () => env.CHAT_ENABLED && !!providerKey();
 let defaultProvider: ChatProvider | null = null;
 const getProvider = (): ChatProvider => {
     if (defaultProvider) return defaultProvider;
-    const model = env.CHAT_MODEL || DEFAULT_MODELS[env.CHAT_PROVIDER];
+    const model = configuredModel();
     const key = providerKey()!;
     switch (env.CHAT_PROVIDER) {
         case 'anthropic':

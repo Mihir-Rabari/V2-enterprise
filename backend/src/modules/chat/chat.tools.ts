@@ -71,10 +71,12 @@ export interface ToolContext {
     amounts: Set<number>;
     /** Raw text of tool results, scanned for percentages the reply may quote. */
     resultText: string[];
+    /** Names of tools called this turn (a reply may only echo the shopper's words after a real search). */
+    toolsUsed: string[];
 }
 
 export const newToolContext = (cart: ClientCart): ToolContext => ({
-    cart, cards: new Map(), actions: [], amounts: new Set(), resultText: [],
+    cart, cards: new Map(), actions: [], amounts: new Set(), resultText: [], toolsUsed: [],
 });
 
 // ── Tool definitions ─────────────────────────────────────────────────────────
@@ -163,8 +165,10 @@ const recordPrice = (ctx: ToolContext, ...values: (number | undefined)[]) => {
 
 const addCard = (ctx: ToolContext, p: any) => {
     const id = String(p._id ?? p.id);
-    if (ctx.cards.has(id)) return;
-    ctx.cards.set(id, {
+    // One card per style + colour: size variants of the same shirt are the same card to a shopper.
+    const key = p.styleCode ? `${p.styleCode}:${p.color}` : id;
+    if (ctx.cards.has(key)) return;
+    ctx.cards.set(key, {
         id,
         name: p.name,
         price: p.price,
@@ -180,19 +184,36 @@ const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLower
 // ── Executors ────────────────────────────────────────────────────────────────
 
 const searchInput = z.object({
-    query: z.string().max(100).nullable(),
-    category: z.string().max(60).nullable(),
-    min_price: z.number().min(0).max(1_000_000).nullable(),
-    max_price: z.number().min(0).max(1_000_000).nullable(),
-    color: z.string().max(30).nullable(),
-    size: z.string().max(10).nullable(),
+    query: z.string().max(100).nullish(),
+    category: z.string().max(60).nullish(),
+    min_price: z.number().min(0).max(1_000_000).nullish(),
+    max_price: z.number().min(0).max(1_000_000).nullish(),
+    color: z.string().max(30).nullish(),
+    size: z.string().max(10).nullish(),
 });
+
+const SEARCH_STOPWORDS = new Set([
+    'show', 'me', 'some', 'any', 'the', 'and', 'for', 'with', 'want', 'need', 'looking', 'find', 'get', 'buy',
+    'please', 'good', 'nice', 'best', 'new', 'like', 'something', 'items', 'item', 'clothes', 'clothing',
+]);
+
+/** "Linen shirts for men" → ["linen", "shirt", "men"]: keywords for the fallback search, plurals singularised. */
+export const searchKeywords = (query: string): string[] => {
+    const words = query.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length >= 3 && !SEARCH_STOPWORDS.has(w));
+    const singular = words.map(w =>
+        w.endsWith('ies') ? `${w.slice(0, -3)}y`
+            : /(ss|x|ch|sh)es$/.test(w) ? w.slice(0, -2)
+                : w.endsWith('s') && !w.endsWith('ss') ? w.slice(0, -1)
+                    : w
+    );
+    return [...new Set(singular)].slice(0, 4);
+};
 
 const searchProducts = async (raw: unknown, ctx: ToolContext) => {
     const input = searchInput.parse(raw);
-    const result = await getProductsService({
+    const run = (search: string | undefined) => getProductsService({
         status: 'ACTIVE',
-        search: input.query?.trim() || undefined,
+        search,
         mainCategories: input.category ? [input.category] : undefined,
         minPrice: input.min_price ?? undefined,
         maxPrice: input.max_price ?? undefined,
@@ -202,7 +223,30 @@ const searchProducts = async (raw: unknown, ctx: ToolContext) => {
         page: 1,
         limit: CHAT_LIMITS.searchResults,
     });
-    const products = (result.products as any[]).map(p => {
+
+    const query = input.query?.trim() || undefined;
+    let result = await run(query);
+    let found = result.products as any[];
+    let total = result.total;
+
+    // The catalogue search matches the whole phrase, so "linen shirts" misses "Linen Blend Shirt".
+    // Fall back to each keyword and rank products by how many keywords they match.
+    if (found.length === 0 && query) {
+        const scored = new Map<string, { p: any; score: number }>();
+        for (const word of searchKeywords(query)) {
+            result = await run(word);
+            for (const p of result.products as any[]) {
+                const id = String(p._id ?? p.id);
+                const hit = scored.get(id);
+                if (hit) hit.score++;
+                else scored.set(id, { p, score: 1 });
+            }
+        }
+        found = [...scored.values()].sort((a, b) => b.score - a.score).slice(0, CHAT_LIMITS.searchResults).map(s => s.p);
+        total = scored.size;
+    }
+
+    const products = found.map(p => {
         addCard(ctx, p);
         recordPrice(ctx, p.price, p.originalPrice);
         return {
@@ -217,7 +261,7 @@ const searchProducts = async (raw: unknown, ctx: ToolContext) => {
             url: `/product/${String(p._id ?? p.id)}`,
         };
     });
-    return { total_matches: result.total, products };
+    return { total_matches: total, products };
 };
 
 const productDetails = async (raw: unknown, ctx: ToolContext) => {
@@ -382,6 +426,7 @@ export const executeTool = async (name: string, input: unknown, ctx: ToolContext
         const result = await run(input, ctx);
         const content = JSON.stringify(result);
         ctx.resultText.push(content);
+        ctx.toolsUsed.push(name);
         return { content, isError: false };
     } catch (err) {
         const msg = err instanceof z.ZodError ? 'Invalid tool input.' : 'The store could not complete that lookup.';

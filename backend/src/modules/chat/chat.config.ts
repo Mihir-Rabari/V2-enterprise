@@ -30,6 +30,14 @@ export const CHAT_LIMITS = {
 
 /** USD per million tokens. Unknown models are priced at the Opus rate so the budget cap stays conservative. */
 const PRICING: Record<string, { input: number; output: number }> = {
+    // Gemini API paid-tier rates (ai.google.dev/gemini-api/docs/pricing, checked 2026-11).
+    'gemini-3.1-flash-lite': { input: 0.25, output: 1.50 },
+    'gemini-2.5-flash-lite': { input: 0.10, output: 0.40 },
+    'gemini-3.5-flash-lite': { input: 0.30, output: 2.50 },
+    // Priced at the 2027 rate; the introductory $0.75 / $3.75 runs through 2026-12-31.
+    'gemini-3.8-flash': { input: 1.50, output: 7.50 },
+    // Amazon Bedrock on-demand rate for GLM 5 (verify against the Bedrock pricing page for your region).
+    'zai.glm-5': { input: 1.00, output: 3.20 },
     'claude-haiku-5-5': { input: 0.10, output: 0.50 },
     'claude-sonnet-5-5': { input: 2.00, output: 10.00 },
     'claude-opus-5-5': { input: 4.00, output: 20.00 },

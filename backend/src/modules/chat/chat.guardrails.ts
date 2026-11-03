@@ -116,7 +116,52 @@ export interface OutputContext {
     allowedPercents: Set<number>;
     /** Hostnames links may point at; relative links are always allowed. */
     allowedHosts: string[];
+    /**
+     * Lower-cased text the reply may draw product facts from: this turn's tool results, earlier
+     * (already validated) assistant replies, and the shopper's message when a search actually ran.
+     */
+    groundingText: string;
 }
+
+// Garment / product-type words a reply might use to describe what the store sells. Words that are
+// common outside product talk ("top", "suit", "bag", "short", "watch") are deliberately left out.
+const GARMENT_STEMS = [
+    'shirt', 'tee', 'polo', 'kurta', 'kurti', 'sherwani', 'bandhgala', 'nehru', 'saree', 'sari', 'lehenga',
+    'ghagra', 'dupatta', 'salwar', 'churidar', 'dhoti', 'kaftan', 'anarkali', 'blazer', 'tuxedo', 'waistcoat',
+    'jacket', 'coat', 'hoodie', 'sweater', 'sweatshirt', 'cardigan', 'knit', 'jean', 'denim', 'trouser', 'pant',
+    'chino', 'jogger', 'skirt', 'dress', 'gown', 'jumpsuit', 'blouse', 'shoe', 'sneaker', 'loafer', 'sandal',
+    'boot', 'belt', 'scarf', 'sunglass', 'jewel',
+];
+const GARMENT_RE = new RegExp(`\\b(${GARMENT_STEMS.join('|')})(?:s|es)?\\b`, 'gi');
+// Devanagari spellings, mapped to the English stem that must appear in the catalogue data.
+const DEVANAGARI_GARMENTS: [string, string][] = [
+    ['कुर्त', 'kurta'], ['शेरवान', 'sherwani'], ['साड़', 'saree'], ['लहंग', 'lehenga'], ['दुपट्ट', 'dupatta'],
+    ['सलवार', 'salwar'], ['धोती', 'dhoti'], ['शर्ट', 'shirt'], ['जींस', 'jean'], ['जैकेट', 'jacket'],
+    ['ब्लेज़र', 'blazer'], ['ड्रेस', 'dress'], ['स्कर्ट', 'skirt'], ['पैंट', 'pant'], ['जूत', 'shoe'],
+];
+
+/**
+ * Product types and quoted names in a reply that no supplied data backs up. This is what stops a
+ * reply like "we have a lovely 'Festive Collection' of sherwanis" when the catalogue has neither.
+ */
+export const findUngroundedClaims = (reply: string, groundingText: string): string[] => {
+    const grounded = groundingText.toLowerCase();
+    const missing = new Set<string>();
+    for (const m of reply.matchAll(GARMENT_RE)) {
+        const stem = m[1].toLowerCase();
+        if (!grounded.includes(stem)) missing.add(stem);
+    }
+    for (const [dev, en] of DEVANAGARI_GARMENTS) {
+        if (reply.includes(dev) && !grounded.includes(en)) missing.add(en);
+    }
+    // Quoted names ("Festive Collection", 'Ethnic Wear') must be real catalogue text.
+    const quoted = /["“]([^"”\n]{2,40})["”]|(?:^|[\s(])['‘]([A-Z][^'’\n]{1,40})['’](?=[\s.,!?;:)]|$)/g;
+    for (const m of reply.matchAll(quoted)) {
+        const name = (m[1] ?? m[2]).trim();
+        if (/[a-z]/i.test(name) && !grounded.includes(name.toLowerCase())) missing.add(`"${name}"`);
+    }
+    return [...missing];
+};
 
 export type OutputCheck = { ok: true; text: string } | { ok: false; reason: string };
 
@@ -172,6 +217,9 @@ export const validateAssistantOutput = (raw: string, ctx: OutputContext): Output
     for (const p of extractPercents(text)) {
         if (!ctx.allowedPercents.has(p)) return { ok: false, reason: `unverified percentage ${p}%` };
     }
+
+    const ungrounded = findUngroundedClaims(text, ctx.groundingText);
+    if (ungrounded.length > 0) return { ok: false, reason: `ungrounded product claims: ${ungrounded.join(', ')}` };
 
     return { ok: true, text };
 };

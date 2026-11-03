@@ -6,7 +6,6 @@
  *   4. the classifier verdict gates the answer; the answer must pass output validation
  * Anything that fails a layer gets a fixed, pre-written reply and any proposed cart changes are dropped.
  */
-import Anthropic from '@anthropic-ai/sdk';
 import crypto from 'crypto';
 import { env } from '../../config/env';
 import { ChatSession, IChatSession, IChatTurn } from '../../models/ChatSession';
@@ -17,18 +16,46 @@ import {
     CANNED, extractRupeeAmounts, looksLikePromptInjection, normalizeUserInput, redactSensitive, validateAssistantOutput,
 } from './chat.guardrails';
 import {
-    CartAddAction, ClientCart, ProductCard, TOOL_DEFINITIONS, executeTool, newToolContext,
+    CartAddAction, ClientCart, ProductCard, executeTool, newToolContext,
 } from './chat.tools';
+import {
+    ChatProvider, GEMINI_BASE_URL, NormalizedUsage, ToolResult, createAnthropicClient, createAnthropicProvider,
+    createOpenAiCompatClient, createOpenAiCompatProvider, describeProviderError, mantleBaseUrl,
+} from './chat.providers';
 
-export type LlmClient = Pick<Anthropic, 'messages'>;
+const DEFAULT_MODELS = {
+    gemini: 'gemini-3.1-flash-lite',
+    'bedrock-mantle': 'zai.glm-5',
+    anthropic: 'claude-haiku-5-5',
+} as const;
 
-let defaultClient: LlmClient | null = null;
-const getClient = (): LlmClient => {
-    if (!defaultClient) defaultClient = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY, maxRetries: 2, timeout: 30_000 });
-    return defaultClient;
+const providerKey = () => ({
+    gemini: env.GEMINI_API_KEY,
+    'bedrock-mantle': env.AWS_BEARER_TOKEN_BEDROCK,
+    anthropic: env.ANTHROPIC_API_KEY,
+})[env.CHAT_PROVIDER];
+
+export const isChatAvailable = () => env.CHAT_ENABLED && !!providerKey();
+
+let defaultProvider: ChatProvider | null = null;
+const getProvider = (): ChatProvider => {
+    if (defaultProvider) return defaultProvider;
+    const model = env.CHAT_MODEL || DEFAULT_MODELS[env.CHAT_PROVIDER];
+    const key = providerKey()!;
+    switch (env.CHAT_PROVIDER) {
+        case 'anthropic':
+            defaultProvider = createAnthropicProvider(createAnthropicClient(key), model, recordUsage);
+            break;
+        case 'bedrock-mantle':
+            defaultProvider = createOpenAiCompatProvider(createOpenAiCompatClient(key, mantleBaseUrl(env.BEDROCK_REGION)), model, recordUsage);
+            break;
+        case 'gemini':
+            // Low thinking keeps replies fast and cheap; Gemini 3 models cannot turn thinking off entirely.
+            defaultProvider = createOpenAiCompatProvider(createOpenAiCompatClient(key, GEMINI_BASE_URL), model, recordUsage, { reasoningEffort: 'low' });
+            break;
+    }
+    return defaultProvider!;
 };
-
-export const isChatAvailable = () => env.CHAT_ENABLED && !!env.ANTHROPIC_API_KEY;
 
 export interface ChatReply {
     sessionId: string;
@@ -46,10 +73,9 @@ export class ChatUnavailableError extends Error {}
 
 const utcDay = () => new Date().toISOString().slice(0, 10);
 
-const recordUsage = async (model: string, usage: Anthropic.Usage | undefined) => {
-    if (!usage) return;
+export const recordUsage = (model: string, usage: NormalizedUsage): void => {
     const cost = estimateCostUsd(model, usage);
-    await ChatUsage.updateOne(
+    ChatUsage.updateOne(
         { day: utcDay() },
         {
             $inc: {
@@ -75,37 +101,16 @@ const budgetExhausted = async () => {
 type Verdict = 'shopping' | 'off_topic' | 'prompt_injection' | 'abusive' | 'fraud';
 const VERDICTS: Verdict[] = ['shopping', 'off_topic', 'prompt_injection', 'abusive', 'fraud'];
 
-const classify = async (client: LlmClient, message: string, previousReply: string | undefined): Promise<Verdict> => {
-    const context = previousReply ? `Assistant's previous reply (context only):\n"""${previousReply.slice(0, 400)}"""\n\n` : '';
-    const response = await client.messages.create({
-        model: env.CHAT_MODEL,
-        max_tokens: CHAT_LIMITS.classifierMaxTokens,
-        system: [{ type: 'text', text: CLASSIFIER_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
-        output_config: {
-            effort: 'low',
-            format: {
-                type: 'json_schema',
-                schema: {
-                    type: 'object',
-                    properties: { category: { type: 'string', enum: VERDICTS } },
-                    required: ['category'],
-                    additionalProperties: false,
-                },
-            },
-        },
-        messages: [{ role: 'user', content: `${context}Shopper message to classify:\n"""${message}"""` }],
-    });
-    void recordUsage(env.CHAT_MODEL, response.usage);
+/** Fail closed: anything other than exactly one known verdict word is treated as unsafe. */
+export const parseVerdict = (raw: string): Verdict => {
+    const word = raw.trim().toLowerCase().replace(/^["'`*\s]+|["'`*.\s]+$/g, '');
+    return (VERDICTS as string[]).includes(word) ? (word as Verdict) : 'prompt_injection';
+};
 
-    // Fail closed: anything other than a clean, parseable verdict is treated as unsafe.
-    if (response.stop_reason === 'refusal') return 'abusive';
-    const text = response.content.find((b): b is Anthropic.TextBlock => b.type === 'text')?.text;
-    try {
-        const category = JSON.parse(text ?? '').category;
-        return VERDICTS.includes(category) ? category : 'prompt_injection';
-    } catch {
-        return 'prompt_injection';
-    }
+const classify = async (provider: ChatProvider, message: string, previousReply: string | undefined): Promise<Verdict> => {
+    const context = previousReply ? `Assistant's previous reply (context only):\n"""${previousReply.slice(0, 400)}"""\n\n` : '';
+    const { text, refused } = await provider.classify(CLASSIFIER_SYSTEM_PROMPT, `${context}Shopper message to classify:\n"""${message}"""`);
+    return refused ? 'abusive' : parseVerdict(text);
 };
 
 const verdictReply = (v: Verdict): string =>
@@ -120,56 +125,41 @@ interface AgentResult {
     actions: CartAddAction[];
     amounts: Set<number>;
     resultText: string[];
+    toolsUsed: string[];
 }
 
 const runAssistant = async (
-    client: LlmClient, history: IChatTurn[], message: string, cart: ClientCart
+    provider: ChatProvider, history: IChatTurn[], message: string, cart: ClientCart
 ): Promise<AgentResult> => {
     const ctx = newToolContext(cart);
-    const messages: Anthropic.MessageParam[] = [
-        ...history.map(t => ({ role: t.role, content: t.text }) as Anthropic.MessageParam),
-        { role: 'user', content: message },
-    ];
+    const turn = provider.startTurn(ASSISTANT_SYSTEM_PROMPT, history, message);
     const done = (text: string, ok: boolean): AgentResult => ({
-        text, ok, cards: [...ctx.cards.values()], actions: ctx.actions, amounts: ctx.amounts, resultText: ctx.resultText,
+        text, ok, cards: [...ctx.cards.values()], actions: ctx.actions, amounts: ctx.amounts, resultText: ctx.resultText, toolsUsed: ctx.toolsUsed,
     });
 
     for (let call = 0; call < CHAT_LIMITS.maxModelCallsPerTurn; call++) {
-        const response = await client.messages.create({
-            model: env.CHAT_MODEL,
-            max_tokens: CHAT_LIMITS.maxOutputTokens,
-            // Tools + system prompt are identical on every request, so they are served from cache.
-            cache_control: { type: 'ephemeral' },
-            system: [{ type: 'text', text: ASSISTANT_SYSTEM_PROMPT }],
-            tools: TOOL_DEFINITIONS,
-            output_config: { effort: 'low' },
-            messages,
-        });
-        void recordUsage(env.CHAT_MODEL, response.usage);
-
-        if (response.stop_reason === 'refusal') return done(CANNED.offTopic, false);
-        if (response.stop_reason === 'max_tokens') return done(CANNED.unsafeOutput, false);
-
-        const toolUses = response.content.filter((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use');
-        if (response.stop_reason !== 'tool_use' || toolUses.length === 0) {
-            const text = response.content
-                .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-                .map(b => b.text)
-                .join('\n')
-                .trim();
-            return done(text, true);
+        const step = await turn.step();
+        if (step.stop === 'refusal') return done(CANNED.offTopic, false);
+        if (step.stop === 'max_tokens') {
+            console.warn('[Chat] Reply hit the output token cap.');
+            return done(CANNED.unsafeOutput, false);
         }
+        if (step.stop === 'end') return done(step.text, true);
 
-        // Append the whole assistant turn (thinking blocks included) so the history stays append-only.
-        messages.push({ role: 'assistant', content: response.content });
-        const results: Anthropic.ToolResultBlockParam[] = [];
-        for (const use of toolUses) {
-            const { content, isError } = await executeTool(use.name, use.input, ctx);
-            results.push({ type: 'tool_result', tool_use_id: use.id, content, is_error: isError });
+        console.info(`[Chat] Tool calls: ${step.toolCalls.map(c => c.name).join(', ')}`);
+        const results: ToolResult[] = [];
+        for (const call of step.toolCalls) {
+            if (call.input === undefined) {
+                results.push({ id: call.id, content: JSON.stringify({ error: 'Arguments were not valid JSON.' }), isError: true });
+                continue;
+            }
+            const { content, isError } = await executeTool(call.name, call.input, ctx);
+            results.push({ id: call.id, content, isError });
         }
-        messages.push({ role: 'user', content: results });
+        turn.addToolResults(results);
     }
     // Ran out of model calls without a final answer.
+    console.warn(`[Chat] No final answer after ${CHAT_LIMITS.maxModelCallsPerTurn} model calls.`);
     return done(CANNED.unsafeOutput, false);
 };
 
@@ -213,8 +203,10 @@ export interface ChatRequest {
     clientKey: string;
 }
 
-export const handleChatMessage = async (req: ChatRequest, client: LlmClient = getClient()): Promise<ChatReply> => {
+export const handleChatMessage = async (req: ChatRequest, providerOverride?: ChatProvider): Promise<ChatReply> => {
     if (!isChatAvailable()) throw new ChatUnavailableError(CANNED.unavailable);
+    // Resolved only after the availability check, so a missing key never constructs a client.
+    const provider = providerOverride ?? getProvider();
     if (await budgetExhausted()) {
         console.warn('[Chat] Daily budget reached; assistant paused until next UTC day.');
         throw new ChatUnavailableError(CANNED.unavailable);
@@ -241,7 +233,9 @@ export const handleChatMessage = async (req: ChatRequest, client: LlmClient = ge
     const message = redaction.text;
     const paymentDataShared = redaction.kinds.some(k => k === 'card' || k === 'secret' || k === 'aadhaar' || k === 'pan');
 
-    const finishBlocked = async (reply: string): Promise<ChatReply> => {
+    const finishBlocked = async (blockedReply: string): Promise<ChatReply> => {
+        // The payment-data warning matters most exactly when the message is also blocked.
+        const reply = paymentDataShared ? `${CANNED.sensitiveData}\n\n${blockedReply}` : blockedReply;
         await saveTurn(session, '[message withheld by safety filter]', reply, true);
         const locked = session.blockedCount + 1 >= CHAT_LIMITS.maxBlockedPerSession;
         return { ...base, reply, remainingTurns: locked ? 0 : remaining(), ended: locked || undefined };
@@ -256,13 +250,11 @@ export const handleChatMessage = async (req: ChatRequest, client: LlmClient = ge
     let result: AgentResult;
     try {
         [verdict, result] = await Promise.all([
-            classify(client, message, previousReply),
-            runAssistant(client, history, message, req.cart),
+            classify(provider, message, previousReply),
+            runAssistant(provider, history, message, req.cart),
         ]);
     } catch (err) {
-        if (err instanceof Anthropic.RateLimitError) console.warn('[Chat] Rate limited by the model API.');
-        else if (err instanceof Anthropic.APIError) console.error(`[Chat] Model API error ${err.status}:`, err.message);
-        else console.error('[Chat] Assistant failed:', (err as Error).message);
+        console.error('[Chat] Assistant failed:', describeProviderError(err));
         return { ...base, reply: CANNED.error, remainingTurns: remaining() + 1 };
     }
 
@@ -284,6 +276,12 @@ export const handleChatMessage = async (req: ChatRequest, client: LlmClient = ge
             allowedAmounts,
             allowedPercents,
             allowedHosts: ['v2enterprise.in'],
+            groundingText: [
+                ...result.resultText,
+                ...history.filter(t => t.role === 'assistant').map(t => t.text),
+                // The shopper's own words only count once a search has actually checked them.
+                ...(result.toolsUsed.includes('search_products') ? [message] : []),
+            ].join('\n'),
         });
         if (!check.ok) {
             console.warn(`[Chat] Reply withheld by output validation: ${check.reason}`);

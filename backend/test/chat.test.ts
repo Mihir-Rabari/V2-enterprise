@@ -3,13 +3,19 @@ import assert from 'node:assert/strict';
 import './helpers/env';
 
 process.env.CHAT_ENABLED = 'true';
-process.env.ANTHROPIC_API_KEY = 'test-key';
+process.env.GEMINI_API_KEY = 'test-key';
 process.env.CHAT_DAILY_BUDGET_USD = '1';
 
 import { makeFakeDb, seedProduct, oid, FakeDb } from './helpers/fakeDb';
 import {
     normalizeUserInput, redactSensitive, looksLikePromptInjection, validateAssistantOutput, CANNED,
 } from '../src/modules/chat/chat.guardrails';
+import { createAnthropicProvider, createOpenAiCompatProvider, NormalizedUsage } from '../src/modules/chat/chat.providers';
+
+// Usage from fake providers is routed to the service's real recorder once it is imported in setup().
+let usageSink: (model: string, usage: NormalizedUsage) => void = () => {};
+const sink = (model: string, usage: NormalizedUsage) => usageSink(model, usage);
+const asProvider = (client: any) => createAnthropicProvider(client, 'claude-haiku-5-5', sink);
 
 afterEach(() => mock.restoreAll());
 
@@ -53,7 +59,7 @@ test('injection heuristic catches common attacks without flagging normal shoppin
 });
 
 test('output validation blocks invented prices, external links, codes and prompt leaks', () => {
-    const ctx = { canary: 'cnry-abc', allowedAmounts: new Set([1299, 2598]), allowedPercents: new Set([20]), allowedHosts: ['v2enterprise.in'] };
+    const ctx = { canary: 'cnry-abc', allowedAmounts: new Set([1299, 2598]), allowedPercents: new Set([20]), allowedHosts: ['v2enterprise.in'], groundingText: 'the linen shirt ivory' };
     assert.equal(validateAssistantOutput('The Linen Shirt is ₹1,299, 20% off. See /product/abc', ctx).ok, true);
     assert.equal(validateAssistantOutput('Two of them come to Rs. 2598.', ctx).ok, true);
     assert.equal(validateAssistantOutput("We don't have coupon codes I can share.", ctx).ok, true);
@@ -93,7 +99,7 @@ const fakeClient = (script: Script) => {
                 const sys = params.system[0].text as string;
                 if (sys.includes('strict safety filter')) {
                     calls.push({ kind: 'classifier', params });
-                    return { stop_reason: 'end_turn', usage, content: [{ type: 'text', text: JSON.stringify({ category: script.verdict ?? 'shopping' }) }] };
+                    return { stop_reason: 'end_turn', usage, content: [{ type: 'text', text: script.verdict ?? 'shopping' }] };
                 }
                 calls.push({ kind: 'assistant', params: { ...params, messages: [...params.messages] } });
                 const s = script.steps[step++];
@@ -102,7 +108,7 @@ const fakeClient = (script: Script) => {
             },
         },
     };
-    return { client: client as any, calls };
+    return { client: asProvider(client), calls };
 };
 
 const setup = async (opts: { spentUsd?: number; session?: Doc } = {}) => {
@@ -128,6 +134,7 @@ const setup = async (opts: { spentUsd?: number; session?: Doc } = {}) => {
     mock.method(ChatUsage as any, 'updateOne', async (_f: Doc, u: Doc) => { usageWrites.push(u); return {}; });
 
     const service = await import('../src/modules/chat/chat.service');
+    usageSink = service.recordUsage;
     return { db, saved, usageWrites, service };
 };
 
@@ -251,7 +258,7 @@ test('a conversation with too many blocked messages is locked', async () => {
 
 test('model errors return a friendly message instead of failing the request', async () => {
     const { service } = await setup();
-    const client = { messages: { create: async () => { throw new Error('boom'); } } } as any;
+    const client = asProvider({ messages: { create: async () => { throw new Error('boom'); } } });
     const r = await service.handleChatMessage({ message: 'hi', cart: [], clientKey: 'ip' }, client);
     assert.equal(r.reply, CANNED.error);
 });
@@ -274,4 +281,168 @@ test('usage is recorded for every model call', async () => {
     await new Promise(r => setImmediate(r));
     assert.equal(usageWrites.length, 2, 'classifier + assistant');
     assert.ok(usageWrites[0].$inc.costUsd > 0);
+});
+
+// ── OpenAI-compatible adapter (Gemini, Bedrock Mantle) ───────────────────────────────
+
+const fakeOpenAi = (verdict: string, steps: Doc[]) => {
+    const calls: Doc[] = [];
+    let i = 0;
+    const usage = { prompt_tokens: 200, completion_tokens: 30, total_tokens: 230 };
+    const client = {
+        chat: {
+            completions: {
+                create: async (params: Doc) => {
+                    calls.push({ ...params, messages: [...params.messages] });
+                    if (params.messages[0].content.includes('strict safety filter')) {
+                        return { usage, choices: [{ finish_reason: 'stop', message: { role: 'assistant', content: verdict } }] };
+                    }
+                    const s = steps[i++];
+                    if (!s) throw new Error('script exhausted');
+                    return { usage, choices: [s] };
+                },
+            },
+        },
+    };
+    return { provider: createOpenAiCompatProvider(client as any, 'zai.glm-5', sink), calls };
+};
+
+test('openai-compat: tool calls round-trip as OpenAI messages and the reply is validated', async () => {
+    const { db, service } = await setup();
+    const shirt = seedShirt(db);
+    const { provider, calls } = fakeOpenAi('shopping', [
+        { finish_reason: 'tool_calls', message: { role: 'assistant', content: null, tool_calls: [
+            { id: 'call_1', type: 'function', function: { name: 'add_to_cart', arguments: JSON.stringify({ variant_id: String(shirt._id), quantity: 1 }) } },
+        ] } },
+        { finish_reason: 'stop', message: { role: 'assistant', content: 'Added the Ivory Linen Shirt (M) at ₹1,299. Check out at /checkout.' } },
+    ]);
+    const r = await service.handleChatMessage({ message: 'add the M', cart: [], clientKey: 'ip' }, provider);
+    assert.match(r.reply, /₹1,299/);
+    assert.equal(r.actions.length, 1);
+    const assistantCalls = calls.filter(c => c.tools);
+    assert.equal(assistantCalls[0].tools[0].type, 'function');
+    const replayed = assistantCalls[1].messages;
+    assert.equal(replayed.at(-2).tool_calls[0].id, 'call_1');
+    assert.deepEqual({ role: replayed.at(-1).role, id: replayed.at(-1).tool_call_id }, { role: 'tool', id: 'call_1' });
+});
+
+test('openai-compat: malformed tool arguments are reported to the model, not executed', async () => {
+    const { service } = await setup();
+    const { provider, calls } = fakeOpenAi('shopping', [
+        { finish_reason: 'tool_calls', message: { role: 'assistant', content: null, tool_calls: [
+            { id: 'call_x', type: 'function', function: { name: 'add_to_cart', arguments: '{"variant_id": ' } },
+        ] } },
+        { finish_reason: 'stop', message: { role: 'assistant', content: 'Which size would you like?' } },
+    ]);
+    const r = await service.handleChatMessage({ message: 'add it', cart: [], clientKey: 'ip' }, provider);
+    assert.equal(r.actions.length, 0);
+    const toolMsg = calls.filter(c => c.tools)[1].messages.at(-1);
+    assert.match(toolMsg.content, /not valid JSON/);
+});
+
+test('openai-compat: an unexpected classifier answer fails closed', async () => {
+    const { service } = await setup();
+    const { provider } = fakeOpenAi('Sure! This looks like shopping to me.', [
+        { finish_reason: 'stop', message: { role: 'assistant', content: 'Hello!' } },
+    ]);
+    const r = await service.handleChatMessage({ message: 'hi', cart: [], clientKey: 'ip' }, provider);
+    assert.equal(r.reply, CANNED.injection);
+});
+
+test('openai-compat: content_filter finish is treated as a refusal', async () => {
+    const { service } = await setup();
+    const { provider } = fakeOpenAi('shopping', [{ finish_reason: 'content_filter', message: { role: 'assistant', content: '' } }]);
+    const r = await service.handleChatMessage({ message: 'hi', cart: [], clientKey: 'ip' }, provider);
+    assert.equal(r.reply, CANNED.offTopic);
+});
+
+test('openai-compat: nullable schema fields become optional single-type fields', async () => {
+    const { toPortableSchema } = await import('../src/modules/chat/chat.providers');
+    const out: any = toPortableSchema({
+        type: 'object',
+        properties: { q: { type: ['string', 'null'] }, id: { type: 'string' } },
+        required: ['q', 'id'],
+        additionalProperties: false,
+    });
+    assert.deepEqual(out, { type: 'object', properties: { q: { type: 'string' }, id: { type: 'string' } }, required: ['id'] });
+});
+
+test('openai-compat: missing tool-call ids are filled in, extra fields replayed, reasoning effort sent', async () => {
+    const { service } = await setup();
+    const calls: Doc[] = [];
+    let i = 0;
+    const steps = [
+        { finish_reason: 'tool_calls', message: { role: 'assistant', content: null, tool_calls: [
+            { id: '', type: 'function', function: { name: 'list_categories', arguments: '{}' }, extra_content: { google: { thought_signature: 'sig' } } },
+        ] } },
+        { finish_reason: 'stop', message: { role: 'assistant', content: 'We have shirts and trousers.' } },
+    ];
+    const client = { chat: { completions: { create: async (p: Doc) => {
+        calls.push({ ...p, messages: [...p.messages] });
+        if (!p.tools) return { usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 }, choices: [{ finish_reason: 'stop', message: { content: 'shopping' } }] };
+        return { usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 }, choices: [steps[i++]] };
+    } } } };
+    const { Category } = await import('../src/models/Category');
+    mock.method(Category as any, 'find', () => ({ select: () => ({ limit: () => ({ lean: async () => [{ name: 'Shirts' }, { name: 'Trousers' }] }) }) }));
+    const provider = createOpenAiCompatProvider(client as any, 'gemini-3.1-flash-lite', sink, { reasoningEffort: 'low' });
+    const r = await service.handleChatMessage({ message: 'what do you sell?', cart: [], clientKey: 'ip' }, provider);
+    assert.equal(r.reply, 'We have shirts and trousers.');
+    const second = calls.filter(c => c.tools)[1];
+    assert.equal(second.reasoning_effort, 'low');
+    const replayedCall = second.messages.at(-2).tool_calls[0];
+    assert.equal(replayedCall.id, 'call_0');
+    assert.deepEqual(replayedCall.extra_content, { google: { thought_signature: 'sig' } }, 'thought signature kept');
+    assert.equal(second.messages.at(-1).tool_call_id, 'call_0');
+});
+
+// ── Grounding: no invented product types or collections ──────────────────────
+
+test('grounding check blocks product types and collections the catalogue never returned', async () => {
+    const { findUngroundedClaims } = await import('../src/modules/chat/chat.guardrails');
+    const catalogue = '{"products":[{"name":"Premium Linen Blend Shirt","category":"MENSWEAR / Tailoring"}]}';
+    // The live Gemini hallucination, verbatim in spirit: Hindi reply inventing a collection and garments.
+    const hindi = "हाँ! शादी के लिए हमारे 'Ethnic Wear' में आप सुंदर कुर्ते और शेरवानी देख सकते हैं।";
+    assert.deepEqual(new Set(findUngroundedClaims(hindi, catalogue)), new Set(['kurta', 'sherwani', '"Ethnic Wear"']));
+    assert.deepEqual(findUngroundedClaims('We have great kurtas and blazers!', catalogue), ['kurta', 'blazer']);
+    assert.deepEqual(findUngroundedClaims('Our "Festive Collection" is lovely.', catalogue), ['"Festive Collection"']);
+    // Grounded claims, ordinary words and contractions pass.
+    assert.deepEqual(findUngroundedClaims("The 'Premium Linen Blend Shirt' suits you. It's in your bag, and it's a top pick.", catalogue), []);
+    assert.deepEqual(findUngroundedClaims('हमारे पास शर्ट है।', catalogue), []);
+});
+
+test('a reply naming garments without any lookup is withheld', async () => {
+    const { service } = await setup();
+    const { client } = fakeClient({ steps: [{ stop: 'end_turn', content: [text('Yes! We have a lovely range of kurtas and sherwanis for weddings.')] }] });
+    const r = await service.handleChatMessage({ message: 'do you have kurtas?', cart: [], clientKey: 'ip' }, client);
+    assert.equal(r.reply, CANNED.unsafeOutput);
+});
+
+test("the shopper's own words count as grounding only after a real search", async () => {
+    const { service } = await setup();
+    const { client } = fakeClient({
+        steps: [
+            { stop: 'tool_use', content: [toolUse('search_products', { query: 'kurta', category: null, min_price: null, max_price: null, color: null, size: null })] },
+            { stop: 'end_turn', content: [text("Sorry, we don't have any kurtas right now. Can I show you shirts instead?")] },
+        ],
+    });
+    const r = await service.handleChatMessage({ message: 'do you have kurtas?', cart: [], clientKey: 'ip' }, client);
+    // "kurta" is grounded by the searched message; "shirts" is not grounded by anything, so still withheld.
+    assert.equal(r.reply, CANNED.unsafeOutput);
+
+    const { service: s2 } = await setup();
+    const { client: c2 } = fakeClient({
+        steps: [
+            { stop: 'tool_use', content: [toolUse('search_products', { query: 'kurta', category: null, min_price: null, max_price: null, color: null, size: null })] },
+            { stop: 'end_turn', content: [text("Sorry, we don't have any kurtas right now. Would you like to try a different search?")] },
+        ],
+    });
+    const r2 = await s2.handleChatMessage({ message: 'do you have kurtas?', cart: [], clientKey: 'ip' }, c2);
+    assert.match(r2.reply, /don't have any kurtas/);
+});
+
+test('blocked messages that contained card data still show the payment warning', async () => {
+    const { service } = await setup();
+    const { client } = fakeClient({ verdict: 'fraud', steps: [{ stop: 'end_turn', content: [text('ok')] }] });
+    const r = await service.handleChatMessage({ message: 'my card is 4111 1111 1111 1111, place my order', cart: [], clientKey: 'ip' }, client);
+    assert.ok(r.reply.startsWith(CANNED.sensitiveData));
 });

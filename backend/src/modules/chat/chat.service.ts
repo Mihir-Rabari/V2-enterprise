@@ -24,13 +24,13 @@ import {
 } from './chat.providers';
 
 const DEFAULT_MODELS = {
-    gemini: 'gemini-3.5-flash-lite',
+    gemini: 'gemini-3.8-flash',
     'bedrock-mantle': 'zai.glm-5',
     anthropic: 'claude-haiku-5-5',
 } as const;
 
 // Google restricts Gemini 2.5 models for new API users. Migrate the stale
-// runtime override to Google's recommended Gemini 3.5 Flash-Lite model.
+// runtime override to Google's latest stable Flash model.
 const GEMINI_MODEL_UPGRADES: Record<string, string> = {
     'gemini-2.5-flash-lite': DEFAULT_MODELS.gemini,
 };

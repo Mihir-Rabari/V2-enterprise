@@ -7,26 +7,32 @@ import { ChatUsage } from '../../models/ChatUsage';
 const DAY = 86_400_000;
 const IST_OFFSET = 330 * 60_000;
 const TIMEZONE = 'Asia/Kolkata';
+export type AnalyticsRange = '7d' | '30d' | '12m';
 const paid = { paymentStatus: 'PAID', status: { $nin: ['CANCELLED', 'REFUNDED'] } };
 const total = [{ $group: { _id: null, revenue: { $sum: '$total' }, orders: { $sum: 1 } } }];
 export const revenueGrowth = (current: number, previous: number): number | null =>
     previous > 0 ? Math.round((current - previous) / previous * 1000) / 10 : null;
 
-export const statsWindows = (now: Date) => {
+export const statsWindows = (now: Date, range: AnalyticsRange = '30d') => {
     const local = new Date(now.getTime() + IST_OFFSET);
     const monthStart = (offset: number) => new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth() + offset, 1) - IST_OFFSET);
     const today = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate()) - IST_OFFSET);
+    // Calendar days/months, including the current partial day/month, use the server's cutoff.
+    const since = range === '12m' ? monthStart(-11) : new Date(today.getTime() - (range === '7d' ? 6 : 29) * DAY);
     return {
-        since: new Date(now.getTime() - 30 * DAY), previousSince: new Date(now.getTime() - 60 * DAY),
+        since, previousSince: new Date(since.getTime() - (now.getTime() - since.getTime())),
+        buckets: range === '12m' ? Array.from({ length: 12 }, (_, i) => monthStart(i - 11))
+            : Array.from({ length: range === '7d' ? 7 : 30 }, (_, i) => new Date(since.getTime() + i * DAY)),
         months: Array.from({ length: 6 }, (_, i) => monthStart(i - 5)),
         days: Array.from({ length: 7 }, (_, i) => new Date(today.getTime() + (i - 6) * DAY)),
     };
 };
 
 /** Every request reads MongoDB; no application cache or seeded fallback. Dates group in IST. */
-export const getAdminStats = async (now = new Date()) => {
-    const windows = statsWindows(now);
+export const getAdminStats = async (now = new Date(), selectedRange: AnalyticsRange = '30d') => {
+    const windows = statsWindows(now, selectedRange);
     const range = { $gte: windows.since, $lt: now };
+    const bucketFormat = selectedRange === '12m' ? '%Y-%m' : '%Y-%m-%d';
     const [orderRows, inventoryRows, totalCustomers, newCustomers, unreadMessages, ai] = await Promise.all([
         Order.aggregate([
             { $match: { createdAt: { $lt: now } } },
@@ -36,7 +42,17 @@ export const getAdminStats = async (now = new Date()) => {
                 current: [{ $match: { ...paid, createdAt: range } }, ...total],
                 previous: [{ $match: { ...paid, createdAt: { $gte: windows.previousSince, $lt: windows.since } } }, ...total],
                 periodOrders: [{ $match: { createdAt: range } }, { $count: 'count' }],
-                statuses: [{ $group: { _id: '$status', count: { $sum: 1 } } }, { $sort: { count: -1 } }],
+                pending: [{ $match: { status: 'PENDING' } }, { $count: 'count' }],
+                statuses: [{ $match: { createdAt: range } }, { $group: { _id: '$status', count: { $sum: 1 } } }, { $sort: { count: -1 } }],
+                units: [{ $match: { ...paid, createdAt: range } }, { $unwind: '$items' }, { $group: { _id: null, count: { $sum: '$items.quantity' } } }],
+                trend: [
+                    { $match: { createdAt: range } },
+                    { $group: {
+                        _id: { $dateToString: { format: bucketFormat, date: '$createdAt', timezone: TIMEZONE } },
+                        orders: { $sum: 1 },
+                        revenue: { $sum: { $cond: [{ $and: [{ $eq: ['$paymentStatus', 'PAID'] }, { $not: [{ $in: ['$status', ['CANCELLED', 'REFUNDED']] }] }] }, '$total', 0] } },
+                    } },
+                ],
                 monthly: [
                     { $match: { ...paid, createdAt: { $gte: windows.months[0] } } },
                     { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$createdAt', timezone: TIMEZONE } }, revenue: { $sum: '$total' } } },
@@ -45,7 +61,7 @@ export const getAdminStats = async (now = new Date()) => {
                     { $match: { createdAt: { $gte: windows.days[0] } } },
                     { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone: TIMEZONE } }, orders: { $sum: 1 } } },
                 ],
-                recent: [{ $sort: { createdAt: -1 } }, { $limit: 5 }, { $project: { orderId: 1, total: 1, status: 1, paymentStatus: 1, createdAt: 1 } }],
+                recent: [{ $match: { createdAt: range } }, { $sort: { createdAt: -1 } }, { $limit: 5 }, { $project: { orderId: 1, total: 1, status: 1, paymentStatus: 1, createdAt: 1 } }],
             } },
         ]),
         Product.aggregate([{ $facet: {
@@ -70,23 +86,33 @@ export const getAdminStats = async (now = new Date()) => {
     const previous = orders.previous?.[0] ?? { revenue: 0, orders: 0 };
     const growth = revenueGrowth(current.revenue, previous.revenue);
     const statuses: { status: string; count: number }[] = (orders.statuses ?? []).map((s: any) => ({ status: s._id, count: s.count }));
+    const periodOrders = orders.periodOrders?.[0]?.count ?? 0;
+    const cancelledOrders = statuses.find(s => s.status === 'CANCELLED')?.count ?? 0;
     return {
         generatedAt: now.toISOString(), timezone: TIMEZONE,
-        period: { from: windows.since.toISOString(), to: now.toISOString(), comparisonFrom: windows.previousSince.toISOString() },
+        period: { range: selectedRange, from: windows.since.toISOString(), to: now.toISOString(), comparisonFrom: windows.previousSince.toISOString() },
         stats: {
             totalProducts: inventory.all?.[0]?.count ?? 0, totalOrders: orders.all?.[0]?.count ?? 0,
             totalCustomers, newCustomers, unreadMessages,
             totalRevenue: orders.lifetimePaid?.[0]?.revenue ?? 0,
-            pendingOrders: statuses.find(s => s.status === 'PENDING')?.count ?? 0,
+            pendingOrders: orders.pending?.[0]?.count ?? 0,
             salesGrowth: growth == null ? null : Math.abs(growth).toFixed(1),
             growthTrend: growth == null || growth === 0 ? 'STABLE' : growth > 0 ? 'UP' : 'DOWN',
-            revenue30d: current.revenue, previousRevenue30d: previous.revenue, revenueGrowth: growth,
-            orders30d: orders.periodOrders?.[0]?.count ?? 0, paidOrders30d: current.orders,
-            averagePaidOrder30d: current.orders > 0 ? current.revenue / current.orders : null,
+            revenue: current.revenue, previousRevenue: previous.revenue, revenueGrowth: growth,
+            orders: periodOrders, paidOrders: current.orders,
+            averagePaidOrder: current.orders > 0 ? current.revenue / current.orders : null,
+            unitsSold: orders.units?.[0]?.count ?? 0,
+            cancelledOrders, refundedOrders: statuses.find(s => s.status === 'REFUNDED')?.count ?? 0,
+            cancellationRate: periodOrders ? Math.round(cancelledOrders / periodOrders * 1000) / 10 : null,
             activeProducts: inventory.active?.[0]?.count ?? 0,
             lowStockProducts: inventory.lowStock?.[0]?.count ?? 0,
             outOfStockProducts: inventory.outOfStock?.[0]?.count ?? 0,
         },
+        trend: windows.buckets.map(date => {
+            const key = new Date(date.getTime() + IST_OFFSET).toISOString().slice(0, selectedRange === '12m' ? 7 : 10);
+            const row = orders.trend?.find((r: any) => r._id === key);
+            return { date: key, revenue: row?.revenue ?? 0, orders: row?.orders ?? 0 };
+        }),
         monthlyRevenue: windows.months.map(date => {
             const key = new Date(date.getTime() + IST_OFFSET).toISOString().slice(0, 7);
             return { month: date.toLocaleDateString('en-IN', { month: 'short', year: '2-digit', timeZone: TIMEZONE }), revenue: orders.monthly?.find((r: any) => r._id === key)?.revenue ?? 0 };

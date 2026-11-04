@@ -51,8 +51,16 @@ router.use('/stats', (_req: Request, res: Response, next) => {
     next();
 });
 router.get('/stats', protect, adminOnly, async (_req: Request, res: Response) => {
+    const range = _req.query.range ?? '30d';
+    if (range !== '7d' && range !== '30d' && range !== '12m') return sendError(res, 'Invalid analytics range.', 400);
     try {
-        return sendSuccess(res, await getAdminStats());
+        const data = await getAdminStats(new Date(), range);
+        return sendSuccess(res, {
+            ...data,
+            // Snapshot cutoff and response time both come from this server's clock.
+            serverTime: new Date().toISOString(),
+            requestId: typeof _req.query.requestId === 'string' ? _req.query.requestId.slice(0, 128) : null,
+        });
     } catch (err) {
         console.error('Stats error:', err);
         return sendError(res, 'Unable to load current analytics. Please retry.', 503);

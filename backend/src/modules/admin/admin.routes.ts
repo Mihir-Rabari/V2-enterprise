@@ -12,10 +12,59 @@ import FormData from 'form-data';
 import axios from 'axios';
 import { env } from '../../config/env';
 import fs from 'fs';
+import { randomUUID } from 'crypto';
 import { getAdminProducts, getAdminProduct } from '../products/products.controller';
 import { uploadToR2, listR2Objects, isR2Configured } from '../../utils/r2';
+import { Category } from '../../models/Category';
+import { chatBurstLimiter, chatDailyLimiter } from '../../middlewares/rateLimit.middleware';
+import { budgetExhausted, getProvider, isChatAvailable } from '../chat/chat.service';
+import { assistantRequestSchema, assistantImageType, draftProduct } from './admin.product-assistant';
 
 const router = Router();
+
+router.post('/product-assistant', protect, adminOnly, chatBurstLimiter, chatDailyLimiter, async (req: Request, res: Response) => {
+    res.setHeader('Cache-Control', 'private, no-store');
+    const parsed = assistantRequestSchema.safeParse(req.body);
+    if (!parsed.success) return sendError(res, 'Invalid conversation. Keep messages short or start a new draft.', 400);
+    if (!isChatAvailable()) return sendError(res, 'The product assistant is unavailable. Check the AI configuration or add the product manually.', 503);
+    try {
+        if (await budgetExhausted()) return sendError(res, 'The daily AI budget has been reached. Please try again tomorrow.', 503);
+        const categories = await Category.find({ status: 'ACTIVE' }).select('name parentId').lean();
+        return sendSuccess(res, await draftProduct(parsed.data.messages, categories, getProvider(), parsed.data.images));
+    } catch (err) {
+        console.error('[Admin product assistant]', (err as Error).message);
+        return sendError(res, 'Unable to prepare a product draft. Please retry; your product has not been saved.', 502);
+    }
+});
+
+const assistantUpload = multer({
+    storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 0 },
+    fileFilter: (_req, file, cb) => {
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)) return cb(new Error('Use a JPEG, PNG or WebP image.'));
+        cb(null, true);
+    },
+}).single('file');
+
+router.post('/product-assistant/images', protect, adminOnly, chatBurstLimiter, (req: Request, res: Response) => {
+    res.setHeader('Cache-Control', 'private, no-store');
+    if (!isR2Configured()) return sendError(res, 'Image uploads require R2 storage to be configured.', 503);
+    assistantUpload(req, res, async err => {
+        if (err) return sendError(res, err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE'
+            ? 'Each image must be 5 MB or smaller.' : 'Upload one JPEG, PNG or WebP image, up to 5 MB.', 400);
+        if (!req.file) return sendError(res, 'Choose a product image to upload.', 400);
+        const mimeType = assistantImageType(req.file.buffer);
+        if (!mimeType || mimeType !== req.file.mimetype) return sendError(res, 'The file is not a valid JPEG, PNG or WebP image.', 400);
+        try {
+            const extension = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }[mimeType];
+            const uploaded = await uploadToR2(req.file.buffer, 'products/assistant', `${randomUUID()}.${extension}`, mimeType);
+            const media = await Media.create({ ...uploaded, size: req.file.size, mimeType });
+            return sendSuccess(res, { url: uploaded.url, fileId: uploaded.fileId, id: String(media._id) }, 'Image saved to R2 for AI review and future product use.');
+        } catch (error) {
+            console.error('[Admin product image]', (error as Error).message);
+            return sendError(res, 'Unable to save the product image. Please retry.', 502);
+        }
+    });
+});
 
 // Admin product reads include inactive products: never cacheable by browsers' shared/CDN caches.
 // Set before auth so 401/403 responses are not cacheable either.

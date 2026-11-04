@@ -60,7 +60,7 @@ const providerKey = () => ({
 export const isChatAvailable = () => env.CHAT_ENABLED && !!providerKey();
 
 let defaultProvider: ChatProvider | null = null;
-const getProvider = (): ChatProvider => {
+export const getProvider = (): ChatProvider => {
     if (defaultProvider) return defaultProvider;
     const model = configuredModel();
     const key = providerKey()!;
@@ -144,7 +144,7 @@ export const recordTurnStats = (s: TurnStats): void => {
     ).catch(err => console.error('[Chat] Failed to record turn stats:', err.message));
 };
 
-const budgetExhausted = async () => {
+export const budgetExhausted = async () => {
     const today = await ChatUsage.findOne({ day: utcDay() }).select('costUsd').lean();
     return (today?.costUsd ?? 0) >= env.CHAT_DAILY_BUDGET_USD;
 };

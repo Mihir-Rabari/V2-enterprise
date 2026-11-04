@@ -8,6 +8,7 @@ import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { chatAPI } from '../../lib/apiClient';
 import { SHOPPING_CHAT_LAUNCH_EVENT, type ShoppingChatLaunch } from '../../lib/chatEvents';
+import { shuffledStarters } from '../../lib/chatSuggestions';
 import { useCart } from '../../context/CartContext';
 import { getOptimizedImageUrl } from '../../utils/mediaUtils';
 import { Product } from '../../types';
@@ -34,6 +35,7 @@ interface ChatMessage {
     role: 'user' | 'assistant';
     text: string;
     cards?: ProductCardData[];
+    suggestions?: string[];
 }
 
 interface StoredChat {
@@ -46,9 +48,8 @@ const STORAGE_KEY = 'v2_chat';
 const MAX_INPUT = 500;
 const GREETING: ChatMessage = {
     role: 'assistant',
-    text: "Hi! I'm V2 Assist. Tell me what you're shopping for (an occasion, colour, fabric or budget) and I'll find options and add them to your bag.",
+    text: "Hi! I'm V2 Assist. A wardrobe refresh, a big occasion, or just browsing? Tell me your vibe and budget. Let's find your next favourite.",
 };
-const SUGGESTIONS = ['Linen for warm days', 'A look for a wedding', 'Help me choose a gift'];
 
 const formatPrice = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 
@@ -100,11 +101,13 @@ const ChatWidget: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     // Persist only after the saved chat has been read, so the initial greeting never overwrites it.
     const [hydrated, setHydrated] = useState(false);
+    const [starters, setStarters] = useState<string[]>([]);
     const listRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
 
     // Only show the launcher when the backend has the assistant switched on.
     useEffect(() => {
+        setStarters(shuffledStarters());
         chatAPI.status()
             .then(res => setEnabled(!!res.data?.data?.enabled))
             .catch(() => setEnabled(false));
@@ -144,6 +147,7 @@ const ChatWidget: React.FC = () => {
 
     const reset = () => {
         setChat({ messages: [GREETING] });
+        setStarters(shuffledStarters());
         setError(null);
         setInput('');
     };
@@ -166,7 +170,7 @@ const ChatWidget: React.FC = () => {
                 })),
             });
             const data = res.data?.data as {
-                sessionId: string; reply: string; cards: ProductCardData[]; actions: CartAddAction[]; ended?: boolean;
+                sessionId: string; reply: string; cards: ProductCardData[]; actions: CartAddAction[]; ended?: boolean; suggestions?: string[];
             };
             for (const action of data.actions ?? []) {
                 if (action.type === 'add_to_cart') {
@@ -176,7 +180,7 @@ const ChatWidget: React.FC = () => {
             setChat(prev => ({
                 sessionId: data.sessionId,
                 ended: data.ended,
-                messages: [...prev.messages, { role: 'assistant', text: data.reply, cards: data.cards }],
+                messages: [...prev.messages, { role: 'assistant', text: data.reply, cards: data.cards, suggestions: data.suggestions }],
             }));
         } catch (err: any) {
             const msg = err?.response?.data?.message || 'Could not reach the assistant. Please try again.';
@@ -344,11 +348,20 @@ const ChatWidget: React.FC = () => {
                                     )
                                 ))}
 
-                                {chat.messages.length === 1 && !sending && (
-                                    <div className="ml-10">
-                                        <p className="mb-2.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#9a927f]">A little inspiration</p>
+                                {!sending && !chat.ended && (chat.messages.length === 1 || !!chat.messages.at(-1)?.suggestions?.length) && (
+                                    <div className="ml-10" aria-label="Suggested prompts">
+                                        <div className="mb-2.5 flex items-center justify-between gap-2">
+                                            <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#9a927f]">
+                                                {chat.messages.length === 1 ? 'Find your starting point' : 'Where to next?'}
+                                            </p>
+                                            {chat.messages.length === 1 && (
+                                                <button type="button" onClick={() => setStarters(shuffledStarters())} aria-label="Shuffle suggested prompts" className="flex items-center gap-1 rounded px-2 py-1 text-[10px] text-[#88764f] hover:bg-white focus-visible:outline-2 focus-visible:outline-[#b79a62]">
+                                                    <RotateCcw size={11} /> New ideas
+                                                </button>
+                                            )}
+                                        </div>
                                         <div className="flex flex-wrap gap-2">
-                                            {SUGGESTIONS.map(s => (
+                                            {(chat.messages.length === 1 ? starters : chat.messages.at(-1)?.suggestions ?? []).map(s => (
                                                 <button
                                                     key={s}
                                                     type="button"

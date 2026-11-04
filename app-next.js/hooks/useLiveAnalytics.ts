@@ -1,18 +1,23 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { adminAPI } from '../lib/apiClient';
+export type AnalyticsRange = '7d' | '30d' | '12m';
 
 export interface LiveAnalytics {
     generatedAt: string;
+    serverTime: string;
+    requestId: string;
     timezone: string;
-    period: { from: string; to: string; comparisonFrom: string };
+    period: { range: AnalyticsRange; from: string; to: string; comparisonFrom: string };
     stats: {
         totalProducts: number; totalOrders: number; totalCustomers: number; totalRevenue: number;
         newCustomers: number; unreadMessages: number; pendingOrders: number;
-        revenue30d: number; previousRevenue30d: number; revenueGrowth: number | null;
-        orders30d: number; paidOrders30d: number; averagePaidOrder30d: number | null;
+        revenue: number; previousRevenue: number; revenueGrowth: number | null;
+        orders: number; paidOrders: number; averagePaidOrder: number | null;
         activeProducts: number; lowStockProducts: number; outOfStockProducts: number;
+        unitsSold: number; cancelledOrders: number; refundedOrders: number; cancellationRate: number | null;
     };
+    trend: { date: string; revenue: number; orders: number }[];
     monthlyRevenue: { month: string; revenue: number }[];
     customerPulse: { date: string; orders: number }[];
     categoryDistribution: { name: string; value: number }[];
@@ -22,10 +27,12 @@ export interface LiveAnalytics {
 }
 
 export const ANALYTICS_REFRESH_MS = 30_000;
-export function useLiveAnalytics() {
+export function useLiveAnalytics(selectedRange: AnalyticsRange = '30d') {
     const [data, setData] = useState<LiveAnalytics | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [serverNow, setServerNow] = useState<number | null>(null);
+    const clock = useRef<{ serverEpoch: number; receivedAt: number; snapshotAge: number } | null>(null);
     const request = useRef<AbortController | null>(null);
     const refresh = useCallback(async () => {
         request.current?.abort();
@@ -34,22 +41,51 @@ export function useLiveAnalytics() {
         setLoading(true);
         // Do not display the previous snapshot as current while refreshing.
         setData(null);
+        setServerNow(null);
         setError('');
         try {
-            const res = await adminAPI.getStats(controller.signal);
+            const requestId = crypto.randomUUID();
+            const startedAt = performance.now();
+            const res = await adminAPI.getStats(controller.signal, requestId, selectedRange);
             if (controller.signal.aborted) return;
             const value = res.data.data as LiveAnalytics;
-            const age = Date.now() - Date.parse(value.generatedAt);
-            if (!Number.isFinite(age) || age > ANALYTICS_REFRESH_MS || age < -ANALYTICS_REFRESH_MS || !value.stats) {
+            const receivedAt = performance.now();
+            const serverEpoch = Date.parse(value.serverTime);
+            // Monotonic elapsed time is independent of the device's wall clock.
+            // Count the full round trip conservatively so slow responses expire sooner.
+            const age = serverEpoch - Date.parse(value.generatedAt) + (receivedAt - startedAt);
+            if (value.requestId !== requestId || value.period?.range !== selectedRange || !Number.isFinite(age) || age >= ANALYTICS_REFRESH_MS || age < 0 || !value.stats) {
                 throw new Error('Analytics response is out of date.');
             }
+            clock.current = { serverEpoch, receivedAt, snapshotAge: age };
+            setServerNow(serverEpoch);
             setData(value);
         } catch {
             if (!controller.signal.aborted) setError('Current analytics could not be loaded. Refresh to try again.');
         } finally {
             if (!controller.signal.aborted) setLoading(false);
         }
-    }, []);
+    }, [selectedRange]);
+
+    useEffect(() => {
+        const anchor = clock.current;
+        if (!data || !anchor) return;
+        const ticker = window.setInterval(() => {
+            setServerNow(anchor.serverEpoch + performance.now() - anchor.receivedAt);
+        }, 1000);
+        // Refresh when the server snapshot expires, rather than using client calendar time.
+        const expiry = window.setTimeout(() => { void refresh(); },
+            Math.max(0, ANALYTICS_REFRESH_MS - anchor.snapshotAge - (performance.now() - anchor.receivedAt)));
+        return () => { clearInterval(ticker); clearTimeout(expiry); };
+    }, [data, refresh]);
+
+    useEffect(() => {
+        if (!error || loading) return;
+        const retry = window.setTimeout(() => {
+            if (document.visibilityState === 'visible') void refresh();
+        }, ANALYTICS_REFRESH_MS);
+        return () => clearTimeout(retry);
+    }, [error, loading, refresh]);
 
     useEffect(() => {
         void refresh();
@@ -58,15 +94,14 @@ export function useLiveAnalytics() {
             else {
                 request.current?.abort();
                 setData(null);
+                setServerNow(null);
             }
         };
-        const timer = window.setInterval(() => {
-            if (document.visibilityState === 'visible') void refresh();
-        }, ANALYTICS_REFRESH_MS);
         const onOnline = () => { if (document.visibilityState === 'visible') void refresh(); };
         const onOffline = () => {
             request.current?.abort();
             setData(null);
+            setServerNow(null);
             setLoading(false);
             setError('You are offline. Reconnect to load current analytics.');
         };
@@ -76,12 +111,11 @@ export function useLiveAnalytics() {
         window.addEventListener('offline', onOffline);
         return () => {
             request.current?.abort();
-            clearInterval(timer);
             document.removeEventListener('visibilitychange', onVisible);
             window.removeEventListener('focus', onOnline);
             window.removeEventListener('online', onOnline);
             window.removeEventListener('offline', onOffline);
         };
     }, [refresh]);
-    return { data, loading, error, refresh };
+    return { data: data?.period.range === selectedRange ? data : null, loading, error, refresh, serverNow };
 }

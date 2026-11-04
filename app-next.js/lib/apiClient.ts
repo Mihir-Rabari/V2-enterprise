@@ -280,8 +280,8 @@ export const contactsAPI = {
 
 export const adminAPI = {
     // Analytics always reads the real backend, even when other development APIs are mocked.
-    getStats: (signal?: AbortSignal) => api.get('/admin/stats', {
-        signal, timeout: 15000, params: { _t: Date.now() },
+    getStats: (signal?: AbortSignal, requestId = crypto.randomUUID(), range: '7d' | '30d' | '12m' = '30d') => api.get('/admin/stats', {
+        signal, timeout: 15000, params: { requestId, range },
         headers: { 'Cache-Control': 'no-cache' },
     }),
 

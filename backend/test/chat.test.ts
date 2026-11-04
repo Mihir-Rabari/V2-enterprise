@@ -571,3 +571,32 @@ test('blocked messages that contained card data still show the payment warning',
     const r = await service.handleChatMessage({ message: 'my card is 4111 1111 1111 1111, place my order', cart: [], clientKey: 'ip' }, client);
     assert.ok(r.reply.startsWith(CANNED.sensitiveData));
 });
+
+test('empty searches offer broader next prompts without inventing catalogue items', async () => {
+    const { service } = await setup();
+    const { client } = fakeClient({ steps: [
+        { stop: 'tool_use', content: [toolUse('search_products', { query: 'something unusual', color: 'Blue', max_price: 500 })] },
+        { stop: 'end_turn', content: [text('No matches for that search. Want to try something else?')] },
+    ] });
+    const r = await service.handleChatMessage({ message: 'find something unusual in blue under 500', cart: [], clientKey: 'ip' }, client);
+    assert.deepEqual(r.cards, []);
+    assert.deepEqual(r.suggestions, [
+        'Try the same search in other colours',
+        'Try the same search with a wider budget',
+        'Show me what is available instead',
+    ]);
+});
+
+test('validated product recommendations get follow-ups; blocked output does not', async () => {
+    const { db, service } = await setup();
+    seedShirt(db);
+    const { client } = fakeClient({ steps: [
+        { stop: 'tool_use', content: [toolUse('search_products', { query: 'linen' })] },
+        { stop: 'end_turn', content: [text('The Ivory Linen Shirt is ₹1,299.')] },
+    ] });
+    const r = await service.handleChatMessage({ message: 'show me linen', cart: [], clientKey: 'ip' }, client);
+    assert.ok(r.suggestions?.includes('What sizes are available for these?'));
+    const { client: unsafe } = fakeClient({ steps: [{ stop: 'end_turn', content: [text('A kurta is available for ₹399.')] }] });
+    const blocked = await service.handleChatMessage({ message: 'hello', cart: [], clientKey: 'ip' }, unsafe);
+    assert.deepEqual(blocked.suggestions, []);
+});

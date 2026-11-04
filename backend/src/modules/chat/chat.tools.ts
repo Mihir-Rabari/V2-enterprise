@@ -76,6 +76,7 @@ export interface ToolContext {
     /** Search calls this turn, and how many of them found nothing (usage metrics). */
     searches: number;
     emptySearches: number;
+    lastSearch?: z.infer<typeof searchInput>;
 }
 
 export const newToolContext = (cart: ClientCart): ToolContext => ({
@@ -214,6 +215,7 @@ export const searchKeywords = (query: string): string[] => {
 
 const searchProducts = async (raw: unknown, ctx: ToolContext) => {
     const input = searchInput.parse(raw);
+    ctx.lastSearch = input;
     const run = (search: string | undefined) => getProductsService({
         status: 'ACTIVE',
         search,

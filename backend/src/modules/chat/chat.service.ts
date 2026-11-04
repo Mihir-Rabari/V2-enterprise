@@ -16,6 +16,7 @@ import { env } from '../../config/env';
 import { ChatSession, IChatSession, IChatTurn, IPendingCartAdd } from '../../models/ChatSession';
 import { ChatUsage } from '../../models/ChatUsage';
 import { CHAT_LIMITS, estimateCostUsd } from './chat.config';
+import { followUpSuggestions } from './chat.suggestions';
 import { ASSISTANT_SYSTEM_PROMPT, CLASSIFIER_SYSTEM_PROMPT, PROMPT_CANARY } from './chat.prompt';
 import {
     CANNED, detectCartIntent, explicitlyAsksToAdd, extractRupeeAmounts, looksLikePromptInjection, normalizeUserInput, redactSensitive, validateAssistantOutput,
@@ -79,6 +80,7 @@ const getProvider = (): ChatProvider => {
 };
 
 export interface ChatReply {
+    suggestions?: string[];
     sessionId: string;
     reply: string;
     cards: ProductCard[];
@@ -170,6 +172,7 @@ const verdictReply = (v: Verdict): string =>
 // ── Assistant tool loop ──────────────────────────────────────────────────────
 
 interface AgentResult {
+    search?: Parameters<typeof followUpSuggestions>[0]['search'];
     text: string;
     ok: boolean;
     cards: ProductCard[];
@@ -197,6 +200,7 @@ const runAssistant = async (
         stats.searches = ctx.searches;
         stats.emptySearches = ctx.emptySearches;
         return {
+            search: ctx.lastSearch,
             text, ok, cards: [...ctx.cards.values()], actions: ctx.actions, amounts: ctx.amounts, resultText: ctx.resultText, toolsUsed: ctx.toolsUsed, stats,
         };
     };
@@ -356,7 +360,8 @@ export const handleChatMessage = async (req: ChatRequest, providerOverride?: Cha
         const committed = await commitPending(pending, req.cart);
         await saveTurn(session, message, committed.reply, false);
         recordTurnStats({ ...emptyStats(), fastConfirm: true });
-        return { ...base, reply: committed.reply, cards: committed.cards.slice(0, 6), actions: committed.actions, remainingTurns: remaining() };
+        return { ...base, reply: committed.reply, cards: committed.cards.slice(0, 6), actions: committed.actions, remainingTurns: remaining(),
+            suggestions: followUpSuggestions({ emptySearch: false, hasProducts: committed.cards.length > 0, addedToCart: committed.actions.length > 0 }) };
     }
 
     const history = session.turns.slice(-CHAT_LIMITS.historyTurns);
@@ -442,5 +447,11 @@ export const handleChatMessage = async (req: ChatRequest, providerOverride?: Cha
     const cards = outputValidated
         ? (mentionedCards.length > 0 ? mentionedCards : result.cards.length === 1 ? result.cards : [])
         : [];
-    return { ...base, reply, cards: cards.slice(0, 6), actions, remainingTurns: remaining() };
+    const suggestions = outputValidated && staged.length === 0 ? followUpSuggestions({
+        emptySearch: result.stats.searches > 0 && result.stats.emptySearches === result.stats.searches && result.cards.length === 0,
+        hasProducts: cards.length > 0,
+        addedToCart: actions.length > 0,
+        search: result.search,
+    }) : [];
+    return { ...base, reply, cards: cards.slice(0, 6), actions, suggestions, remainingTurns: remaining() };
 };

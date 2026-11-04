@@ -1,9 +1,8 @@
+import { getAdminStats } from './admin.stats';
 import { Router, Request, Response } from 'express';
 import path from 'path';
 import { Product } from '../../models/Product';
-import { Order } from '../../models/Order';
 import { User } from '../../models/User';
-import { ContactMessage } from '../../models/ContactMessage';
 import { Media } from '../../models/Media';
 import { sendSuccess, sendError } from '../../utils/response';
 import { protect } from '../../middlewares/auth.middleware';
@@ -44,161 +43,21 @@ const upload = multer({
     limits: { fileSize: 500 * 1024 * 1024 } // 500MB
 });
 
-// Admin: get dashboard stats
+// Never cache analytics, including authentication failures.
+router.use('/stats', (_req: Request, res: Response, next) => {
+    res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+    res.setHeader('CDN-Cache-Control', 'no-store');
+    res.setHeader('Surrogate-Control', 'no-store');
+    next();
+});
 router.get('/stats', protect, adminOnly, async (_req: Request, res: Response) => {
     try {
-        const [totalProducts, totalOrders, totalUsers, revenueResult, recentOrders, pendingOrders, unreadMessages] = await Promise.all([
-            Product.countDocuments(),
-            Order.countDocuments(),
-            User.countDocuments({ role: 'CUSTOMER' }),
-            Order.aggregate([
-                { $match: { status: 'DELIVERED' } },
-                { $group: { _id: null, total: { $sum: '$total' } } },
-            ]),
-            Order.find()
-                .sort({ createdAt: -1 })
-                .limit(5)
-                .populate('userId', 'name email'),
-            Order.countDocuments({ status: 'PENDING' }),
-            ContactMessage.countDocuments({ status: 'UNREAD' }),
-        ]);
-
-        // ── Growth & Metrics Calculations ─────────────────────────────────────
-        const now = new Date();
-        const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-        const [thisMonthRevenue, lastMonthRevenue, newCustomersCount] = await Promise.all([
-            Order.aggregate([
-                { $match: { status: 'DELIVERED', createdAt: { $gte: startOfThisMonth } } },
-                { $group: { _id: null, total: { $sum: '$total' } } }
-            ]),
-            Order.aggregate([
-                { $match: { status: 'DELIVERED', createdAt: { $gte: startOfLastMonth, $lt: startOfThisMonth } } },
-                { $group: { _id: null, total: { $sum: '$total' } } }
-            ]),
-            User.countDocuments({ role: 'CUSTOMER', createdAt: { $gte: thirtyDaysAgo } })
-        ]);
-
-        const currentRev = thisMonthRevenue[0]?.total || 0;
-        const prevRev = lastMonthRevenue[0]?.total || 0;
-        let salesGrowth = 0;
-        let growthTrend: 'UP' | 'DOWN' | 'STABLE' = 'STABLE';
-
-        if (prevRev > 0) {
-            salesGrowth = ((currentRev - prevRev) / prevRev) * 100;
-            growthTrend = salesGrowth > 0 ? 'UP' : salesGrowth < 0 ? 'DOWN' : 'STABLE';
-        } else if (currentRev > 0) {
-            salesGrowth = 100;
-            growthTrend = 'UP';
-        }
-
-        // ── Monthly Revenue (Last 6 months) ───────────────────────────────────
-        const sixMonthsAgo = new Date();
-        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
-        sixMonthsAgo.setDate(1);
-        sixMonthsAgo.setHours(0, 0, 0, 0);
-
-        const monthlyRevenueRaw = await Order.aggregate([
-            {
-                $match: {
-                    status: 'DELIVERED',
-                    createdAt: { $gte: sixMonthsAgo },
-                },
-            },
-            {
-                $group: {
-                    _id: {
-                        month: { $month: '$createdAt' },
-                        year: { $year: '$createdAt' },
-                    },
-                    revenue: { $sum: '$total' },
-                },
-            },
-            { $sort: { '_id.year': 1, '_id.month': 1 } },
-        ]);
-
-        // ── Category Distribution ─────────────────────────────────────────────
-        const categoryDistribution = await Product.aggregate([
-            {
-                $group: {
-                    _id: '$mainCategory',
-                    count: { $sum: 1 },
-                },
-            },
-            { $project: { name: '$_id', value: '$count', _id: 0 } },
-        ]);
-
-        // ── Customer Pulse (Daily orders last 7 days) ─────────────────────────
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-        sevenDaysAgo.setHours(0, 0, 0, 0);
-
-        const customerPulseRaw = await Order.aggregate([
-            {
-                $match: {
-                    createdAt: { $gte: sevenDaysAgo },
-                },
-            },
-            {
-                $group: {
-                    _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-                    orders: { $sum: 1 },
-                },
-            },
-            { $sort: { _id: 1 } },
-            { $project: { date: '$_id', orders: 1, _id: 0 } },
-        ]);
-
-        // Format dates for Customer Pulse (ensure every day has a record)
-        const pulseMap = new Map();
-        customerPulseRaw.forEach(p => pulseMap.set(p.date, p.orders));
-        const customerPulse = [];
-        for (let i = 0; i < 7; i++) {
-            const d = new Date();
-            d.setDate(d.getDate() - (6 - i));
-            const dateStr = d.toISOString().split('T')[0];
-            customerPulse.push({
-                date: d.toLocaleDateString('default', { weekday: 'short' }),
-                orders: pulseMap.get(dateStr) || 0
-            });
-        }
-
-        return sendSuccess(res, {
-            stats: {
-                totalProducts,
-                totalOrders,
-                totalCustomers: totalUsers,
-                totalRevenue: revenueResult[0]?.total || 0,
-                pendingOrders,
-                unreadMessages,
-                salesGrowth: Math.abs(salesGrowth).toFixed(1),
-                growthTrend,
-                newCustomers: newCustomersCount,
-            },
-            monthlyRevenue: monthlyRevenueRaw.map((m) => ({
-                month: new Date(2000, m._id.month - 1).toLocaleString('default', { month: 'short' }),
-                revenue: m.revenue,
-            })),
-            categoryDistribution,
-            customerPulse,
-            recentOrders: recentOrders.map((order) => ({
-                id: (order._id as any).toString(),
-                orderId: order.orderId,
-                customer: (order.userId as any)?.name || 'Guest',
-                amount: order.total,
-                status: order.status,
-                date: order.createdAt,
-            })),
-        });
-    } catch (err: unknown) {
+        return sendSuccess(res, await getAdminStats());
+    } catch (err) {
         console.error('Stats error:', err);
-        return sendError(res, (err as Error).message);
+        return sendError(res, 'Unable to load current analytics. Please retry.', 503);
     }
 });
-
 // Admin: get all customers
 router.get('/customers', protect, adminOnly, async (req: Request, res: Response) => {
     try {

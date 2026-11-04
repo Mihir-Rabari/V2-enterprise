@@ -50,7 +50,7 @@ export interface ChatProvider {
     readonly model: string;
     startTurn(system: string, history: IChatTurn[], userMessage: string): ModelTurn;
     /** One short completion with no tools; `refused` when the provider declined to answer. */
-    classify(system: string, userContent: string): Promise<{ text: string; refused: boolean }>;
+    classify(system: string, userContent: string, maxTokens?: number, images?: string[]): Promise<{ text: string; refused: boolean }>;
 }
 
 export type UsageSink = (model: string, usage: NormalizedUsage) => void;
@@ -152,11 +152,13 @@ export const createOpenAiCompatProvider = (
                 },
             };
         },
-        async classify(system, userContent) {
+        async classify(system, userContent, maxTokens = CHAT_LIMITS.classifierMaxTokens, images = []) {
             const response = await client.chat.completions.create({
                 model,
-                messages: [{ role: 'system', content: system }, { role: 'user', content: userContent }],
-                max_tokens: CHAT_LIMITS.classifierMaxTokens,
+                messages: [{ role: 'system', content: system }, { role: 'user', content: images.length
+                    ? [{ type: 'text', text: userContent }, ...images.map(url => ({ type: 'image_url' as const, image_url: { url } }))]
+                    : userContent }],
+                max_tokens: maxTokens,
                 ...extra,
             });
             record(response.usage);
@@ -229,10 +231,12 @@ export const createGeminiProvider = (
                 },
             };
         },
-        async classify(system, userContent) {
+        async classify(system, userContent, maxTokens = CHAT_LIMITS.classifierMaxTokens, images = []) {
             const result = await generateText({
-                ...settings, system, prompt: userContent,
-                maxOutputTokens: CHAT_LIMITS.classifierMaxTokens,
+                ...settings, system, messages: [{ role: 'user', content: images.length
+                    ? [{ type: 'text', text: userContent }, ...images.map(url => ({ type: 'image' as const, image: new URL(url) }))]
+                    : userContent }],
+                maxOutputTokens: maxTokens,
                 abortSignal: AbortSignal.timeout(45_000),
             });
             record(result.usage);
@@ -303,13 +307,15 @@ export const createAnthropicProvider = (client: AnthropicLikeClient, model: stri
                 },
             };
         },
-        async classify(system, userContent) {
+        async classify(system, userContent, maxTokens = CHAT_LIMITS.classifierMaxTokens, images = []) {
             const response = await client.messages.create({
                 model,
-                max_tokens: CHAT_LIMITS.classifierMaxTokens,
+                max_tokens: maxTokens,
                 system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
                 output_config: { effort: 'low' },
-                messages: [{ role: 'user', content: userContent }],
+                messages: [{ role: 'user', content: images.length
+                    ? [{ type: 'text', text: userContent }, ...images.map(url => ({ type: 'image' as const, source: { type: 'url' as const, url } }))]
+                    : userContent }],
             });
             record(response.usage);
             if (response.stop_reason === 'refusal') return { text: '', refused: true };

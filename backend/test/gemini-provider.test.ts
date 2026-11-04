@@ -73,3 +73,14 @@ test('Gemini SDK rejects safety-blocked and truncated assistant responses', asyn
         stop: 'max_tokens', text: '', toolCalls: [],
     });
 });
+
+test('Gemini product drafting sends inline image bytes to the model', async () => {
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==', 'base64');
+    const image = 'data:image/png;base64,' + png.toString('base64');
+    const { provider, requests } = fakeGemini([response([{ text: '{}' }])]);
+    assert.equal((await provider.classify('Draft product', 'Inspect product', 2400, [image])).refused, false);
+    const part = requests[0].body.contents[0].parts.find((part: any) => part.inlineData);
+    assert.equal(part.inlineData.mimeType, 'image/png');
+    assert.equal(part.inlineData.data, png.toString('base64'));
+    assert.equal(requests[0].body.tools, undefined);
+});

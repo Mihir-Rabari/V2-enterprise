@@ -13,11 +13,9 @@
  * `import.meta.env.VITE_API_URL`, replaced with process.env.NEXT_PUBLIC_API_URL.
  */
 
-const IS_LOCALHOST = typeof window !== 'undefined' &&
-    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.includes('192.168.'));
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ||
-    (IS_LOCALHOST ? 'http://localhost:5000/api/v1' : '/api/v1');
+// Use explicit backend configuration when it is on another origin. The
+// same-origin fallback is stable and works regardless of the serving hostname.
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
 // Deprecated in favor of direct R2 URLs returned by the backend
 export const IMAGEKIT_PUBLIC_URL = 'https://ik.imagekit.io/ma42aehxw/';

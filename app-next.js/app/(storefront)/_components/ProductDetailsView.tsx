@@ -51,13 +51,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ShoppingBag, Heart, ArrowRight, Star, MessageSquare, Send, CheckCircle2, PlayCircle } from 'lucide-react';
+import { ChevronLeft, ShoppingBag, Heart, ArrowRight, Star, MessageSquare, Send, CheckCircle2, PlayCircle, Sparkles, MessageCircle, ArrowUpRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProductCard from '@/components/ProductCard';
 import { Accordion } from '@/components/Accordion';
 import { useCart } from '@/context/CartContext';
 import { useProduct, useProducts, type ApiProduct } from '@/hooks/useProducts';
 import { reviewsAPI, wishlistAPI } from '@/lib/apiClient';
+import { launchShoppingChat } from '@/lib/chatEvents';
 import { useAuth } from '@/context/AuthContext';
 import { getImageSrcSet, getOptimizedImageUrl } from '@/utils/mediaUtils';
 import type { Product } from '@/types';
@@ -233,6 +234,35 @@ const ProductDetailsView: React.FC<{ id: string }> = ({ id }) => {
             console.error('Wishlist toggle failed:', error);
             showToast('Failed to update wishlist.', 'error');
         }
+    };
+
+    const productStylingContext = () => {
+        if (!product) return '';
+        const color = selectedColor || product.color;
+        const size = selectedSize || product.size;
+        return [
+            product.name,
+            color && `${color}`,
+            size && `size ${size}`,
+            product.fabric && `${product.fabric}`,
+            [product.mainCategory, product.subCategory].filter(Boolean).join(' / '),
+        ].filter(Boolean).join(' · ');
+    };
+
+    const getAiPairings = () => {
+        const context = productStylingContext();
+        launchShoppingChat({
+            prompt: `What would you pair with the ${context}? Please suggest a few complementary pieces from V2.`,
+            sendImmediately: true,
+        });
+    };
+
+    const chatAboutProduct = () => {
+        const context = productStylingContext();
+        launchShoppingChat({
+            prompt: `Tell me about this product: ${context}. Check the catalogue and help with fit, fabric, care, or available sizes.`,
+            sendImmediately: true,
+        });
     };
 
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -600,6 +630,46 @@ const ProductDetailsView: React.FC<{ id: string }> = ({ id }) => {
                                 </button>
                             </div>
 
+                            {/* Product-aware AI styling actions, directly under the purchase buttons */}
+                            <section className="relative isolate overflow-hidden border border-[#d8c9a9] bg-[linear-gradient(135deg,#f5f1e8_0%,#fbfaf6_58%,#eee8dc_100%)] p-5 shadow-[0_16px_44px_rgba(42,30,23,0.07)] sm:p-6">
+                                <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-20 -z-10 h-52 w-52 rounded-full border border-[#b79a62]/20" />
+                                <div aria-hidden="true" className="pointer-events-none absolute -right-3 -top-12 -z-10 h-36 w-36 rounded-full border border-[#b79a62]/15" />
+                                <div className="flex items-center justify-between gap-3">
+                                    <span className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.24em] text-[#907747]">
+                                        <Sparkles size={13} strokeWidth={1.8} /> V2 AI STYLIST
+                                    </span>
+                                    <span className="border border-[#c9b78e]/50 bg-white/50 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#9a8760]">Made for this piece</span>
+                                </div>
+                                <h2 className="mt-3 font-serif text-2xl italic tracking-tight text-[#2A1E17]">Make it your own.</h2>
+                                <p className="mt-1.5 max-w-md text-[12px] leading-5 text-[#2A1E17]/65">Get a thoughtful outfit pairing or ask the stylist about fit, fabric and care.</p>
+                                <div className="mt-5 grid gap-2.5">
+                                    <button
+                                        type="button"
+                                        onClick={getAiPairings}
+                                        className="group flex w-full items-center gap-3 rounded-sm bg-[#2A1E17] px-3.5 py-3 text-left text-white shadow-sm transition hover:bg-[#3a2b21] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b79a62] focus-visible:ring-offset-2"
+                                    >
+                                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#b79a62] text-[#221c14]"><Sparkles size={16} strokeWidth={1.8} /></span>
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block text-[11px] font-semibold tracking-wide">Get AI-recommended pairings</span>
+                                            <span className="mt-0.5 block text-[9px] tracking-wide text-white/55">Find pieces that complete this look</span>
+                                        </span>
+                                        <ArrowUpRight size={16} className="shrink-0 text-[#d7bd83] transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={chatAboutProduct}
+                                        className="group flex w-full items-center gap-3 rounded-sm border border-[#2A1E17]/15 bg-white/65 px-3.5 py-3 text-left text-[#2A1E17] transition hover:border-[#b79a62] hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b79a62] focus-visible:ring-offset-2"
+                                    >
+                                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[#d9cba9] bg-[#f5f1e8] text-[#907747]"><MessageCircle size={16} strokeWidth={1.7} /></span>
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block text-[11px] font-semibold tracking-wide">Chat about this product</span>
+                                            <span className="mt-0.5 block text-[9px] tracking-wide text-[#2A1E17]/50">Ask about fit, fabric or sizing</span>
+                                        </span>
+                                        <ArrowRight size={15} className="shrink-0 text-[#9a8760] transition-transform group-hover:translate-x-1" />
+                                    </button>
+                                </div>
+                            </section>
+
                             {/* Composition & Maintenance */}
                             {(() => {
                                 const selectedVariant = product.variants?.find(v => v.size === selectedSize);
@@ -669,6 +739,7 @@ const ProductDetailsView: React.FC<{ id: string }> = ({ id }) => {
                                 </div>
                                 <span className="text-[10px] font-bold uppercase tracking-widest text-[#2A1E17]/60">Based on {productReviews.length} reviews</span>
                             </div>
+
                         </div>
 
                         {/* Review List */}

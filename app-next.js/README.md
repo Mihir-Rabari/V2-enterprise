@@ -35,7 +35,7 @@ cp .env.example .env.local
 | Variable | Default in `.env.example` | Purpose |
 | --- | --- | --- |
 | `NEXT_PUBLIC_API_URL` | `http://localhost:5000/api/v1` | Backend API base URL. **Unset in production** — then the client falls back to the relative `/api/v1` path (Express serves frontend + API from one origin, no CORS). |
-| `NEXT_PUBLIC_USE_MOCK_API` | `false` | `true` enables mock API responses, but only ever on localhost/192.168.\* hosts. |
+| `NEXT_PUBLIC_USE_MOCK_API` | `false` | `true` enables mock API responses in Next development builds only; production builds always use the real API. |
 | `NEXT_PUBLIC_SITE_URL` | `http://localhost:3001` | Canonical origin of this app (SEO/metadata purposes). |
 
 ## Commands
@@ -64,15 +64,15 @@ side-by-side (`npm run dev` in `frontend/` and in `app-next.js/`) and compare be
 ## Backend connection notes
 
 - `lib/apiClient.ts` is a **client-only module** (ported from `frontend/lib/apiClient.ts`):
-  axios instance with `baseURL` from `NEXT_PUBLIC_API_URL` (or the localhost fallback),
+  axios instance with `baseURL` from `NEXT_PUBLIC_API_URL` (or the same-origin `/api/v1` fallback),
   `Bearer` token from `localStorage['v2_token']` attached per request, and a 401 response
   interceptor that clears `v2_token` / `v2_user` / `v2_admin_session`.
 - Every API module (auth, products, orders, reviews, sliders, content, settings, contacts,
   admin incl. `adminAPI.getProducts` → `/admin/products`, categories, wishlist, payments,
   addresses, filters, attributes) is ported **verbatim**, including the server-side-pricing
   contract of `paymentsAPI.createRazorpayOrder` (the client never sends an amount).
-- `resolveLocalAssetUrl` no longer consults `import.meta.env.DEV`; it derives the backend
-  origin from `NEXT_PUBLIC_API_URL` when set (dev), otherwise keeps paths relative (prod).
+- `resolveLocalAssetUrl` uses `NEXT_PUBLIC_API_URL` when set; otherwise it keeps paths
+  relative. The rule is identical on the server and browser, avoiding hydration mismatches.
 
 ## Assets
 

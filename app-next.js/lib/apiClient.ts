@@ -10,9 +10,8 @@
  * Ported from frontend/lib/apiClient.ts (Vite → Next.js):
  *  - import.meta.env.VITE_API_URL          → process.env.NEXT_PUBLIC_API_URL
  *  - import.meta.env.VITE_USE_MOCK_API     → process.env.NEXT_PUBLIC_USE_MOCK_API
- *  - resolveLocalAssetUrl no longer consults import.meta.env.DEV; it is now
- *    env-driven (derives the backend origin from NEXT_PUBLIC_API_URL, falling
- *    back to the localhost heuristic, then to a relative path in production).
+ *  - resolveLocalAssetUrl uses the same build-time NEXT_PUBLIC_API_URL on the
+ *    server and browser, so SSR markup and hydration produce identical URLs.
  * All API modules, including the server-priced paymentsAPI contract and
  * adminAPI.getProducts (/admin/products), are kept exactly as-is.
  */
@@ -25,19 +24,15 @@ const mockResponse = (data: any) => Promise.resolve({ data: { success: true, dat
 
 // ─── Base Config ─────────────────────────────────────────────────────────────
 
-// In production, Express serves both frontend and backend from the same origin,
-// so we use a relative path (/api/v1) — no CORS ever triggered.
-// In development, fall back to localhost:5000 where the backend runs separately.
-const IS_LOCALHOST = typeof window !== 'undefined' &&
-    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.includes('192.168.'));
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ||
-    (IS_LOCALHOST ? 'http://localhost:5000/api/v1' : '/api/v1');
+// Configure NEXT_PUBLIC_API_URL explicitly when the backend is on another
+// origin. The relative default supports same-origin deployments and is
+// deterministic during both server rendering and browser hydration.
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
 const IS_MOCK_ENV = process.env.NEXT_PUBLIC_USE_MOCK_API === 'true';
 
-// Only allow mock mode on localhost to prevent production from accidentally showing mock data
-export const IS_MOCK = IS_MOCK_ENV && IS_LOCALHOST;
+// Mock mode is limited to Next development builds, regardless of hostname.
+export const IS_MOCK = IS_MOCK_ENV && process.env.NODE_ENV === 'development';
 
 if (typeof window !== 'undefined') {
     console.log(`[V2-API] Base URL: ${BASE_URL} | Mock Mode: ${IS_MOCK ? 'ENABLED' : 'DISABLED'}`);
@@ -48,10 +43,10 @@ if (typeof window !== 'undefined') {
  * backend runs on a separate origin (development), or keeps it relative when
  * frontend and API are served from the same origin (production).
  *
- * Env-driven replacement for the Vite `import.meta.env.DEV` check: we derive
- * the backend origin from NEXT_PUBLIC_API_URL when it is set, otherwise fall
- * back to the localhost heuristic (dev without explicit env) and finally to
- * a relative path (same-origin production).
+ * The origin comes only from NEXT_PUBLIC_API_URL. If it is unset, the relative
+ * URL uses the current origin. This is identical during SSR and hydration;
+ * local development with a separate backend should set the variable in
+ * .env.local (see .env.example).
  */
 export const resolveLocalAssetUrl = (path: string) => {
     if (!path) return '';
@@ -59,8 +54,8 @@ export const resolveLocalAssetUrl = (path: string) => {
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
     const rootUrl = apiUrl
-        ? apiUrl.replace(/\/api\/v\d+\/?$/, '') // e.g. http://localhost:5000/api/v1 → http://localhost:5000
-        : (IS_LOCALHOST ? 'http://localhost:5000' : '');
+        ? apiUrl.replace(/\/api\/v\d+\/?$/, '') // e.g. https://api.example.com/api/v1 → https://api.example.com
+        : '';
     return `${rootUrl}${path.startsWith('/') ? '' : '/'}${path}`;
 };
 
@@ -398,6 +393,13 @@ export const addressesAPI = {
         IS_MOCK
             ? mockResponse({ success: true })
             : api.patch(`/addresses/${id}/default`),
+};
+
+/** Shopping assistant. The cart is sent as ids/quantities only; the server looks up names and prices itself. */
+export const chatAPI = {
+    status: () => api.get('/chat/status'),
+    send: (data: { sessionId?: string; message: string; cart: { productId: string; quantity: number; size?: string }[] }) =>
+        api.post('/chat/message', data, { timeout: 60000 }),
 };
 
 // --- NEW FILTERS API ---

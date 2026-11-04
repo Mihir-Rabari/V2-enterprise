@@ -6,33 +6,29 @@ const mockResponse = (data: any) => Promise.resolve({ data: { success: true, dat
 
 // ─── Base Config ─────────────────────────────────────────────────────────────
 
-// In production, Express serves both frontend and backend from the same origin,
-// so we use a relative path (/api/v1) — no CORS ever triggered.
-// In development, fall back to localhost:5000 where the backend runs separately.
-const IS_LOCALHOST = typeof window !== 'undefined' && 
-    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.includes('192.168.'));
-
-const BASE_URL = import.meta.env.VITE_API_URL ||
-    (IS_LOCALHOST ? 'http://localhost:5000/api/v1' : '/api/v1');
+// Configure VITE_API_URL explicitly when the backend is on another origin.
+// The same-origin fallback supports production behind the Express API proxy.
+const BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 const IS_MOCK_ENV = import.meta.env.VITE_USE_MOCK_API === 'true';
 
-// Only allow mock mode on localhost to prevent production from accidentally showing mock data
-export const IS_MOCK = IS_MOCK_ENV && IS_LOCALHOST;
+// Vite's build-time DEV flag keeps mock mode off in production, independent of hostname.
+export const IS_MOCK = IS_MOCK_ENV && import.meta.env.DEV;
 
 if (typeof window !== 'undefined') {
     console.log(`[V2-API] Base URL: ${BASE_URL} | Mock Mode: ${IS_MOCK ? 'ENABLED' : 'DISABLED'}`);
 }
 
 /**
- * Resolves a local asset path (e.g. /videos/f.mp4) to a full URL in dev,
- * or keeps it relative in production.
+ * Resolve local asset paths from explicit API configuration; keep them
+ * same-origin when the public API URL is unset.
  */
 export const resolveLocalAssetUrl = (path: string) => {
     if (!path) return '';
     if (path.startsWith('http')) return path; // Already full URL
     
-    const rootUrl = import.meta.env.DEV ? 'http://localhost:5000' : '';
+    const apiUrl = import.meta.env.VITE_API_URL;
+    const rootUrl = apiUrl ? apiUrl.replace(/\/api\/v\d+\/?$/, '') : '';
     return `${rootUrl}${path.startsWith('/') ? '' : '/'}${path}`;
 };
 

@@ -1,0 +1,58 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "backend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "cwd": "backend",
+      "port": 5000
+    },
+    {
+      "name": "web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "cwd": "app-next.js",
+      "port": 3001
+    },
+    {
+      "name": "backend-chat-e2e",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "ts-node-dev",
+        "--transpile-only",
+        "src/server.ts"
+      ],
+      "cwd": "backend",
+      "port": 5000,
+      "env": {
+        "MONGODB_URI": "mongodb://localhost:27018/v2_chat_e2e",
+        "JWT_SECRET": "local-e2e-secret-local-e2e",
+        "ADMIN_SECRET_CODE": "local-e2e",
+        "RAZORPAY_KEY_ID": "rzp_test_local",
+        "RAZORPAY_KEY_SECRET": "local",
+        "FRONTEND_URL": "http://localhost:3001",
+        "NODE_ENV": "development",
+        "CHAT_ENABLED": "true"
+      }
+    },
+    {
+      "name": "storefront",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "next",
+        "dev",
+        "-p",
+        "3002"
+      ],
+      "cwd": "app-next.js",
+      "port": 3002
+    }
+  ]
+}

@@ -279,10 +279,11 @@ export const contactsAPI = {
 };
 
 export const adminAPI = {
-    getStats: () =>
-        IS_MOCK
-            ? mockResponse({ revenue: 50000, orders: 12, customers: 5 })
-            : api.get('/admin/stats'),
+    // Analytics always reads the real backend, even when other development APIs are mocked.
+    getStats: (signal?: AbortSignal) => api.get('/admin/stats', {
+        signal, timeout: 15000, params: { _t: Date.now() },
+        headers: { 'Cache-Control': 'no-cache' },
+    }),
 
     /** Admin catalog listing (includes inactive). Public `/products` ignores `status`. */
     getProducts: (params?: Record<string, string | number | boolean>) =>

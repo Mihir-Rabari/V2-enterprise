@@ -2372,7 +2372,7 @@ const AdminDashboard: React.FC = () => {
     const renderContent = () => {
         switch (activePage) {
             case 'dashboard':
-                return <DashboardPage apiStats={apiStats} apiContacts={contacts} />;
+                return <DashboardPage />;
 
             case 'customer':
                 return (

@@ -209,7 +209,7 @@ test('an invented price withholds the reply and drops cart actions', async () =>
             { stop: 'end_turn', content: [text('Added! Special price just for you: ₹499.')] },
         ],
     });
-    const r = await service.handleChatMessage({ message: 'add it', cart: [], clientKey: 'ip' }, client);
+    const r = await service.handleChatMessage({ message: 'add the M size', cart: [], clientKey: 'ip' }, client);
     assert.equal(r.reply, CANNED.unsafeOutput);
     assert.equal(r.actions.length, 0);
 });
@@ -279,8 +279,133 @@ test('usage is recorded for every model call', async () => {
     const { client } = fakeClient({ steps: [{ stop: 'end_turn', content: [text('Hello! What are you shopping for?')] }] });
     await service.handleChatMessage({ message: 'hello', cart: [], clientKey: 'ip' }, client);
     await new Promise(r => setImmediate(r));
-    assert.equal(usageWrites.length, 2, 'classifier + assistant');
-    assert.ok(usageWrites[0].$inc.costUsd > 0);
+    const costWrites = usageWrites.filter(w => w.$inc.costUsd !== undefined);
+    assert.equal(costWrites.length, 2, 'classifier + assistant');
+    assert.ok(costWrites[0].$inc.costUsd > 0);
+});
+
+// ── Cart intent and pending offers ───────────────────────────────────────────
+
+test('cart intent: explicit adds pass, negations and bare confirmations do not', async () => {
+    const { detectCartIntent, explicitlyAsksToAdd } = await import('../src/modules/chat/chat.guardrails');
+    const cases: [string, string][] = [
+        ['Add this to cart', 'confirm'],
+        ['Please add two', 'add'],
+        ['can you add the blue one in L?', 'add'],
+        ["Don't add it", 'decline'],
+        ['don’t add it', 'decline'],
+        ['dont add it', 'decline'],
+        ["I don't want to add this", 'decline'],
+        ['do not add that', 'decline'],
+        ['no, not now', 'decline'],
+        ['mat add karo', 'decline'],
+        ['Yes, add it', 'confirm'],
+        ['Yes', 'confirm'],
+        ['yess bro', 'confirm'],
+        ['ok go ahead', 'confirm'],
+        ['should I add it?', 'none'],
+        ['show me linen shirts', 'none'],
+        ['add 2 of them', 'add'],
+    ];
+    for (const [msg, want] of cases) assert.equal(detectCartIntent(msg), want, msg);
+    // Authorization to release an add in the same turn (a bare "yes" needs a pending offer instead).
+    const authorized: [string, boolean][] = [
+        ['Add this to cart', true], ['Please add two', true], ['Yes, add it', true],
+        ["Don't add it", false], ["I don't want to add this", false], ['Yes', false], ['should I add it?', false],
+    ];
+    for (const [msg, want] of authorized) assert.equal(explicitlyAsksToAdd(msg), want, msg);
+});
+
+const addThenReply = (shirt: Doc, reply: string) => fakeClient({
+    steps: [
+        { stop: 'tool_use', content: [toolUse('add_to_cart', { variant_id: String(shirt._id), quantity: 1 })] },
+        { stop: 'end_turn', content: [text(reply)] },
+    ],
+});
+
+test("\"don't add it\" never releases a cart action, even if the model adds anyway", async () => {
+    const { db, service, saved } = await setup();
+    const shirt = seedShirt(db);
+    const { client } = addThenReply(shirt, 'Added the Ivory Linen Shirt to your bag.');
+    const r = await service.handleChatMessage({ message: "don't add it", cart: [], clientKey: 'ip' }, client);
+    assert.equal(r.actions.length, 0);
+    assert.equal(r.reply, CANNED.notAdded);
+    assert.deepEqual(saved[0].$set.pendingCartAdds, [], 'nothing staged after a decline');
+});
+
+test('an unrequested add becomes a server-held offer, and "yes" commits it without a model call', async () => {
+    const { db, service, saved } = await setup();
+    const shirt = seedShirt(db);
+    const { client } = addThenReply(shirt, 'Added it!');
+    const r1 = await service.handleChatMessage({ message: 'the M one looks nice', cart: [], clientKey: 'ip' }, client);
+    assert.equal(r1.actions.length, 0, 'not added without an explicit request');
+    assert.match(r1.reply, /Would you like me to add it to your bag\?/);
+    assert.deepEqual(saved[0].$set.pendingCartAdds, [{ variantId: String(shirt._id), quantity: 1 }]);
+    assert.ok(saved[0].$set.pendingExpiresAt > new Date());
+
+    const session = {
+        _id: oid(), sessionId: '00000000-0000-4000-8000-000000000001', turns: [], userTurnCount: 1, blockedCount: 0,
+        pendingCartAdds: saved[0].$set.pendingCartAdds, pendingExpiresAt: saved[0].$set.pendingExpiresAt,
+    };
+    const s2 = await setup({ session });
+    seedShirt(s2.db, { _id: shirt._id });
+    const { client: c2, calls } = fakeClient({ steps: [] });
+    const r2 = await s2.service.handleChatMessage({ sessionId: session.sessionId, message: 'yes', cart: [], clientKey: 'ip' }, c2);
+    assert.equal(calls.length, 0, 'no classifier or assistant call');
+    assert.equal(r2.actions.length, 1);
+    assert.equal(r2.actions[0].product.price, 1299, 'price re-read from DB');
+    assert.match(r2.reply, /^Added Ivory Linen Shirt/);
+    assert.deepEqual(s2.saved[0].$set.pendingCartAdds, [], 'offer consumed');
+    await new Promise(r => setImmediate(r));
+    assert.ok(s2.usageWrites.some(w => w.$inc.fastConfirms === 1));
+});
+
+test('"yes" to an offer whose stock sold out adds nothing', async () => {
+    const shirtId = oid();
+    const session = {
+        _id: oid(), sessionId: '00000000-0000-4000-8000-000000000002', turns: [], userTurnCount: 1, blockedCount: 0,
+        pendingCartAdds: [{ variantId: String(shirtId), quantity: 1 }], pendingExpiresAt: new Date(Date.now() + 60_000),
+    };
+    const { db, service } = await setup({ session });
+    seedShirt(db, { _id: shirtId, quantity: 0 });
+    const { client, calls } = fakeClient({ steps: [] });
+    const r = await service.handleChatMessage({ sessionId: session.sessionId, message: 'yes', cart: [], clientKey: 'ip' }, client);
+    assert.equal(calls.length, 0);
+    assert.equal(r.actions.length, 0);
+    assert.equal(r.reply, CANNED.pendingGone);
+});
+
+test('an expired offer is not committed by "yes"; the model handles it instead', async () => {
+    const shirtId = oid();
+    const session = {
+        _id: oid(), sessionId: '00000000-0000-4000-8000-000000000003', turns: [], userTurnCount: 1, blockedCount: 0,
+        pendingCartAdds: [{ variantId: String(shirtId), quantity: 1 }], pendingExpiresAt: new Date(Date.now() - 1000),
+    };
+    const { db, service } = await setup({ session });
+    seedShirt(db, { _id: shirtId });
+    const { client, calls } = fakeClient({ steps: [{ stop: 'end_turn', content: [text('What would you like me to add?')] }] });
+    const r = await service.handleChatMessage({ sessionId: session.sessionId, message: 'yes', cart: [], clientKey: 'ip' }, client);
+    assert.ok(calls.length > 0);
+    assert.equal(r.actions.length, 0);
+});
+
+test('per-message stats record tool calls, rounds and searches', async () => {
+    const { db, service, usageWrites } = await setup();
+    seedShirt(db);
+    const { client } = fakeClient({
+        steps: [
+            { stop: 'tool_use', content: [toolUse('search_products', { query: 'linen', category: null, min_price: null, max_price: null, color: null, size: null })] },
+            { stop: 'end_turn', content: [text('The Ivory Linen Shirt is ₹1,299.')] },
+        ],
+    });
+    await service.handleChatMessage({ message: 'linen please', cart: [], clientKey: 'ip' }, client);
+    await new Promise(r => setImmediate(r));
+    const stats = usageWrites.find(w => w.$inc.messages === 1)!.$inc;
+    assert.equal(stats.toolCalls, 1);
+    assert.equal(stats.modelRounds, 2);
+    assert.equal(stats.searches, 1);
+    assert.equal(stats.emptySearches, 0);
+    assert.equal(stats.blockedMessages, 0);
 });
 
 // ── OpenAI-compatible adapter (Gemini, Bedrock Mantle) ───────────────────────────────

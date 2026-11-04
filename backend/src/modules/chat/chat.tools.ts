@@ -73,10 +73,13 @@ export interface ToolContext {
     resultText: string[];
     /** Names of tools called this turn (a reply may only echo the shopper's words after a real search). */
     toolsUsed: string[];
+    /** Search calls this turn, and how many of them found nothing (usage metrics). */
+    searches: number;
+    emptySearches: number;
 }
 
 export const newToolContext = (cart: ClientCart): ToolContext => ({
-    cart, cards: new Map(), actions: [], amounts: new Set(), resultText: [], toolsUsed: [],
+    cart, cards: new Map(), actions: [], amounts: new Set(), resultText: [], toolsUsed: [], searches: 0, emptySearches: 0,
 });
 
 // ── Tool definitions ─────────────────────────────────────────────────────────
@@ -116,7 +119,7 @@ export const TOOL_DEFINITIONS: Anthropic.Tool[] = [
     },
     {
         name: 'add_to_cart',
-        description: "Add one exact variant to the shopper's bag. Only use when the shopper asked for this item and the size/colour is known. variant_id must come from get_product_details.",
+        description: "Add one exact variant to the shopper's bag, or offer it: unless the shopper explicitly asked to add it, the store asks them to confirm first. Only use when the size/colour is known. variant_id must come from get_product_details.",
         strict: true,
         input_schema: {
             type: 'object',
@@ -246,6 +249,8 @@ const searchProducts = async (raw: unknown, ctx: ToolContext) => {
         total = scored.size;
     }
 
+    ctx.searches++;
+    if (found.length === 0) ctx.emptySearches++;
     const products = found.map(p => {
         addCard(ctx, p);
         recordPrice(ctx, p.price, p.originalPrice);

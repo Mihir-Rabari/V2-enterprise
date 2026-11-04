@@ -133,6 +133,12 @@ const GARMENT_STEMS = [
     'boot', 'belt', 'scarf', 'sunglass', 'jewel',
 ];
 const GARMENT_RE = new RegExp(`\\b(${GARMENT_STEMS.join('|')})(?:s|es)?\\b`, 'gi');
+const GARMENT_ALIASES: Record<string, string[]> = {
+    jean: ['denim'],
+    denim: ['jean'],
+    trouser: ['pant'],
+    pant: ['trouser'],
+};
 // Devanagari spellings, mapped to the English stem that must appear in the catalogue data.
 const DEVANAGARI_GARMENTS: [string, string][] = [
     ['कुर्त', 'kurta'], ['शेरवान', 'sherwani'], ['साड़', 'saree'], ['लहंग', 'lehenga'], ['दुपट्ट', 'dupatta'],
@@ -149,7 +155,8 @@ export const findUngroundedClaims = (reply: string, groundingText: string): stri
     const missing = new Set<string>();
     for (const m of reply.matchAll(GARMENT_RE)) {
         const stem = m[1].toLowerCase();
-        if (!grounded.includes(stem)) missing.add(stem);
+        const aliases = GARMENT_ALIASES[stem] ?? [];
+        if (!grounded.includes(stem) && !aliases.some(alias => grounded.includes(alias))) missing.add(stem);
     }
     for (const [dev, en] of DEVANAGARI_GARMENTS) {
         if (reply.includes(dev) && !grounded.includes(en)) missing.add(en);
@@ -224,6 +231,51 @@ export const validateAssistantOutput = (raw: string, ctx: OutputContext): Output
     return { ok: true, text };
 };
 
+// ── Cart intent ──────────────────────────────────────────────────────────────
+
+/**
+ * What the shopper wants done to their bag, decided without the model.
+ *   add     - an explicit, un-negated request ("add this", "please add two")
+ *   confirm - a short bare confirmation ("yes", "ok add it"); only acts on a pending offer
+ *   decline - any negation or cancel word ("don't add it", "no", "not now"); fails closed
+ *   none    - no cart intent
+ */
+export type CartIntent = 'add' | 'confirm' | 'decline' | 'none';
+
+const NEGATION = /\b(?:no|not|nope|nah|never|dont|do\s+not|cancel|stop|wait|hold\s+on|remove|skip|nahi|nahin|mat)\b|n't\b/i;
+const ADD_VERB = /\b(?:add|put|place|include)\b/i;
+// The shopper asking for advice ("should I add it?") is not an instruction.
+const SELF_QUESTION = /\b(?:should|shall|can|could|would|do)\s+i\b/i;
+const AFFIRMATIVE = new Set([
+    'yes', 'yeah', 'yep', 'yup', 'yess', 'yesss', 'sure', 'ok', 'okay', 'okk', 'please', 'pls', 'plz',
+    'add', 'go', 'do', 'haan', 'han', 'ji', 'perfect', 'great', 'done',
+]);
+const CONFIRM_FILLER = new Set([
+    'it', 'that', 'this', 'them', 'those', 'one', 'ahead', 'bro', 'thanks', 'thank', 'you', 'sounds', 'good', 'to', 'bag', 'cart', 'my', 'the',
+]);
+
+export const detectCartIntent = (message: string): CartIntent => {
+    const text = message.trim().toLowerCase().replace(/[’‘]/g, "'");
+    if (!text) return 'none';
+    if (NEGATION.test(text)) return 'decline';
+    const words = text.replace(/[^a-z' ]+/g, ' ').split(/\s+/).filter(Boolean);
+    const shortConfirm = words.length > 0 && words.length <= 6 && !/\d/.test(text)
+        && words.every(w => AFFIRMATIVE.has(w) || CONFIRM_FILLER.has(w))
+        && words.some(w => AFFIRMATIVE.has(w));
+    if (shortConfirm) return 'confirm';
+    if (ADD_VERB.test(text) && !SELF_QUESTION.test(text)) return 'add';
+    return 'none';
+};
+
+/**
+ * True when the shopper's own words ask for an addition: "add this to cart", "yes, add it",
+ * "please add two". A bare "yes" is not enough on its own; it only commits a pending offer.
+ */
+export const explicitlyAsksToAdd = (message: string): boolean => {
+    const intent = detectCartIntent(message);
+    return intent === 'add' || (intent === 'confirm' && ADD_VERB.test(message));
+};
+
 // ── Canned replies ───────────────────────────────────────────────────────────
 
 export const CANNED = {
@@ -236,5 +288,7 @@ export const CANNED = {
     tooLong: `That message is a bit long. Please keep it under ${CHAT_LIMITS.maxMessageChars} characters.`,
     sessionLimit: 'This conversation has reached its limit. Please start a new chat to keep shopping.',
     locked: 'This conversation has been closed. Please start a new chat if you need help shopping.',
+    notAdded: "No problem, I haven't added anything to your bag. Let me know if you'd like to see other options.",
+    pendingGone:'Sorry, that item is no longer available in that size and colour. Would you like me to look for something similar?',
     unavailable: 'The shopping assistant is unavailable right now. You can still browse everything at /shop.',
 } as const;

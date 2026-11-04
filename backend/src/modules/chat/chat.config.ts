@@ -24,6 +24,8 @@ export const CHAT_LIMITS = {
     maxQuantityPerAdd: 5,
     /** Cart lines the client may describe to the assistant. */
     maxCartLines: 30,
+    /** How long an "add this to your bag?" offer stays confirmable. */
+    pendingCartTtlMs: 10 * 60 * 1000,
     /** Conversation expiry after the last message. */
     sessionTtlMs: 24 * 60 * 60 * 1000,
 } as const;

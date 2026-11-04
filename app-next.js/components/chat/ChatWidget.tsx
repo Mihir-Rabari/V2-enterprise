@@ -3,8 +3,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
-import { MessageCircle, X, Send, RotateCcw, ShoppingBag } from 'lucide-react';
+import { MessageCircle, X, Send, RotateCcw, ShoppingBag, Sparkles, ArrowUpRight, ChevronRight } from 'lucide-react';
+import ReactMarkdown, { type Components } from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { chatAPI } from '../../lib/apiClient';
+import { SHOPPING_CHAT_LAUNCH_EVENT, type ShoppingChatLaunch } from '../../lib/chatEvents';
 import { useCart } from '../../context/CartContext';
 import { getOptimizedImageUrl } from '../../utils/mediaUtils';
 import { Product } from '../../types';
@@ -45,28 +48,44 @@ const GREETING: ChatMessage = {
     role: 'assistant',
     text: "Hi! I'm V2 Assist. Tell me what you're shopping for (an occasion, colour, fabric or budget) and I'll find options and add them to your bag.",
 };
-const SUGGESTIONS = ['Show me linen shirts', 'Something for a wedding', "What's in my bag?"];
+const SUGGESTIONS = ['Linen for warm days', 'A look for a wedding', 'Help me choose a gift'];
 
 const formatPrice = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 
-/**
- * Renders assistant text as plain text. Only relative store paths (/product/…, /checkout, …)
- * become links; nothing is ever injected as HTML.
- */
+const STORE_PATH = /^\/(?:product\/[a-f0-9]{24}|shop|cart|checkout|returns|shipping|contact|size-guide|account\/orders)(?:[/?#]|$)/i;
+
+/** Render model output as Markdown without enabling raw HTML. */
 const AssistantText: React.FC<{ text: string; onNavigate: () => void }> = ({ text, onNavigate }) => {
-    const parts = text.split(/(\/(?:product\/[a-f0-9]{24}|shop|cart|checkout|returns|shipping|contact|size-guide|account\/orders)\b)/gi);
+    const components: Components = {
+        p: ({ children }) => <p className="my-1.5 first:mt-0 last:mb-0">{children}</p>,
+        ul: ({ children }) => <ul className="my-2 ml-4 list-disc space-y-1">{children}</ul>,
+        ol: ({ children }) => <ol className="my-2 ml-4 list-decimal space-y-1">{children}</ol>,
+        li: ({ children }) => <li className="pl-0.5">{children}</li>,
+        h1: ({ children }) => <h3 className="my-2 text-base font-semibold">{children}</h3>,
+        h2: ({ children }) => <h3 className="my-2 text-sm font-semibold">{children}</h3>,
+        h3: ({ children }) => <h3 className="my-1.5 text-sm font-semibold">{children}</h3>,
+        blockquote: ({ children }) => <blockquote className="my-2 border-l-2 border-luxury-gold pl-3 text-gray-600">{children}</blockquote>,
+        pre: ({ children }) => <pre className="my-2 overflow-x-auto rounded bg-gray-100 p-2 text-xs">{children}</pre>,
+        code: ({ children, className }) => (
+            <code className={`${className ?? ''} rounded bg-gray-100 px-1 py-0.5 font-mono text-[0.9em]`}>{children}</code>
+        ),
+        a: ({ href, children }) => {
+            if (href && STORE_PATH.test(href)) {
+                return <Link href={href} onClick={onNavigate} className="underline underline-offset-2 hover:text-luxury-gold">{children}</Link>;
+            }
+            if (href && /^https:\/\/(?:www\.)?v2enterprise\.in(?:\/|$)/i.test(href)) {
+                return <a href={href} onClick={onNavigate} className="underline underline-offset-2 hover:text-luxury-gold">{children}</a>;
+            }
+            return <span>{children}</span>;
+        },
+        table: ({ children }) => <table className="my-2 block w-full overflow-x-auto border-collapse text-left">{children}</table>,
+        th: ({ children }) => <th className="border border-gray-200 bg-gray-50 px-2 py-1 font-semibold">{children}</th>,
+        td: ({ children }) => <td className="border border-gray-200 px-2 py-1 align-top">{children}</td>,
+        hr: () => <hr className="my-2 border-gray-200" />,
+    };
+
     return (
-        <>
-            {parts.map((part, i) =>
-                i % 2 === 1 ? (
-                    <Link key={i} href={part} onClick={onNavigate} className="underline underline-offset-2 hover:text-luxury-gold">
-                        {part}
-                    </Link>
-                ) : (
-                    <React.Fragment key={i}>{part}</React.Fragment>
-                )
-            )}
-        </>
+        <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>{text}</ReactMarkdown>
     );
 };
 
@@ -77,6 +96,7 @@ const ChatWidget: React.FC = () => {
     const [chat, setChat] = useState<StoredChat>({ messages: [GREETING] });
     const [input, setInput] = useState('');
     const [sending, setSending] = useState(false);
+    const [pendingPrompt, setPendingPrompt] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     // Persist only after the saved chat has been read, so the initial greeting never overwrites it.
     const [hydrated, setHydrated] = useState(false);
@@ -166,6 +186,31 @@ const ChatWidget: React.FC = () => {
         }
     };
 
+    useEffect(() => {
+        const onLaunch = (event: Event) => {
+            const detail = (event as CustomEvent<ShoppingChatLaunch>).detail;
+            const prompt = detail?.prompt?.trim().slice(0, MAX_INPUT);
+            if (!prompt) return;
+            setError(null);
+            setOpen(true);
+            if (detail.sendImmediately === false) {
+                setPendingPrompt(null);
+                setInput(prompt);
+            } else {
+                setPendingPrompt(prompt);
+            }
+        };
+        window.addEventListener(SHOPPING_CHAT_LAUNCH_EVENT, onLaunch);
+        return () => window.removeEventListener(SHOPPING_CHAT_LAUNCH_EVENT, onLaunch);
+    }, []);
+
+    useEffect(() => {
+        if (!open || !pendingPrompt || sending) return;
+        const prompt = pendingPrompt;
+        setPendingPrompt(null);
+        void send(prompt);
+    }, [open, pendingPrompt, sending, send]);
+
     if (!enabled) return null;
 
     return (
@@ -175,14 +220,20 @@ const ChatWidget: React.FC = () => {
                     <motion.button
                         key="launcher"
                         type="button"
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.8, opacity: 0 }}
+                        initial={{ scale: 0.92, y: 12, opacity: 0 }}
+                        animate={{ scale: 1, y: 0, opacity: 1 }}
+                        exit={{ scale: 0.92, y: 12, opacity: 0 }}
                         onClick={() => setOpen(true)}
                         aria-label="Open shopping assistant"
-                        className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-[90] w-14 h-14 rounded-full bg-luxury-gold text-white ring-1 ring-white/70 shadow-[0_10px_30px_rgba(0,0,0,0.3)] flex items-center justify-center hover:bg-luxury-black transition-colors"
+                        className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom))] right-5 z-[90] flex items-center gap-3 rounded-full border border-white/15 bg-[#191816] py-2 pl-2 pr-5 text-white shadow-[0_16px_40px_rgba(0,0,0,0.28)] transition duration-300 hover:-translate-y-0.5 hover:bg-[#28251f] sm:bottom-6 sm:right-6"
                     >
-                        <MessageCircle size={22} strokeWidth={1.5} />
+                        <span className="grid h-10 w-10 place-items-center rounded-full bg-[#b79a62] text-[#171613] shadow-inner">
+                            <MessageCircle size={19} strokeWidth={1.7} />
+                        </span>
+                        <span className="flex flex-col items-start leading-tight">
+                            <span className="text-xs font-semibold tracking-wide">Ask V2</span>
+                            <span className="mt-0.5 text-[9px] uppercase tracking-[0.16em] text-white/55">Your style desk</span>
+                        </span>
                     </motion.button>
                 )}
             </AnimatePresence>
@@ -196,146 +247,198 @@ const ChatWidget: React.FC = () => {
                         initial={{ opacity: 0, y: 24 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 24 }}
-                        transition={{ duration: 0.2 }}
-                        className="fixed z-[95] inset-0 sm:inset-auto sm:bottom-6 sm:right-6 sm:w-[380px] sm:h-[600px] sm:max-h-[calc(100vh-3rem)] bg-white sm:border sm:border-gray-100 shadow-[0_20px_60px_rgba(0,0,0,0.18)] flex flex-col"
+                        transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+                        className="fixed inset-0 z-[95] flex h-[100dvh] flex-col overflow-hidden bg-[#f6f4ef] shadow-[0_28px_90px_rgba(0,0,0,0.3)] sm:inset-auto sm:bottom-6 sm:right-6 sm:h-[min(46rem,calc(100dvh-3rem))] sm:w-[420px] sm:rounded-[24px] sm:border sm:border-black/10"
                     >
-                        <header className="flex items-center justify-between px-5 py-4 bg-luxury-black text-white">
-                            <div>
-                                <p className="text-[9px] font-bold uppercase tracking-luxury-widest text-luxury-gold">V2 Enterprise</p>
-                                <p className="font-serif italic text-base">Shopping Assistant</p>
+                        <header className="relative flex shrink-0 items-center justify-between overflow-hidden bg-[#191816] px-5 pb-5 pt-5 text-white sm:px-6">
+                            <div className="pointer-events-none absolute -right-10 -top-24 h-56 w-56 rounded-full border border-[#c9aa6b]/15" />
+                            <div className="pointer-events-none absolute -right-2 -top-16 h-40 w-40 rounded-full border border-[#c9aa6b]/10" />
+                            <div className="relative flex min-w-0 items-center gap-3">
+                                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-[16px] border border-[#c9aa6b]/40 bg-[#c9aa6b]/10 font-serif text-lg italic text-[#d7bd83] shadow-[inset_0_0_18px_rgba(201,170,107,0.08)]">
+                                    V2
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-[9px] font-semibold uppercase tracking-[0.24em] text-[#d7bd83]">V2 Enterprise · Style desk</p>
+                                    <h2 className="mt-1 truncate font-serif text-[19px] leading-none tracking-wide">Your personal edit</h2>
+                                    <p className="mt-2 flex items-center gap-1.5 text-[10px] tracking-wide text-white/55">
+                                        <span className="h-1.5 w-1.5 rounded-full bg-[#9db68b] shadow-[0_0_8px_rgba(157,182,139,0.7)]" />
+                                        Online · Ready to help
+                                    </p>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-1">
-                                <button type="button" onClick={reset} aria-label="Start a new chat" title="New chat" className="p-2 text-white/70 hover:text-white">
-                                    <RotateCcw size={16} />
+                            <div className="relative ml-3 flex shrink-0 items-center gap-1.5">
+                                <button type="button" onClick={reset} aria-label="Start a new chat" title="New chat" className="grid h-9 w-9 place-items-center rounded-full border border-white/10 text-white/65 transition hover:border-white/25 hover:bg-white/10 hover:text-white">
+                                    <RotateCcw size={15} />
                                 </button>
-                                <button type="button" onClick={close} aria-label="Close assistant" className="p-2 text-white/70 hover:text-white">
-                                    <X size={18} />
+                                <button type="button" onClick={close} aria-label="Close assistant" className="grid h-9 w-9 place-items-center rounded-full border border-white/10 text-white/65 transition hover:border-white/25 hover:bg-white/10 hover:text-white">
+                                    <X size={17} />
                                 </button>
                             </div>
                         </header>
 
-                        <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-5 space-y-4 bg-luxury-gray/40" aria-live="polite">
-                            {chat.messages.map((m, i) => (
-                                <div key={i} className={m.role === 'user' ? 'flex justify-end' : 'flex flex-col items-start gap-2'}>
-                                    <div
-                                        className={
-                                            m.role === 'user'
-                                                ? 'max-w-[85%] bg-luxury-black text-white px-4 py-2.5 text-sm whitespace-pre-wrap break-words'
-                                                : 'max-w-[90%] bg-white border border-gray-100 text-luxury-black px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words'
-                                        }
-                                    >
-                                        {m.role === 'assistant' ? <AssistantText text={m.text} onNavigate={close} /> : m.text}
-                                    </div>
-                                    {m.cards && m.cards.length > 0 && (
-                                        <div className="flex gap-2 overflow-x-auto max-w-full pb-1">
-                                            {m.cards.map(card => (
-                                                <Link
-                                                    key={card.id}
-                                                    href={card.url}
-                                                    onClick={close}
-                                                    className="shrink-0 w-32 bg-white border border-gray-100 hover:border-luxury-gold transition-colors"
+                        <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto bg-[radial-gradient(ellipse_at_top,_rgba(201,170,107,0.08),_transparent_58%),linear-gradient(180deg,#f8f7f3_0%,#f1efe9_100%)] px-4 py-5 sm:px-5" aria-live="polite">
+                            <div className="mx-auto flex max-w-md flex-col gap-5">
+                                {chat.messages.map((m, i) => (
+                                    m.role === 'user' ? (
+                                        <div key={i} className="flex justify-end pl-10">
+                                            <div className="max-w-[92%] whitespace-pre-wrap break-words rounded-[20px] rounded-br-[6px] bg-[#191816] px-4 py-3 text-[13px] leading-6 text-white shadow-[0_8px_24px_rgba(25,24,22,0.12)]">
+                                                {m.text}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div key={i} className="flex items-start gap-2.5 pr-2">
+                                            <div aria-hidden="true" className="mt-1 grid h-8 w-8 shrink-0 place-items-center rounded-full border border-[#b79a62]/30 bg-[#201f1b] font-serif text-[10px] italic text-[#d5bc84] shadow-sm">V2</div>
+                                            <div className="min-w-0 max-w-[calc(100%-2.625rem)] flex-1 overflow-hidden rounded-[20px] rounded-tl-[6px] border border-[#e9e5dc] bg-white text-[#25231f] shadow-[0_8px_26px_rgba(35,31,23,0.055)]">
+                                                <div className="px-4 py-3.5 text-[13px] leading-[1.7] [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+                                                    <AssistantText text={m.text} onNavigate={close} />
+                                                </div>
+                                                {m.cards && m.cards.length > 0 && (
+                                                    <section className="mx-4 mb-4 border-t border-[#eeeae2] pt-3.5" aria-label="Recommended pieces">
+                                                        <div className="mb-2.5 flex items-center justify-between">
+                                                            <p className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.19em] text-[#88764f]">
+                                                                <Sparkles size={12} strokeWidth={1.8} /> A few good finds
+                                                            </p>
+                                                            <span className="text-[9px] tracking-wider text-[#aaa59a]">{String(m.cards.length).padStart(2, '0')} PIECES</span>
+                                                        </div>
+                                                        <div className="flex flex-col gap-2">
+                                                            {m.cards.map((card, cardIndex) => (
+                                                                <Link
+                                                                    key={card.id}
+                                                                    href={card.url}
+                                                                    onClick={close}
+                                                                    className="group flex min-w-0 overflow-hidden rounded-[15px] border border-[#e9e5dc] bg-[#faf9f6] transition duration-300 hover:border-[#b79a62]/60 hover:bg-white hover:shadow-[0_8px_24px_rgba(35,31,23,0.07)]"
+                                                                >
+                                                                    <div className="relative w-[84px] shrink-0 overflow-hidden bg-[#ece9e1] sm:w-[92px]">
+                                                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                                        <img
+                                                                            src={getOptimizedImageUrl(card.photo, { width: 400 })}
+                                                                            alt={card.name}
+                                                                            loading="lazy"
+                                                                            className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+                                                                        />
+                                                                        <span className="absolute left-2 top-2 rounded-full bg-black/55 px-1.5 py-1 text-[8px] tracking-widest text-white backdrop-blur-sm">{String(cardIndex + 1).padStart(2, '0')}</span>
+                                                                    </div>
+                                                                    <div className="flex min-w-0 flex-1 items-center justify-between gap-2 px-3 py-3">
+                                                                        <div className="min-w-0">
+                                                                            <p className="mb-1 text-[8px] font-medium uppercase tracking-[0.16em] text-[#a18a59]">V2 · Selected piece</p>
+                                                                            <p className="line-clamp-2 text-[12px] font-medium leading-[1.35] text-[#292722]">{card.name}</p>
+                                                                            {card.color && <p className="mt-1 truncate text-[10px] text-[#89857b]">{card.color}</p>}
+                                                                            <p className="mt-2 text-[12px] font-semibold tracking-wide text-[#292722]">
+                                                                                {formatPrice(card.price)}
+                                                                                {card.originalPrice && card.originalPrice > card.price && (
+                                                                                    <span className="ml-1.5 text-[10px] font-normal text-[#9b978e] line-through">{formatPrice(card.originalPrice)}</span>
+                                                                                )}
+                                                                            </p>
+                                                                        </div>
+                                                                        <span aria-hidden="true" className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-[#e5dfd2] text-[#84744f] transition group-hover:border-[#b79a62] group-hover:bg-[#b79a62] group-hover:text-white">
+                                                                            <ArrowUpRight size={14} strokeWidth={1.7} />
+                                                                        </span>
+                                                                    </div>
+                                                                </Link>
+                                                            ))}
+                                                        </div>
+                                                    </section>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )
+                                ))}
+
+                                {chat.messages.length === 1 && !sending && (
+                                    <div className="ml-10">
+                                        <p className="mb-2.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#9a927f]">A little inspiration</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {SUGGESTIONS.map(s => (
+                                                <button
+                                                    key={s}
+                                                    type="button"
+                                                    onClick={() => send(s)}
+                                                    className="rounded-full border border-[#dfdbd1] bg-white/80 px-3.5 py-2 text-[11px] text-[#514d43] shadow-[0_2px_8px_rgba(35,31,23,0.025)] transition hover:border-[#b79a62] hover:bg-white hover:text-[#8a7546]"
                                                 >
-                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                    <img
-                                                        src={getOptimizedImageUrl(card.photo, { width: 400 })}
-                                                        alt={card.name}
-                                                        loading="lazy"
-                                                        className="w-full h-36 object-cover bg-luxury-gray"
-                                                    />
-                                                    <div className="p-2">
-                                                        <p className="text-[11px] leading-tight line-clamp-2 text-luxury-black">{card.name}</p>
-                                                        <p className="text-[11px] mt-1 font-semibold">
-                                                            {formatPrice(card.price)}
-                                                            {card.originalPrice && card.originalPrice > card.price && (
-                                                                <span className="ml-1 font-normal text-gray-400 line-through">{formatPrice(card.originalPrice)}</span>
-                                                            )}
-                                                        </p>
-                                                    </div>
-                                                </Link>
+                                                    {s}
+                                                </button>
                                             ))}
                                         </div>
-                                    )}
-                                </div>
-                            ))}
+                                    </div>
+                                )}
 
-                            {chat.messages.length === 1 && !sending && (
-                                <div className="flex flex-wrap gap-2">
-                                    {SUGGESTIONS.map(s => (
-                                        <button
-                                            key={s}
-                                            type="button"
-                                            onClick={() => send(s)}
-                                            className="text-xs border border-gray-200 bg-white px-3 py-1.5 hover:border-luxury-black transition-colors"
-                                        >
-                                            {s}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
+                                {sending && (
+                                    <div className="flex items-start gap-2.5" aria-label="Assistant is typing">
+                                        <div aria-hidden="true" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#201f1b] font-serif text-[10px] italic text-[#d5bc84]">V2</div>
+                                        <div className="flex items-center gap-1.5 rounded-[18px] rounded-tl-[6px] border border-[#e9e5dc] bg-white px-4 py-3.5 shadow-sm">
+                                            {[0, 1, 2].map(d => (
+                                                <motion.span
+                                                    key={d}
+                                                    className="h-1.5 w-1.5 rounded-full bg-[#b79a62]"
+                                                    animate={{ y: [0, -3, 0], opacity: [0.45, 1, 0.45] }}
+                                                    transition={{ duration: 0.9, repeat: Infinity, delay: d * 0.14 }}
+                                                />
+                                            ))}
+                                            <span className="ml-1 text-[10px] tracking-wide text-[#8d887c]">Finding your edit…</span>
+                                        </div>
+                                    </div>
+                                )}
 
-                            {sending && (
-                                <div className="flex items-center gap-1 px-4 py-3 bg-white border border-gray-100 w-fit" aria-label="Assistant is typing">
-                                    {[0, 1, 2].map(d => (
-                                        <motion.span
-                                            key={d}
-                                            className="w-1.5 h-1.5 rounded-full bg-gray-400"
-                                            animate={{ opacity: [0.3, 1, 0.3] }}
-                                            transition={{ duration: 1, repeat: Infinity, delay: d * 0.2 }}
-                                        />
-                                    ))}
-                                </div>
-                            )}
-
-                            {error && <p className="text-xs text-red-500">{error}</p>}
+                                {error && <p role="alert" className="ml-10 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs text-red-700">{error}</p>}
+                            </div>
                         </div>
 
                         {cart.length > 0 && (
                             <Link
                                 href="/cart"
                                 onClick={close}
-                                className="flex items-center justify-center gap-2 py-2 text-[10px] font-bold uppercase tracking-luxury border-t border-gray-100 hover:text-luxury-gold"
+                                className="flex shrink-0 items-center justify-between border-t border-[#e8e4dc] bg-white px-5 py-3 text-[#37342d] transition hover:bg-[#fbfaf7]"
                             >
-                                <ShoppingBag size={13} /> View bag & checkout
+                                <span className="flex items-center gap-2.5">
+                                    <span className="grid h-8 w-8 place-items-center rounded-full bg-[#f3f0e9] text-[#8c774a]"><ShoppingBag size={14} /></span>
+                                    <span className="flex flex-col text-left">
+                                        <span className="text-[11px] font-medium">Your bag</span>
+                                        <span className="mt-0.5 text-[9px] uppercase tracking-[0.14em] text-[#9a958a]">{cart.reduce((sum, item) => sum + item.quantity, 0)} pieces · Ready when you are</span>
+                                    </span>
+                                </span>
+                                <ChevronRight size={16} className="text-[#9c895c]" />
                             </Link>
                         )}
 
                         <form
                             onSubmit={e => { e.preventDefault(); void send(input); }}
-                            className="flex items-end gap-2 border-t border-gray-100 p-3"
+                            className="shrink-0 border-t border-[#e8e4dc] bg-white px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 sm:pb-3"
                         >
                             {chat.ended ? (
-                                <button type="button" onClick={reset} className="w-full py-2.5 text-xs font-bold uppercase tracking-luxury bg-luxury-black text-white">
+                                <button type="button" onClick={reset} className="w-full rounded-xl bg-[#191816] py-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-white transition hover:bg-[#302d25]">
                                     Start a new chat
                                 </button>
                             ) : (
                                 <>
-                                    <textarea
-                                        ref={inputRef}
-                                        value={input}
-                                        onChange={e => setInput(e.target.value.slice(0, MAX_INPUT))}
-                                        onKeyDown={e => {
-                                            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(input); }
-                                        }}
-                                        rows={1}
-                                        maxLength={MAX_INPUT}
-                                        placeholder="Ask about products, sizes, styling…"
-                                        aria-label="Message"
-                                        className="flex-1 resize-none max-h-28 text-sm px-3 py-2.5 border border-gray-200 focus:outline-none focus:border-luxury-black"
-                                    />
-                                    <button
-                                        type="submit"
-                                        disabled={sending || !input.trim()}
-                                        aria-label="Send message"
-                                        className="h-[42px] w-[42px] flex items-center justify-center bg-luxury-black text-white disabled:opacity-40"
-                                    >
-                                        <Send size={16} />
-                                    </button>
+                                    <div className="flex items-end gap-2 rounded-[18px] border border-[#e7e3da] bg-[#f8f7f3] p-1.5 transition focus-within:border-[#b79a62]/70 focus-within:bg-white focus-within:shadow-[0_0_0_3px_rgba(183,154,98,0.08)]">
+                                        <textarea
+                                            ref={inputRef}
+                                            value={input}
+                                            onChange={e => setInput(e.target.value.slice(0, MAX_INPUT))}
+                                            onKeyDown={e => {
+                                                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(input); }
+                                            }}
+                                            rows={1}
+                                            maxLength={MAX_INPUT}
+                                            placeholder="Ask about a look, fabric or fit…"
+                                            aria-label="Message"
+                                            className="max-h-28 min-h-10 flex-1 resize-none bg-transparent px-3 py-2.5 text-[13px] text-[#292722] outline-none placeholder:text-[#aaa59a]"
+                                        />
+                                        <button
+                                            type="submit"
+                                            disabled={sending || !input.trim()}
+                                            aria-label="Send message"
+                                            className="grid h-10 w-10 shrink-0 place-items-center rounded-[13px] bg-[#191816] text-white transition hover:bg-[#b79a62] disabled:cursor-not-allowed disabled:opacity-35"
+                                        >
+                                            <Send size={15} />
+                                        </button>
+                                    </div>
                                 </>
                             )}
+                            <p className="mt-2 text-center text-[9px] tracking-wide text-[#aaa59a]">
+                                V2 Assist · Secure shopping, with a human touch
+                            </p>
                         </form>
-                        <p className="text-[9px] text-center text-gray-400 pb-2 px-4">
-                            AI assistant. Prices and stock are confirmed at checkout. Never share payment details here.
-                        </p>
                     </motion.section>
                 )}
             </AnimatePresence>

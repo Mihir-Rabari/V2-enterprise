@@ -24,7 +24,7 @@ import {
     CartAddAction, ClientCart, ProductCard, executeTool, newToolContext,
 } from './chat.tools';
 import {
-    ChatProvider, GEMINI_BASE_URL, NormalizedUsage, ToolResult, createAnthropicClient, createAnthropicProvider,
+    ChatProvider, NormalizedUsage, ToolResult, createAnthropicClient, createAnthropicProvider, createGeminiProvider,
     createOpenAiCompatClient, createOpenAiCompatProvider, describeProviderError, mantleBaseUrl,
 } from './chat.providers';
 
@@ -72,7 +72,7 @@ const getProvider = (): ChatProvider => {
             break;
         case 'gemini':
             // Low thinking keeps replies fast and cheap; Gemini 3 models cannot turn thinking off entirely.
-            defaultProvider = createOpenAiCompatProvider(createOpenAiCompatClient(key, GEMINI_BASE_URL), model, recordUsage, { reasoningEffort: 'low' });
+            defaultProvider = createGeminiProvider(key, model, recordUsage);
             break;
     }
     return defaultProvider!;

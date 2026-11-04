@@ -1,7 +1,7 @@
 /**
  * Model providers for the shopping assistant. The service only sees this small interface, so the
  * guardrails, tools and limits are identical whichever provider is configured:
- *   - gemini: Gemini API through its OpenAI-compatible Chat Completions endpoint
+ *   - gemini: native Gemini API through the Vercel AI SDK Google provider
  *   - bedrock-mantle: OpenAI-compatible Chat Completions on Amazon Bedrock (e.g. zai.glm-5)
  *   - anthropic: Claude Messages API
  * Each turn keeps its own provider-native message list so tool calls replay exactly as the
@@ -9,6 +9,8 @@
  */
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { generateText, jsonSchema, tool, type ModelMessage, type ToolSet, type LanguageModelUsage } from 'ai';
 import type { IChatTurn } from '../../models/ChatSession';
 import { CHAT_LIMITS } from './chat.config';
 import { TOOL_DEFINITIONS } from './chat.tools';
@@ -58,7 +60,7 @@ const parseArgs = (raw: string | undefined): unknown => {
     try { return JSON.parse(raw); } catch { return undefined; }
 };
 
-// ── OpenAI-compatible endpoints (Gemini, Bedrock Mantle) ─────────────────────
+// ── OpenAI-compatible endpoints (Bedrock Mantle) ────────────────────────────
 
 export type OpenAiLikeClient = Pick<OpenAI, 'chat'>;
 
@@ -84,7 +86,6 @@ const OPENAI_TOOLS: OpenAI.Chat.ChatCompletionTool[] = TOOL_DEFINITIONS.map(t =>
     function: { name: t.name, description: t.description, parameters: toPortableSchema(t.input_schema as Record<string, any>) },
 }));
 
-export const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/';
 export const mantleBaseUrl = (region: string) => `https://bedrock-mantle.${region}.api.aws/v1`;
 
 export const createOpenAiCompatClient = (apiKey: string, baseURL: string): OpenAiLikeClient =>
@@ -162,6 +163,83 @@ export const createOpenAiCompatProvider = (
             const choice = response.choices[0];
             if (!choice || choice.finish_reason === 'content_filter') return { text: '', refused: true };
             return { text: choice.message.content ?? '', refused: false };
+        },
+    };
+};
+
+// ── Gemini through Vercel AI SDK ─────────────────────────────────────────────
+
+export const createGeminiProvider = (
+    apiKey: string, model: string, onUsage: UsageSink, options: { fetch?: typeof fetch } = {}
+): ChatProvider => {
+    const google = createGoogleGenerativeAI({ apiKey, ...options });
+    const tools: ToolSet = Object.fromEntries(TOOL_DEFINITIONS.map(t => [t.name, tool({
+        description: t.description,
+        inputSchema: jsonSchema(toPortableSchema(t.input_schema as Record<string, any>)),
+        // Execution stays in the service, which enforces cart intent and per-turn limits.
+    })]));
+    const record = (usage: LanguageModelUsage) => onUsage(model, {
+        input_tokens: usage.inputTokens ?? 0,
+        // SDK outputTokens already includes Gemini's reasoning tokens.
+        output_tokens: usage.outputTokens ?? 0,
+    });
+    const settings = {
+        model: google(model),
+        maxRetries: 2,
+        providerOptions: { google: { thinkingConfig: { thinkingLevel: 'low' } } },
+    } as const;
+
+    return {
+        model,
+        startTurn(system, history, userMessage) {
+            const messages: ModelMessage[] = [
+                ...history.map(t => ({ role: t.role, content: t.text })),
+                { role: 'user', content: userMessage },
+            ];
+            const toolNames = new Map<string, string>();
+            return {
+                async step() {
+                    const result = await generateText({
+                        ...settings, system, messages, tools, toolChoice: 'auto',
+                        maxOutputTokens: CHAT_LIMITS.maxOutputTokens,
+                        abortSignal: AbortSignal.timeout(45_000),
+                    });
+                    record(result.usage);
+                    if (result.finishReason === 'content-filter') return { stop: 'refusal', text: '', toolCalls: [] };
+                    if (result.finishReason === 'length') return { stop: 'max_tokens', text: '', toolCalls: [] };
+                    if (result.toolCalls.length) {
+                        // Replay complete SDK messages, preserving Google's thought signatures.
+                        messages.push(...result.response.messages);
+                        for (const call of result.toolCalls) toolNames.set(call.toolCallId, call.toolName);
+                        return {
+                            stop: 'tool_use', text: result.text,
+                            toolCalls: result.toolCalls.map(call => ({
+                                id: call.toolCallId, name: call.toolName, input: call.invalid ? undefined : call.input,
+                            })),
+                        };
+                    }
+                    if (result.finishReason !== 'stop') return { stop: 'refusal', text: '', toolCalls: [] };
+                    return { stop: 'end', text: result.text.trim(), toolCalls: [] };
+                },
+                addToolResults(results) {
+                    messages.push({ role: 'tool', content: results.map(r => ({
+                        type: 'tool-result', toolCallId: r.id, toolName: toolNames.get(r.id)!,
+                        output: { type: r.isError ? 'error-text' : 'text', value: r.content },
+                    })) });
+                },
+            };
+        },
+        async classify(system, userContent) {
+            const result = await generateText({
+                ...settings, system, prompt: userContent,
+                maxOutputTokens: CHAT_LIMITS.classifierMaxTokens,
+                abortSignal: AbortSignal.timeout(45_000),
+            });
+            record(result.usage);
+            return {
+                text: result.text,
+                refused: result.finishReason !== 'stop',
+            };
         },
     };
 };

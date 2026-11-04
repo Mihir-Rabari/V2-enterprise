@@ -35,10 +35,10 @@ const envSchema = z.object({
     // Shopping assistant (chat widget). The widget is disabled unless CHAT_ENABLED=true and the
     // selected provider's key is set.
     CHAT_ENABLED: z.string().default('false').transform(s => s === 'true'),
-    // gemini: Gemini API via its OpenAI-compatible endpoint (default model gemini-3.8-flash).
+    // gemini: native Gemini API via the Vercel AI SDK (default model gemini-3.8-flash).
     // bedrock-mantle: OpenAI-compatible Chat Completions on Amazon Bedrock (default model zai.glm-5).
     // anthropic: Claude API (default model claude-haiku-5-5).
-    CHAT_PROVIDER: z.enum(['gemini', 'bedrock-mantle', 'anthropic']).default('bedrock-mantle'),
+    CHAT_PROVIDER: z.enum(['gemini', 'bedrock-mantle', 'anthropic']).default('gemini'),
     // Optional override; when unset the provider's default model is used.
     CHAT_MODEL: z.string().optional(),
     // Google AI Studio API key.

@@ -4,6 +4,7 @@
 //   - react-router-dom useNavigate/useSearchParams → next/navigation useRouter/useSearchParams/usePathname
 //   - view routing keeps the exact `?page=` query-param semantics (refresh + deep links behave identically)
 import React, { useState } from 'react';
+import AdminProductAssistant from './AdminProductAssistant';
 import { useAdminData } from '../../hooks/useAdminData';
 import { sliderAPI, settingsAPI, contentAPI, categoriesAPI, productsAPI, reviewsAPI, contactsAPI, filtersAPI, attributesAPI } from '../../lib/apiClient';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -2954,10 +2955,20 @@ const AdminDashboard: React.FC = () => {
                 </main>
             </div>
 
+            <AdminProductAssistant hidden={modalOpen || orderDetailOpen} onReview={(draft) => {
+                setModalType('product');
+                setValidationErrors({});
+                setProductModalTab('basic');
+                setFormData({ ...draft, status: 'ACTIVE', photo: draft.photo || '', photos: draft.photos || [], videoUrls: [],
+                    styleCode: draft.styleCode || 'V2-' + Math.random().toString(36).substring(2, 8).toUpperCase() });
+                setModalOpen(true);
+            }} />
+
             <Modal
                 isOpen={modalOpen}
                 onClose={() => setModalOpen(false)}
                 onSubmit={handleSubmit}
+                submitLabel={modalType === 'product' && !formData.id && !formData._id ? 'Add product' : 'Save changes'}
                 title={`Manage ${modalType?.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')}`}
             >
                 {renderModalContent()}

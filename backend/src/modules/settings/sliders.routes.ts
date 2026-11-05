@@ -23,12 +23,8 @@ router.get('/hero', async (_req: Request, res: Response) => {
 // Get all active promotional sliders (excluding Marquee)
 router.get('/promotional', async (_req: Request, res: Response) => {
     try {
-        const marquee = await Slider.find({ 
-            type: 'MARQUEE', 
-            $or: [{ status: { $regex: /^active$/i } }, { status: { $exists: false } }] 
-        });
         const sliders = await Slider.find({  
-            type: { $ne: 'MARQUEE' },
+            type: { $not: /^MARQUEE$/ },
             $or: [{ status: { $regex: /^active$/i } }, { status: { $exists: false } }] 
         });
         const slidersWithId = sliders.map(s => ({ ...s.toObject(), id: s._id.toString() }));

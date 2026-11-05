@@ -33,7 +33,7 @@ export interface IProduct extends Document {
     isTrending: boolean;
     tags: string[];
     customAttributes: Map<string, string>;
-    status: 'ACTIVE' | 'INACTIVE';
+    status: 'ACTIVE' | 'INACTIVE' | 'Active' | 'Inactive';
     createdAt: Date;
     updatedAt: Date;
 }

@@ -3,7 +3,7 @@ import nodemailer from 'nodemailer';
 const SMTP_EMAIL = process.env.SMTP_EMAIL;
 const SMTP_APP_PASSWORD = process.env.SMTP_APP_PASSWORD;
 
-let transporterInstance: nodemailer.Transporter | null = null;
+let transporterInstance: ReturnType<typeof nodemailer.createTransport> | null = null;
 
 export const getTransporter = () => {
     if (!SMTP_EMAIL || !SMTP_APP_PASSWORD) {

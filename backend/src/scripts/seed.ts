@@ -170,13 +170,13 @@ async function main() {
         const menswear = await Category.create({
             name: 'MENSWEAR',
             slug: 'menswear',
-            status: 'ACTIVE',
+            status: 'ACTIVE' as const,
             image: 'https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=800'
         });
         const womenswear = await Category.create({
             name: 'WOMENSWEAR',
             slug: 'womenswear',
-            status: 'ACTIVE',
+            status: 'ACTIVE' as const,
             image: 'https://images.pexels.com/photos/4066293/pexels-photo-4066293.jpeg?auto=compress&cs=tinysrgb&w=800'
         });
 
@@ -210,7 +210,7 @@ async function main() {
                     { size: 'L', quantity: 8 },
                 ],
                 isNewArrival: true, isTrending: true, tags: ['Linen', 'Formal', 'Summer'],
-                status: 'ACTIVE',
+                status: 'ACTIVE' as const,
             },
             {
                 name: 'Selvedge Slim Fit Denim',
@@ -232,7 +232,7 @@ async function main() {
                     { size: '34', quantity: 10 },
                 ],
                 isTrending: true, tags: ['Denim', 'Selvedge', 'Classic'],
-                status: 'ACTIVE',
+                status: 'ACTIVE' as const,
             },
             {
                 name: 'Merino Wool Oversized Knit',
@@ -250,7 +250,7 @@ async function main() {
                     { size: 'M', quantity: 12 },
                 ],
                 isNewArrival: true, isTrending: true, tags: ['Merino', 'Wool', 'Knitwear'],
-                status: 'ACTIVE',
+                status: 'ACTIVE' as const,
             },
             {
                 name: 'Fluid Midi Dress',
@@ -267,7 +267,7 @@ async function main() {
                     { size: 'M', quantity: 16 },
                 ],
                 isNewArrival: true, isTrending: true, tags: ['Dress', 'Midi'],
-                status: 'ACTIVE',
+                status: 'ACTIVE' as const,
             },
         ];
 
@@ -301,7 +301,7 @@ async function main() {
                 customerEmail: 'rohit@example.com',
                 rating: 4,
                 reviewText: 'Excellent denim quality. A bit stiff at first but breaks in beautifully.',
-                status: 'ACTIVE',
+                status: 'ACTIVE' as const,
                 homepageVisible: true,
                 date: new Date('2026-02-16')
             },
@@ -311,7 +311,7 @@ async function main() {
                 customerEmail: 'sneha@example.com',
                 rating: 5,
                 reviewText: 'So soft and cozy! The oversized fit is exactly what I was looking for.',
-                status: 'ACTIVE',
+                status: 'ACTIVE' as const,
                 homepageVisible: true,
                 date: new Date('2026-02-18')
             },
@@ -321,7 +321,7 @@ async function main() {
                 customerEmail: 'aarav@example.com',
                 rating: 5,
                 reviewText: 'Incredible texture and fits impeccably.',
-                status: 'ACTIVE',
+                status: 'ACTIVE' as const,
                 homepageVisible: true,
                 date: new Date('2026-02-20')
             },
@@ -331,7 +331,7 @@ async function main() {
                 customerEmail: 'vikram.singh@example.com',
                 rating: 4,
                 reviewText: 'Great structure and warmth. Highly recommend.',
-                status: 'ACTIVE',
+                status: 'ACTIVE' as const,
                 homepageVisible: true,
                 date: new Date('2026-02-22')
             }

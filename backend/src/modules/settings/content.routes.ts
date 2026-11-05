@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { Content } from '../../models/Content';
+import { Content, type IContent } from '../../models/Content';
 import { sendSuccess, sendError } from '../../utils/response';
 import { protect } from '../../middlewares/auth.middleware';
 import { adminOnly } from '../../middlewares/admin.middleware';
@@ -10,7 +10,7 @@ const router = Router();
 router.get('/:type', async (req: Request, res: Response) => {
     try {
         const { type } = req.params;
-        const content = await Content.find({ type: type.toUpperCase(), status: 'ACTIVE' });
+        const content = await Content.find({ type: type.toUpperCase() as IContent['type'], status: 'ACTIVE' });
         const contentWithId = content.map(c => ({ ...c.toObject(), id: c._id.toString() }));
         return sendSuccess(res, contentWithId);
     } catch (err: unknown) {
@@ -22,7 +22,7 @@ router.get('/:type', async (req: Request, res: Response) => {
 router.get('/admin/:type', protect, adminOnly, async (req: Request, res: Response) => {
     try {
         const { type } = req.params;
-        const content = await Content.find({ type: type.toUpperCase() });
+        const content = await Content.find({ type: type.toUpperCase() as IContent['type'] });
         const contentWithId = content.map(c => ({ ...c.toObject(), id: c._id.toString() }));
         return sendSuccess(res, contentWithId);
     } catch (err: unknown) {

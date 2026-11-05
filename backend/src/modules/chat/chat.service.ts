@@ -183,6 +183,26 @@ interface AgentResult {
     stats: TurnStats;
 }
 
+const outputContext = (result: AgentResult, history: IChatTurn[], message: string) => {
+    // Amounts and percentages the reply may quote: tool data plus what the shopper themselves wrote.
+    // Prior assistant turns only enter history after passing this same validator, so their prices
+    // remain trusted context when the shopper confirms or refers back to an earlier recommendation.
+    const allowedAmounts = new Set<number>([
+        ...result.amounts,
+        ...history.filter(t => t.role === 'assistant').flatMap(t => extractRupeeAmounts(t.text)),
+        ...extractRupeeAmounts(message),
+    ]);
+    for (const n of message.matchAll(/\d[\d,]*/g)) allowedAmounts.add(Number(n[0].replace(/,/g, '')));
+    const allowedPercents = new Set<number>();
+    for (const src of [...result.resultText, message]) {
+        for (const m of src.matchAll(/(\d{1,3}(?:\.\d+)?)\s*%/g)) allowedPercents.add(Number(m[1]));
+    }
+
+    return { canary: PROMPT_CANARY, allowedAmounts, allowedPercents, allowedHosts: ['v2enterprise.in'],
+        groundingText: [...result.resultText, ...history.filter(t => t.role === 'assistant').map(t => t.text),
+            ...(result.toolsUsed.includes('search_products') ? [message] : [])].join('\n') };
+};
+
 const cartActionReply = (actions: CartAddAction[], added: boolean): string => actions.map(action => {
     const item = `${action.product.name} – ${action.color || 'selected colour'}, size ${action.size || 'selected size'}`;
     if (!added) return `I found ${item}. Would you like me to add it to your bag?`;
@@ -191,11 +211,13 @@ const cartActionReply = (actions: CartAddAction[], added: boolean): string => ac
 }).join('\n');
 
 const runAssistant = async (
-    provider: ChatProvider, history: IChatTurn[], message: string, cart: ClientCart, mayAddToCart: boolean
+    provider: ChatProvider, history: IChatTurn[], message: string, cart: ClientCart, mayAddToCart: boolean,
+    recovery = false, maxCalls: number = CHAT_LIMITS.maxModelCallsPerTurn
 ): Promise<AgentResult> => {
     const ctx = newToolContext(cart);
     const stats = emptyStats();
-    const turn = provider.startTurn(ASSISTANT_SYSTEM_PROMPT, history, message);
+    const turn = provider.startTurn(ASSISTANT_SYSTEM_PROMPT + (recovery
+        ? '\nA prior draft could not be verified. Use a read-only catalogue lookup before making product claims. Keep the answer brief and quote only returned facts. Do not add items or claim anything was added.' : ''), history, message);
     const done = (text: string, ok: boolean): AgentResult => {
         stats.searches = ctx.searches;
         stats.emptySearches = ctx.emptySearches;
@@ -205,7 +227,7 @@ const runAssistant = async (
         };
     };
 
-    for (let call = 0; call < CHAT_LIMITS.maxModelCallsPerTurn; call++) {
+    for (let call = 0; call < maxCalls; call++) {
         stats.modelRounds++;
         const step = await turn.step();
         if (step.stop === 'refusal') return done(CANNED.offTopic, false);
@@ -219,6 +241,10 @@ const runAssistant = async (
         stats.toolCalls += step.toolCalls.length;
         const results: ToolResult[] = [];
         for (const call of step.toolCalls) {
+            if (recovery && call.name === 'add_to_cart') {
+                results.push({ id: call.id, content: JSON.stringify({ error: 'Recovery is read-only. No item was added.' }), isError: true });
+                continue;
+            }
             if (call.input === undefined) {
                 results.push({ id: call.id, content: JSON.stringify({ error: 'Arguments were not valid JSON.' }), isError: true });
                 continue;
@@ -229,7 +255,7 @@ const runAssistant = async (
         turn.addToolResults(results);
     }
     // Ran out of model calls without a final answer.
-    console.warn(`[Chat] No final answer after ${CHAT_LIMITS.maxModelCallsPerTurn} model calls.`);
+    console.warn(`[Chat] No final answer after ${maxCalls} model calls.`);
     if (ctx.actions.length > 0) {
         // A completed tool action is already built from a live DB variant. Use that trusted data
         // for a concise final reply instead of discarding it after tool-loop exhaustion. Without an
@@ -385,20 +411,6 @@ export const handleChatMessage = async (req: ChatRequest, providerOverride?: Cha
 
     if (verdict !== 'shopping') return finishBlocked(verdictReply(verdict), result.stats);
 
-    // Amounts and percentages the reply may quote: tool data plus what the shopper themselves wrote.
-    // Prior assistant turns only enter history after passing this same validator, so their prices
-    // remain trusted context when the shopper confirms or refers back to an earlier recommendation.
-    const allowedAmounts = new Set<number>([
-        ...result.amounts,
-        ...history.filter(t => t.role === 'assistant').flatMap(t => extractRupeeAmounts(t.text)),
-        ...extractRupeeAmounts(message),
-    ]);
-    for (const n of message.matchAll(/\d[\d,]*/g)) allowedAmounts.add(Number(n[0].replace(/,/g, '')));
-    const allowedPercents = new Set<number>();
-    for (const src of [...result.resultText, message]) {
-        for (const m of src.matchAll(/(\d{1,3}(?:\.\d+)?)\s*%/g)) allowedPercents.add(Number(m[1]));
-    }
-
     let reply = result.text;
     let actions = result.actions;
     let staged: IPendingCartAdd[] = [];
@@ -413,25 +425,45 @@ export const handleChatMessage = async (req: ChatRequest, providerOverride?: Cha
         staged = toPending(actions);
         actions = [];
     }
-    if (result.ok) {
-        const check = validateAssistantOutput(reply, {
-            canary: PROMPT_CANARY,
-            allowedAmounts,
-            allowedPercents,
-            allowedHosts: ['v2enterprise.in'],
-            groundingText: [
-                ...result.resultText,
-                ...history.filter(t => t.role === 'assistant').map(t => t.text),
-                // The shopper's own words only count once a search has actually checked them.
-                ...(result.toolsUsed.includes('search_products') ? [message] : []),
-            ].join('\n'),
-        });
+    if (result.ok || result.text === CANNED.unsafeOutput) {
+        let check = result.ok ? validateAssistantOutput(reply, outputContext(result, history, message))
+            : { ok: false as const, reason: 'incomplete response' };
         if (!check.ok) {
             console.warn(`[Chat] Reply withheld by output validation: ${check.reason}`);
-            reply = CANNED.unsafeOutput;
+            // One read-only retry handles empty/ungrounded first responses without asking the shopper
+            // to repeat their question. Never replay an attempted cart mutation.
+            if (!mayAddToCart && result.actions.length === 0 && result.cards.length === 0 && result.stats.searches === 0 && result.stats.modelRounds < CHAT_LIMITS.maxModelCallsPerTurn) {
+                try {
+                    const recovered = await runAssistant(provider, history, message, req.cart, false, true,
+                        CHAT_LIMITS.maxModelCallsPerTurn - result.stats.modelRounds);
+                    recovered.stats.modelRounds += result.stats.modelRounds;
+                    recovered.stats.toolCalls += result.stats.toolCalls;
+                    const recoveredCheck = validateAssistantOutput(recovered.text, outputContext(recovered, history, message));
+                    if (recovered.ok && recoveredCheck.ok && !/\b(?:added|adding)\b/i.test(recovered.text)) {
+                        result = recovered;
+                        reply = recovered.text;
+                        check = recoveredCheck;
+                    } else if (recovered.cards.length > 0 || recovered.stats.searches > 0) result = recovered;
+                } catch (err) {
+                    console.warn('[Chat] Read-only recovery failed:', describeProviderError(err));
+                }
+            }
+            // Prefer a verified catalogue answer to discarding a successful lookup because the model
+            // invented a price/type, used stray quotes, or ran out of output tokens.
+            if (!check.ok && result.actions.length === 0) {
+                const fallback = result.cards.length > 0
+                    ? 'Here are the catalog options I could verify. Please check their prices against your budget:\n' + result.cards.slice(0, 4)
+                        .map(card => `- ${card.name} — ₹${card.price.toLocaleString('en-IN')}`).join('\n')
+                    : result.stats.searches > 0 && result.stats.emptySearches === result.stats.searches
+                        ? "I couldn't find an exact match for those filters. Would you like to adjust the budget, size or colour?" : '';
+                const fallbackCheck = validateAssistantOutput(fallback, outputContext(result, history, message));
+                if (fallbackCheck.ok) { reply = fallback; check = fallbackCheck; }
+            }
             actions = [];
             staged = [];
-        } else outputValidated = true;
+            if (!check.ok) reply = CANNED.unsafeOutput;
+        }
+        outputValidated = check.ok;
     } else {
         actions = [];
         staged = [];

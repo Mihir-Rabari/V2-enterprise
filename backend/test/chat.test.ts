@@ -551,8 +551,9 @@ test("the shopper's own words count as grounding only after a real search", asyn
         ],
     });
     const r = await service.handleChatMessage({ message: 'do you have kurtas?', cart: [], clientKey: 'ip' }, client);
-    // "kurta" is grounded by the searched message; "shirts" is not grounded by anything, so still withheld.
-    assert.equal(r.reply, CANNED.unsafeOutput);
+    // The invented alternative is withheld; a verified empty-search reply replaces it in this turn.
+    assert.match(r.reply, /couldn't find an exact match/);
+    assert.ok(!r.reply.includes('shirts'));
 
     const { service: s2 } = await setup();
     const { client: c2 } = fakeClient({
@@ -563,6 +564,60 @@ test("the shopper's own words count as grounding only after a real search", asyn
     });
     const r2 = await s2.handleChatMessage({ message: 'do you have kurtas?', cart: [], clientKey: 'ip' }, c2);
     assert.match(r2.reply, /don't have any kurtas/);
+});
+
+test('an empty first answer is recovered with a read-only product lookup in the same request', async () => {
+    const { db, service, saved } = await setup();
+    const shirt = seedShirt(db);
+    const { client, calls } = fakeClient({ steps: [
+        { stop: 'end_turn', content: [text('')] },
+        { stop: 'tool_use', content: [toolUse('search_products', { query: 'linen' })] },
+        { stop: 'end_turn', content: [text('The Ivory Linen Shirt is ₹1,299.')] },
+    ] });
+    const reply = await service.handleChatMessage({ message: 'Show me linen shirts', cart: [], clientKey: 'ip' }, client);
+    assert.match(reply.reply, /Ivory Linen Shirt/);
+    assert.equal(reply.cards[0].id, String(shirt._id));
+    assert.equal(reply.actions.length, 0);
+    assert.equal(saved.length, 1, 'only the final answer is saved');
+    assert.equal(calls.filter(call => call.kind === 'classifier').length, 1);
+});
+
+test('an invalid first budget answer uses verified catalog facts without inventing a cheaper price', async () => {
+    const { db, service } = await setup();
+    seedShirt(db, { name: 'Denim Plain Jeans', price: 650 });
+    const { client } = fakeClient({ steps: [
+        { stop: 'tool_use', content: [toolUse('search_products', { query: 'jeans' })] },
+        { stop: 'end_turn', content: [text('Denim Plain Jeans cost ₹499.')] },
+    ] });
+    const reply = await service.handleChatMessage({ message: 'Give me jeans under 500 rupees', cart: [], clientKey: 'ip' }, client);
+    assert.match(reply.reply, /₹650/);
+    assert.ok(!reply.reply.includes('499'));
+    assert.equal(reply.cards.length, 1);
+    assert.equal(reply.actions.length, 0);
+});
+
+test('recovery never replays a cart tool or claims that an item was added', async () => {
+    const { db, service } = await setup();
+    const shirt = seedShirt(db);
+    const { client } = fakeClient({ steps: [
+        { stop: 'end_turn', content: [text('We have sherwanis.')] },
+        { stop: 'tool_use', content: [toolUse('add_to_cart', { variant_id: String(shirt._id), quantity: 1 })] },
+        { stop: 'end_turn', content: [text('Added it.')] },
+    ] });
+    const reply = await service.handleChatMessage({ message: 'Show me a shirt', cart: [], clientKey: 'ip' }, client);
+    assert.equal(reply.reply, CANNED.unsafeOutput);
+    assert.equal(reply.actions.length, 0);
+});
+
+test('a truncated first answer is retried within the existing per-turn call limit', async () => {
+    const { service } = await setup();
+    const { client, calls } = fakeClient({ steps: [
+        { stop: 'max_tokens', content: [] },
+        { stop: 'end_turn', content: [text('What size and colour are you looking for?')] },
+    ] });
+    const reply = await service.handleChatMessage({ message: 'Help me choose', cart: [], clientKey: 'ip' }, client);
+    assert.match(reply.reply, /What size and colour/);
+    assert.equal(calls.filter(call => call.kind === 'assistant').length, 2);
 });
 
 test('blocked messages that contained card data still show the payment warning', async () => {

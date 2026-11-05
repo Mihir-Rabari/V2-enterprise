@@ -102,6 +102,8 @@ const fakeClient = (script: Script) => {
                     return { stop_reason: 'end_turn', usage, content: [{ type: 'text', text: script.verdict ?? 'shopping' }] };
                 }
                 calls.push({ kind: 'assistant', params: { ...params, messages: [...params.messages] } });
+                if (script.verdict && script.verdict !== 'shopping') return { stop_reason: 'tool_use', usage,
+                    content: [{ type: 'tool_use', id: 'decline', name: 'decline_request', input: { reason: script.verdict } }] };
                 const s = script.steps[step++];
                 if (!s) throw new Error('script exhausted');
                 return { stop_reason: s.stop, usage, content: s.content };
@@ -161,7 +163,7 @@ test('search then answer: reply passes validation and product cards come from th
     assert.equal(r.cards.length, 1);
     assert.equal(r.cards[0].price, 1299);
     assert.equal(r.actions.length, 0);
-    assert.equal(calls.filter(c => c.kind === 'classifier').length, 1);
+    assert.equal(calls.filter(c => c.kind === 'classifier').length, 0);
     // Second assistant call received the tool result.
     const second = calls.filter(c => c.kind === 'assistant')[1].params.messages;
     assert.equal(second.at(-1).content[0].type, 'tool_result');
@@ -214,13 +216,40 @@ test('an invented price withholds the reply and drops cart actions', async () =>
     assert.equal(r.actions.length, 0);
 });
 
-test('classifier verdict blocks off-topic requests even if the assistant answered', async () => {
+test('off-topic requests are blocked without a separate classifier', async () => {
     const { service, saved } = await setup();
     const { client } = fakeClient({ verdict: 'off_topic', steps: [{ stop: 'end_turn', content: [text('Here is your essay...')] }] });
     const r = await service.handleChatMessage({ message: 'write my history essay', cart: [], clientKey: 'ip' }, client);
     assert.equal(r.reply, CANNED.offTopic);
     assert.equal(saved[0].$inc.blockedCount, 1);
     assert.equal(saved[0].$push.turns.$each[0].text, '[message withheld by safety filter]');
+});
+
+test('inline policy refusal cancels every other tool in the same model response', async () => {
+    const { db, service, saved } = await setup();
+    const shirt = seedShirt(db);
+    const { client, calls } = fakeClient({ steps: [{ stop: 'tool_use', content: [
+        toolUse('add_to_cart', { variant_id: String(shirt._id), quantity: 1 }),
+        toolUse('decline_request', { reason: 'fraud' }),
+    ] }] });
+    const result = await service.handleChatMessage({ message: 'add the M size', cart: [], clientKey: 'ip' }, client);
+    assert.equal(calls.length, 1);
+    assert.equal(result.actions.length, 0);
+    assert.deepEqual(saved[0].$set.pendingCartAdds, []);
+    assert.equal(saved[0].$inc.blockedCount, 1);
+});
+
+test('history is bounded by characters and retains only complete recent exchanges', async () => {
+    const { service } = await setup();
+    const turns = Array.from({ length: 10 }, (_, i) => [
+        { role: 'user' as const, text: `question-${i} ` + 'x'.repeat(400) },
+        { role: 'assistant' as const, text: `answer-${i} ` + 'y'.repeat(1800) },
+    ]).flat();
+    const history = service.compactHistory(turns);
+    assert.ok(history.reduce((n, turn) => n + turn.text.length, 0) <= 6000);
+    assert.equal(history.length % 2, 0);
+    assert.equal(history[0].role, 'user');
+    assert.equal(history.at(-1)?.text, turns.at(-1)?.text);
 });
 
 test('heuristic injection is blocked before any model call', async () => {
@@ -280,7 +309,7 @@ test('usage is recorded for every model call', async () => {
     await service.handleChatMessage({ message: 'hello', cart: [], clientKey: 'ip' }, client);
     await new Promise(r => setImmediate(r));
     const costWrites = usageWrites.filter(w => w.$inc.costUsd !== undefined);
-    assert.equal(costWrites.length, 2, 'classifier + assistant');
+    assert.equal(costWrites.length, 1, 'assistant only; no classifier');
     assert.ok(costWrites[0].$inc.costUsd > 0);
 });
 
@@ -465,10 +494,12 @@ test('openai-compat: malformed tool arguments are reported to the model, not exe
     assert.match(toolMsg.content, /not valid JSON/);
 });
 
-test('openai-compat: an unexpected classifier answer fails closed', async () => {
+test('openai-compat: an invalid inline refusal reason fails closed', async () => {
     const { service } = await setup();
     const { provider } = fakeOpenAi('Sure! This looks like shopping to me.', [
-        { finish_reason: 'stop', message: { role: 'assistant', content: 'Hello!' } },
+        { finish_reason: 'tool_calls', message: { role: 'assistant', content: null, tool_calls: [
+            { id: 'bad-refusal', type: 'function', function: { name: 'decline_request', arguments: '{"reason":"unknown"}' } },
+        ] } },
     ]);
     const r = await service.handleChatMessage({ message: 'hi', cart: [], clientKey: 'ip' }, provider);
     assert.equal(r.reply, CANNED.injection);
@@ -563,7 +594,7 @@ test("the shopper's own words count as grounding only after a real search", asyn
         ],
     });
     const r2 = await s2.handleChatMessage({ message: 'do you have kurtas?', cart: [], clientKey: 'ip' }, c2);
-    assert.match(r2.reply, /don't have any kurtas/);
+    assert.match(r2.reply, /couldn't find an exact match/);
 });
 
 test('an empty first answer is recovered with a read-only product lookup in the same request', async () => {
@@ -579,7 +610,7 @@ test('an empty first answer is recovered with a read-only product lookup in the 
     assert.equal(reply.cards[0].id, String(shirt._id));
     assert.equal(reply.actions.length, 0);
     assert.equal(saved.length, 1, 'only the final answer is saved');
-    assert.equal(calls.filter(call => call.kind === 'classifier').length, 1);
+    assert.equal(calls.filter(call => call.kind === 'classifier').length, 0);
 });
 
 test('an invalid first budget answer uses verified catalog facts without inventing a cheaper price', async () => {
@@ -629,12 +660,13 @@ test('blocked messages that contained card data still show the payment warning',
 
 test('empty searches offer broader next prompts without inventing catalogue items', async () => {
     const { service } = await setup();
-    const { client } = fakeClient({ steps: [
+    const { client, calls } = fakeClient({ steps: [
         { stop: 'tool_use', content: [toolUse('search_products', { query: 'something unusual', color: 'Blue', max_price: 500 })] },
         { stop: 'end_turn', content: [text('No matches for that search. Want to try something else?')] },
     ] });
     const r = await service.handleChatMessage({ message: 'find something unusual in blue under 500', cart: [], clientKey: 'ip' }, client);
     assert.deepEqual(r.cards, []);
+    assert.equal(calls.length, 1, 'empty lookup is answered without a second generation call');
     assert.deepEqual(r.suggestions, [
         'Try the same search in other colours',
         'Try the same search with a wider budget',

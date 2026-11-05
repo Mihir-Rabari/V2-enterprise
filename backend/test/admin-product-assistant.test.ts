@@ -20,7 +20,7 @@ const messages = [{ role: 'user' as const, content: 'A navy cotton shirt, M, 129
 const draft = { name: 'Navy Cotton Shirt', description: 'A navy cotton shirt.', materialCare: 'Cold wash.',
     mainCategory: 'Men', subCategory: 'Shirts', color: 'Navy', size: 'M', price: 1299, quantity: 20 };
 const provider = (value: unknown): ChatProvider => ({ model: 'test',
-    classify: async () => ({ text: JSON.stringify(value), refused: false }),
+    complete: async () => ({ text: JSON.stringify(value), refused: false }),
     startTurn: () => { throw new Error('Product drafting must never use shopping tools'); },
 });
 
@@ -39,8 +39,8 @@ test('rejects malformed model output, unsafe product fields and invalid inventor
     for (const bad of [{ ...draft, quantity: -1 }, { ...draft, quantity: 1.5 }, { ...draft, id: 'existing' }, { ...draft, status: 'ACTIVE' }, { ...draft, photo: 'https://invented.test/photo.jpg' }]) {
         await assert.rejects(draftProduct(messages, categories, provider({ reply: 'Ready.', draft: bad })));
     }
-    await assert.rejects(draftProduct(messages, categories, { ...provider(null), classify: async () => ({ text: '{bad json', refused: false }) }));
-    await assert.rejects(draftProduct(messages, categories, { ...provider(null), classify: async () => ({ text: '', refused: true }) }));
+    await assert.rejects(draftProduct(messages, categories, { ...provider(null), complete: async () => ({ text: '{bad json', refused: false }) }));
+    await assert.rejects(draftProduct(messages, categories, { ...provider(null), complete: async () => ({ text: '', refused: true }) }));
 });
 
 test('bounds conversation history and rejects forged roles', () => {
@@ -62,7 +62,7 @@ test('accepts only our R2 assistant images and carries actual images into AI and
     }
     assert.equal(assistantRequestSchema.safeParse({ messages, images: Array(7).fill(image) }).success, false);
     let seen: string[] | undefined;
-    const result = await draftProduct(messages, categories, { ...provider(null), classify: async (_system, _text, _tokens, images) => {
+    const result = await draftProduct(messages, categories, { ...provider(null), complete: async (_system, _text, _tokens, images) => {
         seen = images; return { text: JSON.stringify({ reply: 'Ready.', draft }), refused: false };
     } }, [image]);
     assert.deepEqual(seen, [image]);
@@ -77,14 +77,14 @@ test('OpenAI-compatible and Anthropic providers send image content blocks rather
     const openAi = createOpenAiCompatProvider({ chat: { completions: { create: async (body: any) => {
         openAiBody = body; return { choices: [{ finish_reason: 'stop', message: { content: '{}' } }] };
     } } } } as any, 'vision-model', () => {});
-    await openAi.classify('Draft', 'Inspect product', 2400, images);
+    await openAi.complete('Draft', 'Inspect product', 2400, images);
     assert.equal(openAiBody.messages[1].content[1].image_url.url, images[0]);
     assert.equal(openAiBody.tools, undefined);
     let anthropicBody: any;
     const anthropic = createAnthropicProvider({ messages: { create: async (body: any) => {
         anthropicBody = body; return { content: [{ type: 'text', text: '{}' }], stop_reason: 'end_turn' };
     } } } as any, 'vision-model', () => {});
-    await anthropic.classify('Draft', 'Inspect product', 2400, images);
+    await anthropic.complete('Draft', 'Inspect product', 2400, images);
     assert.deepEqual(anthropicBody.messages[0].content[1], { type: 'image', source: { type: 'url', url: images[0] } });
     assert.equal(anthropicBody.tools, undefined);
 });

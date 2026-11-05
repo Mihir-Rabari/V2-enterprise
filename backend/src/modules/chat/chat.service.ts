@@ -2,8 +2,8 @@
  * Shopping assistant orchestration. One user message goes through these layers in order:
  *   1. kill switch, daily spend cap, per-conversation turn / block limits
  *   2. input normalisation, sensitive-data redaction, injection heuristic (no model involved)
- *   3. in parallel: an independent safety classifier call, and the assistant's tool loop
- *   4. the classifier verdict gates the answer; the answer must pass output validation
+ *   3. one assistant tool loop, with contextual refusals in the same model call
+ *   4. deterministic output validation gates every reply and staged cart action
  * Anything that fails a layer gets a fixed, pre-written reply and any proposed cart changes are dropped.
  *
  * Cart additions: tools only stage actions in memory; nothing reaches the browser until every
@@ -17,9 +17,9 @@ import { ChatSession, IChatSession, IChatTurn, IPendingCartAdd } from '../../mod
 import { ChatUsage } from '../../models/ChatUsage';
 import { CHAT_LIMITS, estimateCostUsd } from './chat.config';
 import { followUpSuggestions } from './chat.suggestions';
-import { ASSISTANT_SYSTEM_PROMPT, CLASSIFIER_SYSTEM_PROMPT, PROMPT_CANARY } from './chat.prompt';
+import { ASSISTANT_SYSTEM_PROMPT, PROMPT_CANARY } from './chat.prompt';
 import {
-    CANNED, detectCartIntent, explicitlyAsksToAdd, extractRupeeAmounts, looksLikePromptInjection, normalizeUserInput, redactSensitive, validateAssistantOutput,
+    CANNED, localPolicyReply, detectCartIntent, explicitlyAsksToAdd, extractRupeeAmounts, looksLikePromptInjection, normalizeUserInput, redactSensitive, validateAssistantOutput,
 } from './chat.guardrails';
 import {
     CartAddAction, ClientCart, ProductCard, executeTool, newToolContext,
@@ -149,26 +149,6 @@ export const budgetExhausted = async () => {
     return (today?.costUsd ?? 0) >= env.CHAT_DAILY_BUDGET_USD;
 };
 
-// ── Safety classifier ────────────────────────────────────────────────────────
-
-type Verdict = 'shopping' | 'off_topic' | 'prompt_injection' | 'abusive' | 'fraud';
-const VERDICTS: Verdict[] = ['shopping', 'off_topic', 'prompt_injection', 'abusive', 'fraud'];
-
-/** Fail closed: anything other than exactly one known verdict word is treated as unsafe. */
-export const parseVerdict = (raw: string): Verdict => {
-    const word = raw.trim().toLowerCase().replace(/^["'`*\s]+|["'`*.\s]+$/g, '');
-    return (VERDICTS as string[]).includes(word) ? (word as Verdict) : 'prompt_injection';
-};
-
-const classify = async (provider: ChatProvider, message: string, previousReply: string | undefined): Promise<Verdict> => {
-    const context = previousReply ? `Assistant's previous reply (context only):\n"""${previousReply.slice(0, 400)}"""\n\n` : '';
-    const { text, refused } = await provider.classify(CLASSIFIER_SYSTEM_PROMPT, `${context}Shopper message to classify:\n"""${message}"""`);
-    return refused ? 'abusive' : parseVerdict(text);
-};
-
-const verdictReply = (v: Verdict): string =>
-    v === 'off_topic' ? CANNED.offTopic : v === 'abusive' ? CANNED.abusive : CANNED.injection;
-
 // ── Assistant tool loop ──────────────────────────────────────────────────────
 
 interface AgentResult {
@@ -181,7 +161,21 @@ interface AgentResult {
     resultText: string[];
     toolsUsed: string[];
     stats: TurnStats;
+    blockedReply?: string;
 }
+
+export const compactHistory = (turns: IChatTurn[]): IChatTurn[] => {
+    const selected: IChatTurn[] = [];
+    let chars = 0;
+    // Keep whole user/assistant exchanges; never pay for a summary generation call.
+    for (let i = turns.length - 2; i >= 0; i -= 2) {
+        const pair = turns.slice(i, i + 2);
+        const size = pair.reduce((n, t) => n + t.text.length, 0);
+        if (selected.length + 2 > CHAT_LIMITS.historyTurns || chars + size > CHAT_LIMITS.historyChars) break;
+        selected.unshift(...pair); chars += size;
+    }
+    return selected;
+};
 
 const outputContext = (result: AgentResult, history: IChatTurn[], message: string) => {
     // Amounts and percentages the reply may quote: tool data plus what the shopper themselves wrote.
@@ -237,6 +231,13 @@ const runAssistant = async (
         }
         if (step.stop === 'end') return done(step.text, true);
 
+        // Evaluate a refusal before executing ANY other tool in the same batch.
+        const refusal = step.toolCalls.find(call => call.name === 'decline_request');
+        if (refusal) {
+            const reason = (refusal.input as { reason?: string } | undefined)?.reason;
+            const reply = reason === 'off_topic' ? CANNED.offTopic : reason === 'abusive' ? CANNED.abusive : CANNED.injection;
+            return { ...done(reply, false), blockedReply: reply };
+        }
         console.info(`[Chat] Tool calls: ${step.toolCalls.map(c => c.name).join(', ')}`);
         stats.toolCalls += step.toolCalls.length;
         const results: ToolResult[] = [];
@@ -251,6 +252,9 @@ const runAssistant = async (
             }
             const { content, isError } = await executeTool(call.name, call.input, ctx);
             results.push({ id: call.id, content, isError });
+        }
+        if (step.toolCalls.every(call => call.name === 'search_products') && ctx.searches > 0 && ctx.emptySearches === ctx.searches) {
+            return done("I couldn't find an exact match for those filters. Would you like to adjust the budget, size or colour?", true);
         }
         turn.addToolResults(results);
     }
@@ -378,6 +382,9 @@ export const handleChatMessage = async (req: ChatRequest, providerOverride?: Cha
 
     if (looksLikePromptInjection(message)) return finishBlocked(CANNED.injection);
 
+    const localReply = localPolicyReply(message);
+    if (localReply) return finishBlocked(localReply);
+
     const intent = detectCartIntent(message);
     const pending = activePending(session);
 
@@ -390,26 +397,18 @@ export const handleChatMessage = async (req: ChatRequest, providerOverride?: Cha
             suggestions: followUpSuggestions({ emptySearch: false, hasProducts: committed.cards.length > 0, addedToCart: committed.actions.length > 0 }) };
     }
 
-    const history = session.turns.slice(-CHAT_LIMITS.historyTurns);
-    const previousReply = [...history].reverse().find(t => t.role === 'assistant')?.text;
+    const history = compactHistory(session.turns);
     // Only an explicit, un-negated "add" in the shopper's own words releases cart actions this turn.
     const mayAddToCart = explicitlyAsksToAdd(message);
 
-    // Both run at once for latency. This is safe because tools only stage actions in memory;
-    // nothing is returned to the browser unless the verdict below is "shopping".
-    let verdict: Verdict;
     let result: AgentResult;
     try {
-        [verdict, result] = await Promise.all([
-            classify(provider, message, previousReply),
-            runAssistant(provider, history, message, req.cart, mayAddToCart),
-        ]);
+        result = await runAssistant(provider, history, message, req.cart, mayAddToCart);
     } catch (err) {
         console.error('[Chat] Assistant failed:', describeProviderError(err));
         return { ...base, reply: CANNED.error, remainingTurns: remaining() + 1 };
     }
-
-    if (verdict !== 'shopping') return finishBlocked(verdictReply(verdict), result.stats);
+    if (result.blockedReply) return finishBlocked(result.blockedReply, result.stats);
 
     let reply = result.text;
     let actions = result.actions;
@@ -438,6 +437,7 @@ export const handleChatMessage = async (req: ChatRequest, providerOverride?: Cha
                         CHAT_LIMITS.maxModelCallsPerTurn - result.stats.modelRounds);
                     recovered.stats.modelRounds += result.stats.modelRounds;
                     recovered.stats.toolCalls += result.stats.toolCalls;
+                    if (recovered.blockedReply) return finishBlocked(recovered.blockedReply, recovered.stats);
                     const recoveredCheck = validateAssistantOutput(recovered.text, outputContext(recovered, history, message));
                     if (recovered.ok && recoveredCheck.ok && !/\b(?:added|adding)\b/i.test(recovered.text)) {
                         result = recovered;

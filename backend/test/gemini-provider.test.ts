@@ -57,8 +57,8 @@ test('Gemini SDK tool-free completion is isolated from tools and fails closed on
         response([{ text: 'shopping' }]),
         response([{ text: 'shopping' }], 'MAX_TOKENS'),
     ]);
-    assert.deepEqual(await provider.classify('Safety filter', 'hi'), { text: 'shopping', refused: false });
-    assert.equal((await provider.classify('Safety filter', 'hi')).refused, true);
+    assert.deepEqual(await provider.complete('Safety filter', 'hi'), { text: 'shopping', refused: false });
+    assert.equal((await provider.complete('Safety filter', 'hi')).refused, true);
     assert.equal(requests[0].body.tools, undefined);
     assert.equal(requests[0].body.generationConfig.maxOutputTokens, 600);
 });
@@ -78,7 +78,7 @@ test('Gemini product drafting sends inline image bytes to the model', async () =
     const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==', 'base64');
     const image = 'data:image/png;base64,' + png.toString('base64');
     const { provider, requests } = fakeGemini([response([{ text: '{}' }])]);
-    assert.equal((await provider.classify('Draft product', 'Inspect product', 2400, [image])).refused, false);
+    assert.equal((await provider.complete('Draft product', 'Inspect product', 2400, [image])).refused, false);
     const part = requests[0].body.contents[0].parts.find((part: any) => part.inlineData);
     assert.equal(part.inlineData.mimeType, 'image/png');
     assert.equal(part.inlineData.data, png.toString('base64'));

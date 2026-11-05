@@ -7,15 +7,17 @@ export const CHAT_LIMITS = {
     /** After this many blocked messages the conversation is locked. */
     maxBlockedPerSession: 4,
     /** Prior text turns replayed to the model (user + assistant). */
-    historyTurns: 12,
+    historyTurns: 8,
     /** Stored text turns per session (older ones are dropped). */
     storedTurns: 40,
+    /** Character ceiling for full history exchanges sent to the model. */
+    historyChars: 6000,
     /** Model round-trips allowed in one user turn (each tool call needs one). */
     maxModelCallsPerTurn: 5,
     /** Output token cap for one model call (includes adaptive thinking). */
     maxOutputTokens: 1500,
-    /** Output token cap for the safety classifier call. */
-    classifierMaxTokens: 600,
+    /** Default output cap for short, tool-free completions (admin drafting overrides it). */
+    completionMaxTokens: 600,
     /** Products returned by one search. */
     searchResults: 6,
     /** add_to_cart calls honoured in one user turn. */

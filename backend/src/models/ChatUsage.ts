@@ -8,7 +8,7 @@ export interface IChatUsage extends Document {
     cacheReadTokens: number;
     cacheWriteTokens: number;
     costUsd: number;
-    /** Model API calls (classifier + every assistant round). */
+    /** Model API calls (assistant rounds and admin draft completions). */
     requests: number;
     /** Shopper messages that reached the model or the pending-add fast path. */
     messages: number;
@@ -19,7 +19,7 @@ export interface IChatUsage extends Document {
     searches: number;
     /** Searches that found nothing. emptySearches / searches = empty search rate. */
     emptySearches: number;
-    /** Messages blocked by the heuristic, classifier or output validation. */
+    /** Messages blocked by the local checks, inline policy refusal or output validation. */
     blockedMessages: number;
     /** Confirmations served from a pending offer without any model call. */
     fastConfirms: number;

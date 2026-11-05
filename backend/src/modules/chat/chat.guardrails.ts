@@ -3,7 +3,7 @@
  * hold even if the model is talked out of its instructions:
  *   - input normalisation + length cap
  *   - redaction of payment / identity data before anything is sent to the model or stored
- *   - a prompt-injection heuristic (the model-based classifier is a second, independent layer)
+ *   - local prompt-injection checks plus a contextual refusal tool in the assistant call
  *   - output validation: no leaked system prompt, no external links, no invented prices or codes
  */
 import { CHAT_LIMITS } from './chat.config';
@@ -292,3 +292,10 @@ export const CANNED = {
     pendingGone:'Sorry, that item is no longer available in that size and colour. Would you like me to look for something similar?',
     unavailable: 'The shopping assistant is unavailable right now. You can still browse everything at /shop.',
 } as const;
+
+/** High-confidence local rejects save a model call; ambiguous requests stay with the assistant policy. */
+export const localPolicyReply = (message: string): string | undefined => {
+    if (/\b(?:write|generate|debug|execute)\b.{0,30}\b(?:python|javascript|sql|shell|program|script|code)\b|\b(?:write|solve)\b.{0,25}\b(?:essay|homework|equation)\b/i.test(message)) return CANNED.offTopic;
+    if (/\b(?:give|make|get)\b.{0,20}\b(?:free items|free products|unauthorised discount)\b|\bsomeone else's (?:order|account|password)\b/i.test(message)) return CANNED.injection;
+    return undefined;
+};

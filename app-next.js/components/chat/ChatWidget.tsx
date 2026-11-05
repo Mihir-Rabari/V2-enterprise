@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useChatViewport } from '../../hooks/useChatViewport';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
 import { MessageCircle, X, Send, RotateCcw, ShoppingBag, Sparkles, ArrowUpRight, ChevronRight } from 'lucide-react';
@@ -104,6 +106,10 @@ const ChatWidget: React.FC = () => {
     const [starters, setStarters] = useState<string[]>([]);
     const listRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
+    const panelRef = useRef<HTMLElement>(null);
+    const inFlight = useRef(false);
+    const generation = useRef(0);
+    const viewport = useChatViewport(open && enabled);
 
     // Only show the launcher when the backend has the assistant switched on.
     useEffect(() => {
@@ -140,12 +146,24 @@ const ChatWidget: React.FC = () => {
 
     useEffect(() => {
         if (!open) return;
-        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') close();
+            if (e.key !== 'Tab') return;
+            const controls = panelRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], textarea:not(:disabled)');
+            if (!controls?.length) return;
+            const first = controls[0]; const last = controls[controls.length - 1];
+            if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+            else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
     }, [open, close]);
 
     const reset = () => {
+        generation.current++;
+        inFlight.current = false;
+        setSending(false);
+        setPendingPrompt(null);
         setChat({ messages: [GREETING] });
         setStarters(shuffledStarters());
         setError(null);
@@ -154,7 +172,9 @@ const ChatWidget: React.FC = () => {
 
     const send = async (raw: string) => {
         const message = raw.trim().slice(0, MAX_INPUT);
-        if (!message || sending || chat.ended) return;
+        if (!message || inFlight.current || chat.ended || !hydrated) return;
+        inFlight.current = true;
+        const requestGeneration = generation.current;
         setError(null);
         setInput('');
         setChat(prev => ({ ...prev, messages: [...prev.messages, { role: 'user', text: message }] }));
@@ -172,6 +192,8 @@ const ChatWidget: React.FC = () => {
             const data = res.data?.data as {
                 sessionId: string; reply: string; cards: ProductCardData[]; actions: CartAddAction[]; ended?: boolean; suggestions?: string[];
             };
+            if (requestGeneration !== generation.current) return;
+            if (!data?.reply?.trim() || !data.sessionId) throw new Error('Empty assistant response');
             for (const action of data.actions ?? []) {
                 if (action.type === 'add_to_cart') {
                     addToCart(action.product, action.quantity, action.size, action.color);
@@ -183,10 +205,12 @@ const ChatWidget: React.FC = () => {
                 messages: [...prev.messages, { role: 'assistant', text: data.reply, cards: data.cards, suggestions: data.suggestions }],
             }));
         } catch (err: any) {
+            if (requestGeneration !== generation.current) return;
             const msg = err?.response?.data?.message || 'Could not reach the assistant. Please try again.';
             setError(msg);
+            setInput(message);
         } finally {
-            setSending(false);
+            if (requestGeneration === generation.current) { inFlight.current = false; setSending(false); }
         }
     };
 
@@ -209,15 +233,15 @@ const ChatWidget: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        if (!open || !pendingPrompt || sending) return;
+        if (!enabled || !open || !pendingPrompt || sending || !hydrated) return;
         const prompt = pendingPrompt;
         setPendingPrompt(null);
         void send(prompt);
-    }, [open, pendingPrompt, sending, send]);
+    }, [enabled, open, pendingPrompt, sending, hydrated, send]);
 
     if (!enabled) return null;
 
-    return (
+    return createPortal((
         <>
             <AnimatePresence>
                 {!open && (
@@ -245,14 +269,17 @@ const ChatWidget: React.FC = () => {
             <AnimatePresence>
                 {open && (
                     <motion.section
+                        ref={panelRef}
                         key="panel"
                         role="dialog"
                         aria-label="Shopping assistant"
+                        aria-modal="true"
+                        style={viewport ? { top: viewport.top, height: viewport.height, bottom: 'auto' } : undefined}
                         initial={{ opacity: 0, y: 24 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 24 }}
                         transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-                        className="fixed inset-0 z-[95] flex h-[100dvh] flex-col overflow-hidden bg-[#f6f4ef] shadow-[0_28px_90px_rgba(0,0,0,0.3)] sm:inset-auto sm:bottom-6 sm:right-6 sm:h-[min(46rem,calc(100dvh-3rem))] sm:w-[420px] sm:rounded-[24px] sm:border sm:border-black/10"
+                        className="fixed inset-0 z-[1000] flex h-[100dvh] flex-col overflow-hidden overscroll-none bg-[#f6f4ef] shadow-[0_28px_90px_rgba(0,0,0,0.3)] sm:inset-auto sm:bottom-6 sm:right-6 sm:h-[min(46rem,calc(100dvh-3rem))] sm:w-[420px] sm:rounded-[24px] sm:border sm:border-black/10"
                     >
                         <header className="relative flex shrink-0 items-center justify-between overflow-hidden bg-[#191816] px-5 pb-5 pt-5 text-white sm:px-6">
                             <div className="pointer-events-none absolute -right-10 -top-24 h-56 w-56 rounded-full border border-[#c9aa6b]/15" />
@@ -280,7 +307,7 @@ const ChatWidget: React.FC = () => {
                             </div>
                         </header>
 
-                        <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto bg-[radial-gradient(ellipse_at_top,_rgba(201,170,107,0.08),_transparent_58%),linear-gradient(180deg,#f8f7f3_0%,#f1efe9_100%)] px-4 py-5 sm:px-5" aria-live="polite">
+                        <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[radial-gradient(ellipse_at_top,_rgba(201,170,107,0.08),_transparent_58%),linear-gradient(180deg,#f8f7f3_0%,#f1efe9_100%)] px-4 py-5 sm:px-5" aria-live="polite">
                             <div className="mx-auto flex max-w-md flex-col gap-5">
                                 {chat.messages.map((m, i) => (
                                     m.role === 'user' ? (
@@ -456,7 +483,7 @@ const ChatWidget: React.FC = () => {
                 )}
             </AnimatePresence>
         </>
-    );
+    ), document.body);
 };
 
 export default ChatWidget;

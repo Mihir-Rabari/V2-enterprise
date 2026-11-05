@@ -40,6 +40,7 @@ export interface ModelTurn {
 }
 
 export interface NormalizedUsage {
+    /** Uncached input; cache reads/writes are reported separately. */
     input_tokens: number;
     output_tokens: number;
     cache_read_input_tokens?: number;
@@ -104,7 +105,9 @@ export const createOpenAiCompatProvider = (
         // Some endpoints leave thinking tokens out of completion_tokens but bill them as output;
         // counting everything beyond the prompt keeps the spend estimate conservative.
         const output = Math.max(usage.completion_tokens, (usage.total_tokens ?? 0) - usage.prompt_tokens);
-        onUsage(model, { input_tokens: usage.prompt_tokens, output_tokens: output });
+        const cached = usage.prompt_tokens_details?.cached_tokens ?? 0;
+        onUsage(model, { input_tokens: Math.max(0, usage.prompt_tokens - cached), output_tokens: output,
+            ...(cached ? { cache_read_input_tokens: cached } : {}) });
     };
     const extra = opts.reasoningEffort ? { reasoning_effort: opts.reasoningEffort } : {};
 
@@ -181,7 +184,8 @@ export const createGeminiProvider = (
         // Execution stays in the service, which enforces cart intent and per-turn limits.
     })]));
     const record = (usage: LanguageModelUsage) => onUsage(model, {
-        input_tokens: usage.inputTokens ?? 0,
+        input_tokens: Math.max(0, (usage.inputTokens ?? 0) - (usage.inputTokenDetails?.cacheReadTokens ?? 0)),
+        ...(usage.inputTokenDetails?.cacheReadTokens ? { cache_read_input_tokens: usage.inputTokenDetails.cacheReadTokens } : {}),
         // SDK outputTokens already includes Gemini's reasoning tokens.
         output_tokens: usage.outputTokens ?? 0,
     });
@@ -210,7 +214,7 @@ export const createGeminiProvider = (
                     if (result.finishReason === 'content-filter') return { stop: 'refusal', text: '', toolCalls: [] };
                     if (result.finishReason === 'length') return { stop: 'max_tokens', text: '', toolCalls: [] };
                     if (result.toolCalls.length) {
-                        // Replay complete SDK messages, preserving Google's thought signatures.
+                        // Replay classify SDK messages, preserving Google's thought signatures.
                         messages.push(...result.response.messages);
                         for (const call of result.toolCalls) toolNames.set(call.toolCallId, call.toolName);
                         return {
@@ -278,9 +282,8 @@ export const createAnthropicProvider = (client: AnthropicLikeClient, model: stri
                     const response = await client.messages.create({
                         model,
                         max_tokens: CHAT_LIMITS.maxOutputTokens,
-                        // Tools + system prompt are identical on every request, so they are served from cache.
-                        cache_control: { type: 'ephemeral' },
-                        system: [{ type: 'text', text: system }],
+                        // Cache the shared tools/system prefix when provider token thresholds are met.
+                        system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
                         tools: TOOL_DEFINITIONS,
                         output_config: { effort: 'low' },
                         messages,

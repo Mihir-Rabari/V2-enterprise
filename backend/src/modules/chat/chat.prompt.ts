@@ -1,11 +1,11 @@
 import crypto from 'crypto';
 
 /**
- * Random per-process marker placed in the system prompt. If it ever shows up in a reply, the
- * prompt has leaked and the reply is withheld. Stable for the life of the process so prompt
+ * Stable policy-version marker placed in the system prompt. If it ever shows up in a reply, the
+ * prompt has leaked and the reply is withheld. Stable across workers and restarts so prompt
  * caching keeps working.
  */
-export const PROMPT_CANARY = `cnry-${crypto.randomBytes(6).toString('hex')}`;
+export const PROMPT_CANARY = `cnry-${crypto.createHash('sha256').update('v2-shopping-policy-v3').digest('hex').slice(0, 12)}`;
 
 export const ASSISTANT_SYSTEM_PROMPT = `You are "V2 Assist", the shopping assistant on the V2 Enterprise online store (v2enterprise.in), a premium fashion brand from Bhavnagar, Gujarat. Prices are in Indian rupees (₹).
 

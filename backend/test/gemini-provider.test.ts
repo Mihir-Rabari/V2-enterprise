@@ -52,7 +52,7 @@ test('Gemini SDK uses native API, preserves tool signatures and counts thinking 
     ]);
 });
 
-test('Gemini SDK classifier is isolated from tools and fails closed on truncation', async () => {
+test('Gemini SDK tool-free completion is isolated from tools and fails closed on truncation', async () => {
     const { provider, requests } = fakeGemini([
         response([{ text: 'shopping' }]),
         response([{ text: 'shopping' }], 'MAX_TOKENS'),
@@ -83,4 +83,14 @@ test('Gemini product drafting sends inline image bytes to the model', async () =
     assert.equal(part.inlineData.mimeType, 'image/png');
     assert.equal(part.inlineData.data, png.toString('base64'));
     assert.equal(requests[0].body.tools, undefined);
+});
+
+test('Gemini cache hits are recorded separately without double-counting input tokens', async () => {
+    const cached = response([{ text: 'Hello' }]);
+    Object.assign(cached.usageMetadata, { cachedContentTokenCount: 40 });
+    const { provider, usage } = fakeGemini([cached]);
+    await provider.startTurn('Stable prompt', [], 'Hello').step();
+    assert.equal(usage[0].input_tokens, 60);
+    assert.equal(usage[0].cache_read_input_tokens, 40);
+    assert.equal(usage[0].output_tokens, 30);
 });

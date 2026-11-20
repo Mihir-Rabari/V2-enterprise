@@ -412,10 +412,8 @@ const ShopView: React.FC<ShopViewProps> = ({ variant, category, subcategory }) =
         { key: 'neck', label: 'Neck' },
         { key: 'pocket', label: 'Pocket' },
         { key: 'length', label: 'Length' },
-        { key: 'chest', label: 'Chest' },
-        { key: 'waist', label: 'Waist' },
-        { key: 'shoulder', label: 'Shoulder' },
-        { key: 'sleeveLength', label: 'Sleeve Length' },
+        // Chest / waist / shoulder / sleeve-length are per-size garment measurements, not shopper filters:
+        // the API has no such params, so offering them did nothing.
         // Dynamic custom attribute filters from the admin suggestions. Once a
         // product-derived baseline exists they are suppressed unless the scope
         // carries values for them, so scoped pages never offer catalog-wide

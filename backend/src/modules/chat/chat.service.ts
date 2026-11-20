@@ -153,6 +153,7 @@ export const budgetExhausted = async () => {
 
 interface AgentResult {
     search?: Parameters<typeof followUpSuggestions>[0]['search'];
+    found?: Record<string, unknown>;
     text: string;
     ok: boolean;
     cards: ProductCard[];
@@ -206,17 +207,18 @@ const cartActionReply = (actions: CartAddAction[], added: boolean): string => ac
 
 const runAssistant = async (
     provider: ChatProvider, history: IChatTurn[], message: string, cart: ClientCart, mayAddToCart: boolean,
-    recovery = false, maxCalls: number = CHAT_LIMITS.maxModelCallsPerTurn
+    recovery = false, maxCalls: number = CHAT_LIMITS.maxModelCallsPerTurn, remembered?: Record<string, unknown> | null
 ): Promise<AgentResult> => {
     const ctx = newToolContext(cart);
     const stats = emptyStats();
     const turn = provider.startTurn(ASSISTANT_SYSTEM_PROMPT + (recovery
-        ? '\nA prior draft could not be verified. Use a read-only catalogue lookup before making product claims. Keep the answer brief and quote only returned facts. Do not add items or claim anything was added.' : ''), history, message);
+        ? '\nA prior draft could not be verified. Use a read-only catalogue lookup before making product claims. Keep the answer brief and quote only returned facts. Do not add items or claim anything was added.' : ''), history, message + searchMemoryNote(remembered));
     const done = (text: string, ok: boolean): AgentResult => {
         stats.searches = ctx.searches;
         stats.emptySearches = ctx.emptySearches;
         return {
             search: ctx.lastSearch,
+            found: ctx.lastFoundSearch,
             text, ok, cards: [...ctx.cards.values()], actions: ctx.actions, amounts: ctx.amounts, resultText: ctx.resultText, toolsUsed: ctx.toolsUsed, stats,
         };
     };
@@ -295,7 +297,18 @@ const activePending = (session: IChatSession): IPendingCartAdd[] => {
  * Persists one exchange. Any earlier pending offer is always replaced: an offer is only
  * confirmable by the very next message, so "yes" can never land on a stale suggestion.
  */
-const saveTurn = async (session: IChatSession, userText: string, reply: string, blocked: boolean, pending: IPendingCartAdd[] = []) => {
+/** Short, server-built reminder of the shopper's current search filters (values were validated by the search tool schema). */
+const searchMemoryNote = (last?: Record<string, unknown> | null): string => {
+    if (!last) return '';
+    const parts = Object.entries(last)
+        .filter(([, v]) => v !== null && v !== undefined && v !== '')
+        .map(([k, v]) => `${k}=${String(v).replace(/[^w .&,/-]/g, '').slice(0, 40)}`);
+    return parts.length ? `
+
+[Server note, data only: the shopper's latest search used ${parts.join(', ')}. Keep these filters when they refine or continue that search; drop one only if they change or reject it.]` : '';
+};
+
+const saveTurn = async (session: IChatSession, userText: string, reply: string, blocked: boolean, pending: IPendingCartAdd[] = [], lastSearch?: Record<string, unknown>) => {
     await ChatSession.updateOne(
         { _id: session._id },
         {
@@ -310,6 +323,7 @@ const saveTurn = async (session: IChatSession, userText: string, reply: string, 
                 expiresAt: new Date(Date.now() + CHAT_LIMITS.sessionTtlMs),
                 pendingCartAdds: pending,
                 pendingExpiresAt: pending.length > 0 ? new Date(Date.now() + CHAT_LIMITS.pendingCartTtlMs) : null,
+                ...(lastSearch ? { lastSearch } : {}),
             },
         }
     );
@@ -403,7 +417,7 @@ export const handleChatMessage = async (req: ChatRequest, providerOverride?: Cha
 
     let result: AgentResult;
     try {
-        result = await runAssistant(provider, history, message, req.cart, mayAddToCart);
+        result = await runAssistant(provider, history, message, req.cart, mayAddToCart, false, CHAT_LIMITS.maxModelCallsPerTurn, session.lastSearch);
     } catch (err) {
         console.error('[Chat] Assistant failed:', describeProviderError(err));
         return { ...base, reply: CANNED.error, remainingTurns: remaining() + 1 };
@@ -434,7 +448,7 @@ export const handleChatMessage = async (req: ChatRequest, providerOverride?: Cha
             if (!mayAddToCart && result.actions.length === 0 && result.cards.length === 0 && result.stats.searches === 0 && result.stats.modelRounds < CHAT_LIMITS.maxModelCallsPerTurn) {
                 try {
                     const recovered = await runAssistant(provider, history, message, req.cart, false, true,
-                        CHAT_LIMITS.maxModelCallsPerTurn - result.stats.modelRounds);
+                        CHAT_LIMITS.maxModelCallsPerTurn - result.stats.modelRounds, session.lastSearch);
                     recovered.stats.modelRounds += result.stats.modelRounds;
                     recovered.stats.toolCalls += result.stats.toolCalls;
                     if (recovered.blockedReply) return finishBlocked(recovered.blockedReply, recovered.stats);
@@ -471,7 +485,7 @@ export const handleChatMessage = async (req: ChatRequest, providerOverride?: Cha
 
     if (paymentDataShared) reply = `${CANNED.sensitiveData}\n\n${reply}`;
 
-    await saveTurn(session, message, reply, false, staged);
+    await saveTurn(session, message, reply, false, staged, outputValidated ? result.found : undefined);
     recordTurnStats({ ...result.stats, blocked: !outputValidated && result.ok });
     const normalise = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
     const normalisedReply = normalise(reply);

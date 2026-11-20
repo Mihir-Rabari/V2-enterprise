@@ -25,6 +25,8 @@ export interface IChatSession extends Document {
     /** Set only by the server when it asks "add this?"; cleared on the next message whatever it says. */
     pendingCartAdds?: IPendingCartAdd[];
     pendingExpiresAt?: Date | null;
+    /** Filters of the shopper's latest successful product search, so refinements keep them. */
+    lastSearch?: Record<string, unknown> | null;
     expiresAt: Date;
     createdAt: Date;
     updatedAt: Date;
@@ -53,6 +55,7 @@ const ChatSessionSchema = new Schema<IChatSession>(
             default: undefined,
         },
         pendingExpiresAt: { type: Date, default: null },
+        lastSearch: { type: Schema.Types.Mixed, default: null },
         // TTL index: MongoDB deletes the session once this time passes.
         expiresAt: { type: Date, required: true, index: { expires: 0 } },
     },

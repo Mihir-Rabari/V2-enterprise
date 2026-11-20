@@ -93,10 +93,11 @@ interface ProductReview {
     date: string;
 }
 
-const RelatedProducts: React.FC<{ currentId: string | number; categoryName?: string }> = ({ currentId, categoryName }) => {
+const RelatedProducts: React.FC<{ currentId: string | number; subCategory?: string; size?: string | null }> = ({ currentId, subCategory, size }) => {
     const { products, loading } = useProducts({
-        category: categoryName,
-        limit: 4,
+        ...(subCategory ? { subCategories: [subCategory] } : {}),
+        ...(size ? { sizes: [size] } : {}),
+        limit: 5,
         status: 'ACTIVE',
         groupByColor: true
     });
@@ -252,7 +253,7 @@ const ProductDetailsView: React.FC<{ id: string }> = ({ id }) => {
     const getAiPairings = () => {
         const context = productStylingContext();
         launchShoppingChat({
-            prompt: `What would you pair with the ${context}? Please suggest a few complementary pieces from V2.`,
+            prompt: `What would you pair with the ${context}? Please suggest a few complementary pieces from V2 that are in stock in my size${(selectedSize || product?.size) ? ` (${selectedSize || product?.size})` : ''}.`,
             sendImmediately: true,
         });
     };
@@ -900,7 +901,7 @@ const ProductDetailsView: React.FC<{ id: string }> = ({ id }) => {
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                             {/* Show related products from same category */}
-                            <RelatedProducts currentId={product.id} categoryName={product.category?.name} />
+                            <RelatedProducts currentId={product.id} subCategory={product.subCategory} size={selectedSize} />
                         </div>
                     </div>
                 </div>

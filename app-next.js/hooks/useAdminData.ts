@@ -94,10 +94,10 @@ export function useAdminData() {
         } catch (err) { console.error('Stats fetch error:', err); }
     }, []);
 
-    const fetchProducts = useCallback(async (page = 1, limit = 10, search = '') => {
+    const fetchProducts = useCallback(async (page = 1, limit = 10, search = '', status: 'ALL' | 'ACTIVE' | 'INACTIVE' = 'ALL') => {
         setLoading(true);
         try {
-            const res = await adminAPI.getProducts({ page, limit, status: 'ALL', ...(search ? { search } : {}) });
+            const res = await adminAPI.getProducts({ page, limit, status, ...(search ? { search } : {}) });
             setProducts(res.data.data.products);
             setProductPagination({
                 page: res.data.data.page,

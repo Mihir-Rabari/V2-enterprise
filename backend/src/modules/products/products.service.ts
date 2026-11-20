@@ -1,6 +1,11 @@
 import { Product } from '../../models/Product';
 import mongoose from 'mongoose';
 import { escapeRegex } from '../../utils/query';
+
+/** Case- and edge-space-insensitive exact match: the catalogue holds values like 'STAND COLLAR ' and 'Black'. */
+const looseIn = (values: string[]) => ({
+    $in: values.map(v => v.trim()).filter(Boolean).map(v => new RegExp('^\\s*' + escapeRegex(v) + '\\s*$', 'i')),
+});
 import { isActiveStatus, ACTIVE_STATUS_FILTER } from '../../utils/productStatus';
 import { syncFiltersFromProducts, rebuildFiltersFromAllProducts } from '../filters/filters.service';
 
@@ -14,6 +19,8 @@ export interface ProductFilters {
     page?: number;
     limit?: number;
     status?: 'ACTIVE' | 'INACTIVE' | 'ALL';
+    /** Only SKUs with stock left. */
+    inStock?: boolean;
     groupByColor?: boolean;
     // Dynamic Filters
     minPrice?: number;
@@ -34,7 +41,7 @@ export interface ProductFilters {
 export const getProductsService = async (filters: ProductFilters) => {
     const { 
         mainCategories, subCategories, isTrending, isNewArrival, tag, search, status, 
-        page = 1, limit = 12, groupByColor,
+        page = 1, limit = 12, groupByColor, inStock,
         minPrice, maxPrice, colors, sizes, fabrics, collars, sleeves, necks, pockets, lengths, patternTypes,
         sort = 'Newest', customFilters
     } = filters;
@@ -47,6 +54,7 @@ export const getProductsService = async (filters: ProductFilters) => {
         ...(isNewArrival !== undefined && { isNewArrival }),
         ...(status === 'ALL' ? {} : { status: { $regex: new RegExp(`^${escapeRegex(status || 'ACTIVE')}$`, 'i') } }),
         ...(tag && { tags: tag }),
+        ...(inStock && { quantity: { $gt: 0 } }),
         // Price Range
         ...((minPrice !== undefined || maxPrice !== undefined) && {
             price: {
@@ -55,20 +63,20 @@ export const getProductsService = async (filters: ProductFilters) => {
             }
         }),
         // Multi-select Filters
-        ...(colors && colors.length > 0 && { color: { $in: colors } }),
-        ...(sizes && sizes.length > 0 && { size: { $in: sizes } }),
-        ...(fabrics && fabrics.length > 0 && { fabric: { $in: fabrics } }),
-        ...(collars && collars.length > 0 && { collar: { $in: collars } }),
-        ...(sleeves && sleeves.length > 0 && { sleeve: { $in: sleeves } }),
-        ...(necks && necks.length > 0 && { neck: { $in: necks } }),
-        ...(pockets && pockets.length > 0 && { pocket: { $in: pockets } }),
-        ...(lengths && lengths.length > 0 && { length: { $in: lengths } }),
-        ...(patternTypes && patternTypes.length > 0 && { patternType: { $in: patternTypes } }),
+        ...(colors && colors.length > 0 && { color: looseIn(colors) }),
+        ...(sizes && sizes.length > 0 && { size: looseIn(sizes) }),
+        ...(fabrics && fabrics.length > 0 && { fabric: looseIn(fabrics) }),
+        ...(collars && collars.length > 0 && { collar: looseIn(collars) }),
+        ...(sleeves && sleeves.length > 0 && { sleeve: looseIn(sleeves) }),
+        ...(necks && necks.length > 0 && { neck: looseIn(necks) }),
+        ...(pockets && pockets.length > 0 && { pocket: looseIn(pockets) }),
+        ...(lengths && lengths.length > 0 && { length: looseIn(lengths) }),
+        ...(patternTypes && patternTypes.length > 0 && { patternType: looseIn(patternTypes) }),
         // Custom (dynamic) attribute filters
         ...(customFilters && Object.fromEntries(
             Object.entries(customFilters)
                 .filter(([, values]) => values && values.length > 0)
-                .map(([key, values]) => [`customAttributes.${key}`, { $in: values }])
+                .map(([key, values]) => [`customAttributes.${key}`, looseIn(values)])
         )),
         ...(search && (() => {
             const safe = escapeRegex(search);
@@ -141,6 +149,29 @@ export const getProductsService = async (filters: ProductFilters) => {
         ]);
 
         const total = countResult[0]?.total || 0;
+
+        // A size filter is applied before grouping, so each card would only list the sizes that matched.
+        // Re-read every size of the listed style+colour groups so shoppers (and the assistant) see them all.
+        if (sizes && sizes.length > 0) {
+            const keyed = products.filter(p => p.styleCode);
+            if (keyed.length > 0) {
+                const siblings = await Product.find({
+                    $or: keyed.map(p => ({ styleCode: p.styleCode, color: p.color })),
+                    status: query.status as any,
+                    ...(inStock ? { quantity: { $gt: 0 } } : {}),
+                }).select('styleCode color size').lean();
+                const bySku = new Map<string, Set<string>>();
+                for (const sib of siblings) {
+                    const k = sib.styleCode + '|' + sib.color;
+                    if (!bySku.has(k)) bySku.set(k, new Set());
+                    bySku.get(k)!.add(sib.size);
+                }
+                for (const p of keyed) {
+                    const all = bySku.get(p.styleCode + '|' + p.color);
+                    if (all && all.size > 0) p.sizes = [...all];
+                }
+            }
+        }
         const productsWithId = products.map(p => ({
             ...p,
             id: p._id.toString(),
@@ -150,7 +181,7 @@ export const getProductsService = async (filters: ProductFilters) => {
     }
 
     const [products, total] = await Promise.all([
-        Product.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        Product.find(query).sort({ ...sortOptions, _id: -1 }).skip(skip).limit(limit),
         Product.countDocuments(query),
     ]);
 

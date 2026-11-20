@@ -13,6 +13,7 @@ import { SiteSettings } from '../../models/SiteSettings';
 import { getProductsService } from '../products/products.service';
 import { isActiveStatus } from '../../utils/productStatus';
 import { CHAT_LIMITS } from './chat.config';
+import { escapeRegex as _unused } from '../../utils/query';
 
 // ── Shapes returned to the browser ───────────────────────────────────────────
 
@@ -77,6 +78,8 @@ export interface ToolContext {
     searches: number;
     emptySearches: number;
     lastSearch?: z.infer<typeof searchInput>;
+    /** Filters of the last search that actually found products (remembered across turns). */
+    lastFoundSearch?: z.infer<typeof searchInput>;
 }
 
 export const newToolContext = (cart: ClientCart): ToolContext => ({
@@ -91,17 +94,17 @@ const nullableNumber = (description: string) => ({ type: ['number', 'null'], des
 export const TOOL_DEFINITIONS: Anthropic.Tool[] = [
     {
         name: 'search_products',
-        description: 'Search the store catalogue. Returns up to 6 matching products (one per colour) with id, name, price, colour and sizes. Use plain keywords such as "linen shirt" or "black kurta". Pass null for filters you do not need.',
+        description: 'Search the store catalogue (in-stock items only). Returns up to 6 matching products (one per colour) with id, name, price, colour and every available size. Filters are cumulative: when the shopper refines an earlier search, repeat the earlier filters and add the new one. If nothing matches, the server relaxes colour, budget or category (never size) and says what it relaxed. Use plain keywords such as "linen shirt" or "black kurta". Pass null for filters you do not need.',
         strict: true,
         input_schema: {
             type: 'object',
             properties: {
                 query: nullableString('Keywords, e.g. "white linen shirt". Null to browse by filters only.'),
-                category: nullableString('Main category name from list_categories, or null.'),
+                category: nullableString('Any category or sub-category name from list_categories (e.g. SHIRT, TSHIRT, PANTS, MENS), or null.'),
                 min_price: nullableNumber('Minimum price in rupees, or null.'),
                 max_price: nullableNumber('Maximum price in rupees, or null.'),
                 color: nullableString('Colour name, e.g. "Black", or null.'),
-                size: nullableString('Size label, e.g. "M", "L", "32", or null.'),
+                size: nullableString('Shopper size, e.g. "M", "XL", "32", or null. Letter and waist sizes are converted automatically between tops and bottoms.'),
             },
             required: ['query', 'category', 'min_price', 'max_price', 'color', 'size'],
             additionalProperties: false,
@@ -219,46 +222,125 @@ export const searchKeywords = (query: string): string[] => {
     return [...new Set(singular)].slice(0, 4);
 };
 
+// ── Size helpers ─────────────────────────────────────────────────────────────
+
+const SIZE_WORDS: Record<string, string> = {
+    'extra small': 'XS', xsmall: 'XS', small: 'S', medium: 'M', large: 'L', 'extra large': 'XL', xlarge: 'XL',
+    '2xl': 'XXL', xxlarge: 'XXL', 'double xl': 'XXL', xxxl: '3XL',
+};
+
+/** "medium" / "m " / "xl" → the catalogue's label ("M", "XL"); numeric sizes pass through. */
+export const normaliseSize = (raw: string): string => {
+    const t = raw.trim().toLowerCase().replace(/\s+/g, ' ').replace(/\s*size$/, '');
+    return (SIZE_WORDS[t] ?? t).toUpperCase();
+};
+
+/** Approximate waist sizes for each letter size, used only to pair a top size with bottoms (and back). */
+const LETTER_TO_WAIST: Record<string, string[]> = {
+    XS: ['28'], S: ['28', '30'], M: ['30', '32'], L: ['32', '34'], XL: ['34', '36'], XXL: ['36', '38'], '3XL': ['38', '40'], '4XL': ['40', '42'], '5XL': ['42'],
+};
+const BOTTOM_WORDS = /\b(pant|pants|trouser|trousers|jean|jeans|bottom|bottoms|chino|chinos|short|shorts|cargo|jogger|joggers)\b/i;
+const TOP_WORDS = /\b(shirt|shirts|tshirt|tshirts|t-shirt|t-shirts|tee|polo|top|tops|kurta|hoodie|sweatshirt)\b/i;
+
+/** Sizes to search for, plus whether they were converted (so the reply can say "closest to your M"). */
+export const sizesForSearch = (size: string, context: string): { sizes: string[]; converted: boolean } => {
+    const label = normaliseSize(size);
+    const isLetter = Object.prototype.hasOwnProperty.call(LETTER_TO_WAIST, label);
+    const isNumber = /^\d{2}$/.test(label);
+    const wantsBottoms = BOTTOM_WORDS.test(context);
+    const wantsTops = TOP_WORDS.test(context) && !wantsBottoms;
+    if (isLetter && wantsBottoms) return { sizes: LETTER_TO_WAIST[label], converted: true };
+    if (isNumber && wantsTops) {
+        const letters = Object.entries(LETTER_TO_WAIST).filter(([, waists]) => waists.includes(label)).map(([l]) => l);
+        if (letters.length) return { sizes: letters, converted: true };
+    }
+    return { sizes: [label], converted: false };
+};
+
+// ── Search ───────────────────────────────────────────────────────────────────
+
+/** A category name may be a main category (MENS) or a sub-category (SHIRT); route it to the right filter. */
+const resolveCategory = async (name: string): Promise<{ mainCategories?: string[]; subCategories?: string[] }> => {
+    const trimmed = name.trim();
+    const all = await Category.find({ status: 'ACTIVE' }).select('name parentId').lean();
+    const compact = trimmed.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    // Exact (case-insensitive) first, then loose plurals: "shirts", "t-shirts".
+    const hit = all.find(c => c.name.toUpperCase().replace(/[^A-Z0-9]/g, '') === compact)
+        ?? all.find(c => {
+            const key = c.name.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            return `${key}S` === compact || key === `${compact}S`;
+        });
+    if (hit) return hit.parentId ? { subCategories: [hit.name] } : { mainCategories: [hit.name] };
+    return { mainCategories: [trimmed] };
+};
+
 const searchProducts = async (raw: unknown, ctx: ToolContext) => {
     const input = searchInput.parse(raw);
     ctx.lastSearch = input;
-    const run = (search: string | undefined) => getProductsService({
+    const query = input.query?.trim() || undefined;
+    const sizeInfo = input.size ? sizesForSearch(input.size, `${input.query ?? ''} ${input.category ?? ''}`) : undefined;
+    const categoryFilter = input.category ? await resolveCategory(input.category) : {};
+
+    interface Attempt { query?: string; category: boolean; color: boolean; price: boolean; label?: string }
+    const run = (a: Attempt, search: string | undefined) => getProductsService({
         status: 'ACTIVE',
+        inStock: true,
         search,
-        mainCategories: input.category ? [input.category] : undefined,
-        minPrice: input.min_price ?? undefined,
-        maxPrice: input.max_price ?? undefined,
-        colors: input.color ? [...new Set([input.color, capitalise(input.color), input.color.toUpperCase()])] : undefined,
-        sizes: input.size ? [...new Set([input.size, input.size.toUpperCase()])] : undefined,
+        ...(a.category ? categoryFilter : {}),
+        minPrice: a.price ? input.min_price ?? undefined : undefined,
+        maxPrice: a.price ? input.max_price ?? undefined : undefined,
+        colors: a.color && input.color ? [input.color] : undefined,
+        sizes: sizeInfo?.sizes,
         groupByColor: true,
         page: 1,
         limit: CHAT_LIMITS.searchResults,
     });
 
-    const query = input.query?.trim() || undefined;
-    let result = await run(query);
-    let found = result.products as any[];
-    let total = result.total;
-
-    // The catalogue search matches the whole phrase, so "linen shirts" misses "Linen Blend Shirt".
-    // Fall back to each keyword and rank products by how many keywords they match.
-    if (found.length === 0 && query) {
-        const scored = new Map<string, { p: any; score: number }>();
-        for (const word of searchKeywords(query)) {
-            result = await run(word);
-            for (const p of result.products as any[]) {
-                const id = String(p._id ?? p.id);
-                const hit = scored.get(id);
-                if (hit) hit.score++;
-                else scored.set(id, { p, score: 1 });
+    const attempt = async (a: Attempt) => {
+        const q = a.query;
+        let result = await run(a, q);
+        let found = result.products as any[];
+        let total = result.total;
+        // The catalogue search matches the whole phrase, so "linen shirts" misses "Linen Blend Shirt".
+        // Fall back to each keyword and rank products by how many keywords they match.
+        if (found.length === 0 && q) {
+            const scored = new Map<string, { p: any; score: number }>();
+            for (const word of searchKeywords(q)) {
+                result = await run(a, word);
+                for (const p of result.products as any[]) {
+                    const id = String(p._id ?? p.id);
+                    const hit = scored.get(id);
+                    if (hit) hit.score++;
+                    else scored.set(id, { p, score: 1 });
+                }
             }
+            found = [...scored.values()].sort((x, y) => y.score - x.score).slice(0, CHAT_LIMITS.searchResults).map(s => s.p);
+            total = scored.size;
         }
-        found = [...scored.values()].sort((a, b) => b.score - a.score).slice(0, CHAT_LIMITS.searchResults).map(s => s.p);
-        total = scored.size;
+        return { found, total };
+    };
+
+    // Try the exact request first, then loosen everything except the size, so "M" never silently becomes "L".
+    const full: Attempt = { query, category: true, color: true, price: true };
+    const ladder: Attempt[] = [full];
+    if (input.color) ladder.push({ ...full, color: false, label: `colour ${input.color}` });
+    if (input.min_price != null || input.max_price != null) ladder.push({ ...full, color: false, price: false, label: 'budget' });
+    if (input.category && query) ladder.push({ ...full, color: false, price: false, category: false, label: 'category' });
+    if (query && (input.category || input.color || input.min_price != null || input.max_price != null)) {
+        ladder.push({ query: undefined, category: true, color: false, price: false, label: 'keywords' });
+    }
+
+    let found: any[] = [];
+    let total = 0;
+    let relaxed: string | undefined;
+    for (const a of ladder) {
+        ({ found, total } = await attempt(a));
+        if (found.length > 0) { relaxed = a.label; break; }
     }
 
     ctx.searches++;
     if (found.length === 0) ctx.emptySearches++;
+    else ctx.lastFoundSearch = input;
     const products = found.map(p => {
         addCard(ctx, p);
         recordPrice(ctx, p.price, p.originalPrice);
@@ -269,12 +351,18 @@ const searchProducts = async (raw: unknown, ctx: ToolContext) => {
             original_price: p.originalPrice || null,
             discount: clip(p.discount, 20) ?? null,
             colour: clip(p.color, 30),
-            sizes: Array.isArray(p.sizes) ? p.sizes.slice(0, 12) : [p.size].filter(Boolean),
+            sizes: Array.isArray(p.sizes) ? p.sizes.slice(0, 14) : [p.size].filter(Boolean),
             category: clip(`${p.mainCategory} / ${p.subCategory}`, 80),
             url: `/product/${String(p._id ?? p.id)}`,
         };
     });
-    return { total_matches: total, products };
+    return {
+        total_matches: total,
+        products,
+        size_searched: sizeInfo?.sizes ?? null,
+        size_converted_for_item_type: sizeInfo?.converted ?? false,
+        ...(relaxed ? { relaxed_filter: `No exact match, so the ${relaxed} filter was dropped. Say this to the shopper.` } : {}),
+    };
 };
 
 const productDetails = async (raw: unknown, ctx: ToolContext) => {
@@ -409,7 +497,11 @@ const viewCart = async (_raw: unknown, ctx: ToolContext) => {
 
 const listCategories = async () => {
     const cats = await Category.find({ status: 'ACTIVE' }).select('name parentId').limit(60).lean();
-    return { categories: cats.filter(c => !c.parentId).map(c => clip(c.name, 60)) };
+    return {
+        categories: cats.filter(c => !c.parentId).map(c => clip(c.name, 60)),
+        sub_categories: cats.filter(c => c.parentId).map(c => clip(c.name, 60)),
+        note: 'Pass either kind as the category filter of search_products (e.g. SHIRT, TSHIRT, PANTS, JEANS).',
+    };
 };
 
 const storeInfo = async () => {

@@ -291,6 +291,12 @@ export const adminAPI = {
             ? mockResponse({ products: [] })
             : api.get('/admin/products', { params }),
 
+    /** Admin product detail incl. inactive siblings (every size/colour sharing the style code). */
+    getProduct: (id: string | number) =>
+        IS_MOCK
+            ? mockResponse(null)
+            : api.get(`/admin/products/${id}`),
+
     getCustomers: (params?: Record<string, number>) =>
         IS_MOCK
             ? mockResponse([])

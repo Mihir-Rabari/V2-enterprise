@@ -51,7 +51,9 @@ export const deriveFacets = (products: readonly unknown[]): Facets => {
         const trimmed = readTrimmed(value);
         if (trimmed === null) return;
         if (!sets[key]) sets[key] = new Set<string>();
-        sets[key].add(trimmed);
+        // The API matches case-insensitively, so "Black" and "BLACK" are one option.
+        const lower = trimmed.toLowerCase();
+        if (![...sets[key]].some(v => v.toLowerCase() === lower)) sets[key].add(trimmed);
     };
 
     for (const product of products) {

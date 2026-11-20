@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import AdminProductAssistant from './AdminProductAssistant';
 import { useAdminData } from '../../hooks/useAdminData';
-import { sliderAPI, settingsAPI, contentAPI, categoriesAPI, productsAPI, reviewsAPI, contactsAPI, filtersAPI, attributesAPI } from '../../lib/apiClient';
+import { adminAPI, sliderAPI, settingsAPI, contentAPI, categoriesAPI, productsAPI, reviewsAPI, contactsAPI, filtersAPI, attributesAPI } from '../../lib/apiClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Menu,
@@ -350,6 +350,9 @@ const AdminDashboard: React.FC = () => {
     const [attributeDefinitions, setAttributeDefinitions] = useState<Attribute[]>([]);
     const [productModalTab, setProductModalTab] = useState<'basic' | 'variants' | 'media' | 'attributes'>('basic');
     const [productSearch, setProductSearch] = useState('');
+    const [productStatusTab, setProductStatusTab] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
+    const [sizeRows, setSizeRows] = useState<{ id?: string; size: string; quantity: number }[]>([{ size: '', quantity: 0 }]);
+    const [removedSizeIds, setRemovedSizeIds] = useState<string[]>([]);
 
     // Sync waybillData with apiOrders
     React.useEffect(() => {
@@ -494,6 +497,8 @@ const AdminDashboard: React.FC = () => {
         }
         if (type === 'product') {
             setProductModalTab('basic');
+            setSizeRows([{ size: '', quantity: 0 }]);
+            setRemovedSizeIds([]);
             defaults.styleCode = 'V2-' + Math.random().toString(36).substring(2, 8).toUpperCase();
         }
         if (['slider', 'category-slider', 'best-category-slider', 'new-arrival-slider', 'hero-slide'].includes(type)) {
@@ -520,6 +525,18 @@ const AdminDashboard: React.FC = () => {
             }
             setFormData(normalizedItem);
             setProductModalTab('basic');
+            const selfId = String(item.id || item._id);
+            setSizeRows([{ id: selfId, size: item.size || '', quantity: Number(item.quantity) || 0 }]);
+            setRemovedSizeIds([]);
+            // Every size of this style + colour is its own SKU; load them so all sizes are edited together.
+            adminAPI.getProduct(selfId).then(res => {
+                const siblings: any[] = res.data?.data?.siblings ?? [];
+                const same = siblings.filter(s => String(s.color || '').trim().toUpperCase() === String(item.color || '').trim().toUpperCase());
+                setSizeRows([
+                    { id: selfId, size: item.size || '', quantity: Number(item.quantity) || 0 },
+                    ...same.map(s => ({ id: String(s.id || s._id), size: s.size || '', quantity: Number(s.quantity) || 0 })),
+                ]);
+            }).catch(() => { /* keep the single row */ });
         } else {
             setFormData(item);
         }
@@ -778,13 +795,28 @@ const AdminDashboard: React.FC = () => {
                     normalizedData.customAttributes = {};
                 }
 
-                if (formData.id || formData._id) {
-                    const res = await productsAPI.update(formData.id || formData._id, normalizedData);
-                    finalData = res.data.data;
-                } else {
-                    const res = await productsAPI.create(normalizedData);
-                    finalData = res.data.data;
+                const rows = sizeRows.map(r => ({ ...r, size: r.size.trim().toUpperCase() })).filter(r => r.size);
+                if (rows.length === 0) { setValidationErrors({ size: 'Add at least one size' }); return; }
+                if (new Set(rows.map(r => r.size)).size !== rows.length) { setValidationErrors({ size: 'Each size can only be listed once' }); return; }
+
+                // One SKU per size (stock and orders are tracked per SKU). Shared fields are copied to every size;
+                // per-size garment measurements are not.
+                const { id: _i, _id: _i2, __v: _v, createdAt: _c, updatedAt: _u, siblings: _s, size: _sz, quantity: _q,
+                    chest: _ch, waist: _w, shoulder: _sh, sleeveLength: _sl, length: _ln, ...shared } = normalizedData;
+                const currentId = formData.id || formData._id;
+                const results: any[] = [];
+                for (const row of rows) {
+                    const stock = Math.max(0, Math.floor(Number(row.quantity) || 0));
+                    if (currentId && row.id === String(currentId)) {
+                        results.push(await productsAPI.update(currentId, { ...normalizedData, size: row.size, quantity: stock }));
+                    } else if (row.id) {
+                        results.push(await productsAPI.update(row.id, { ...shared, size: row.size, quantity: stock }));
+                    } else {
+                        results.push(await productsAPI.create({ ...shared, size: row.size, quantity: stock }));
+                    }
                 }
+                for (const id of removedSizeIds) await productsAPI.delete(id);
+                finalData = results[0].data.data;
             } else if (['slider', 'category-slider', 'best-category-slider', 'new-arrival-slider'].includes(modalType)) {
                 const typeMap: Record<string, string> = {
                     'category-slider': 'CATEGORY',
@@ -866,7 +898,7 @@ const AdminDashboard: React.FC = () => {
             } else {
                 if (modalType === 'product') {
                     // Refresh from server so new product appears at top (newest-first) with correct pagination totals
-                    fetchProducts(1, 15, productSearch);
+                    fetchProducts(1, 15, productSearch, productStatusTab);
                 } else {
                     if (!finalData.id) {
                         finalData.id = modalType === 'page' ? formData.title?.toLowerCase().replace(/\s+/g, '-') : Date.now();
@@ -898,6 +930,8 @@ const AdminDashboard: React.FC = () => {
         // Pre-fill form with all data from the original, but strip ID fields and clear color
         const { id, _id, ...rest } = row as any;
         setFormData({ ...rest, color: '', name: row.name });
+        setSizeRows([{ size: (row as any).size || '', quantity: Number((row as any).quantity) || 0 }]);
+        setRemovedSizeIds([]);
         setProductModalTab('basic');
         setModalType('product');
         setModalOpen(true);
@@ -1374,28 +1408,52 @@ const AdminDashboard: React.FC = () => {
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">SKU Size</label>
-                                        <div className="flex gap-2 items-center">
-                                            <input
-                                                type="text"
-                                                className="flex-1 border p-2.5 rounded focus:outline-none focus:border-black text-sm uppercase"
-                                                value={formData.size || ''}
-                                                onChange={e => setFormData({ ...formData, size: e.target.value.toUpperCase() })}
-                                                placeholder="e.g. XL"
-                                            />
+                                <div>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <label className="block text-xs font-bold uppercase tracking-widest text-gray-400">Sizes & Stock</label>
+                                        <div className="flex gap-1.5">
+                                            {['S', 'M', 'L', 'XL', 'XXL'].filter(p => !sizeRows.some(r => r.size.toUpperCase() === p)).map(p => (
+                                                <button key={p} type="button" onClick={() => setSizeRows(rows => [...rows.filter(r => r.size || r.id), { size: p, quantity: 0 }])}
+                                                    className="px-2 py-1 text-[10px] font-bold tracking-widest border rounded hover:bg-black hover:text-white transition-colors">+ {p}</button>
+                                            ))}
                                         </div>
                                     </div>
-                                    <div>
-                                        <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Stock Quantity</label>
-                                        <input
-                                            type="number"
-                                            className="w-full border p-2.5 rounded focus:outline-none focus:border-black text-sm"
-                                            value={formData.quantity || 0}
-                                            onChange={e => setFormData({ ...formData, quantity: Number(e.target.value) })}
-                                        />
+                                    <div className="space-y-2">
+                                        {sizeRows.map((row, idx) => (
+                                            <div key={row.id || idx} className="flex gap-2 items-center">
+                                                <input
+                                                    type="text"
+                                                    aria-label="Size"
+                                                    className="w-28 border p-2.5 rounded focus:outline-none focus:border-black text-sm uppercase"
+                                                    value={row.size}
+                                                    onChange={e => setSizeRows(rows => rows.map((r, i) => i === idx ? { ...r, size: e.target.value.toUpperCase() } : r))}
+                                                    placeholder="e.g. XL / 32"
+                                                />
+                                                <input
+                                                    type="number"
+                                                    min={0}
+                                                    aria-label="Stock"
+                                                    className="flex-1 border p-2.5 rounded focus:outline-none focus:border-black text-sm"
+                                                    value={row.quantity}
+                                                    onChange={e => setSizeRows(rows => rows.map((r, i) => i === idx ? { ...r, quantity: Number(e.target.value) } : r))}
+                                                    placeholder="Stock"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    disabled={sizeRows.length === 1}
+                                                    onClick={() => {
+                                                        if (row.id && !window.confirm(`Remove size ${row.size || ''}? This deletes that size's listing when you save.`)) return;
+                                                        if (row.id) setRemovedSizeIds(ids => [...ids, row.id!]);
+                                                        setSizeRows(rows => rows.filter((_, i) => i !== idx));
+                                                    }}
+                                                    className="px-3 py-2 text-xs text-red-500 border rounded hover:bg-red-50 disabled:opacity-30"
+                                                >Remove</button>
+                                            </div>
+                                        ))}
                                     </div>
+                                    {validationErrors.size && <p className="text-[10px] text-red-500 font-bold uppercase mt-1">{validationErrors.size}</p>}
+                                    <button type="button" onClick={() => setSizeRows(rows => [...rows, { size: '', quantity: 0 }])}
+                                        className="mt-2 text-[10px] font-bold uppercase tracking-widest text-luxury-gold hover:text-luxury-black">+ Add another size</button>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2523,6 +2581,21 @@ const AdminDashboard: React.FC = () => {
 
             case 'products':
                 return (
+                    <div className="space-y-4">
+                    <div className="flex gap-2" role="tablist" aria-label="Product status">
+                        {([['ALL', 'All'], ['ACTIVE', 'Active'], ['INACTIVE', 'Inactive']] as const).map(([value, label]) => (
+                            <button
+                                key={value}
+                                type="button"
+                                role="tab"
+                                aria-selected={productStatusTab === value}
+                                onClick={() => { setProductStatusTab(value); fetchProducts(1, 15, productSearch, value); }}
+                                className={`px-4 py-2 text-xs font-bold uppercase tracking-widest rounded border transition-colors ${productStatusTab === value ? 'bg-luxury-black text-white border-luxury-black' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'}`}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                    </div>
                     <DataTable
                         title="Products"
                         data={products as unknown as Product[]}
@@ -2533,11 +2606,12 @@ const AdminDashboard: React.FC = () => {
                         currentPage={productPagination.page}
                         totalPages={productPagination.totalPages}
                         totalEntries={productPagination.total}
-                        onPageChange={(page) => fetchProducts(page, 15, productSearch)}
+                        onPageChange={(page) => fetchProducts(page, 15, productSearch, productStatusTab)}
                         limit={15}
                         onRowClick={(row) => handleEdit('product', row)}
-                        onSearch={(q) => { setProductSearch(q); fetchProducts(1, 15, q); }}
+                        onSearch={(q) => { setProductSearch(q); fetchProducts(1, 15, q, productStatusTab); }}
                     />
+                    </div>
                 );
 
             case 'attributes':

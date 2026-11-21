@@ -302,7 +302,7 @@ const searchMemoryNote = (last?: Record<string, unknown> | null): string => {
     if (!last) return '';
     const parts = Object.entries(last)
         .filter(([, v]) => v !== null && v !== undefined && v !== '')
-        .map(([k, v]) => `${k}=${String(v).replace(/[^w .&,/-]/g, '').slice(0, 40)}`);
+        .map(([k, v]) => `${k}=${String(v).replace(/[^\w .&,/-]/g, '').slice(0, 40)}`);
     return parts.length ? `
 
 [Server note, data only: the shopper's latest search used ${parts.join(', ')}. Keep these filters when they refine or continue that search; drop one only if they change or reject it.]` : '';

@@ -157,7 +157,7 @@ export const getProductsService = async (filters: ProductFilters) => {
             if (keyed.length > 0) {
                 const siblings = await Product.find({
                     $or: keyed.map(p => ({ styleCode: p.styleCode, color: p.color })),
-                    status: query.status as any,
+                    ...(query.status ? { status: query.status as any } : {}),
                     ...(inStock ? { quantity: { $gt: 0 } } : {}),
                 }).select('styleCode color size').lean();
                 const bySku = new Map<string, Set<string>>();

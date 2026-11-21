@@ -235,9 +235,9 @@ export const normaliseSize = (raw: string): string => {
     return (SIZE_WORDS[t] ?? t).toUpperCase();
 };
 
-/** Approximate waist sizes for each letter size, used only to pair a top size with bottoms (and back). */
+/** The store's own pairing chart: jeans/pants waist ↔ shirt/t-shirt size (provided by the owner). */
 const LETTER_TO_WAIST: Record<string, string[]> = {
-    XS: ['28'], S: ['28', '30'], M: ['30', '32'], L: ['32', '34'], XL: ['34', '36'], XXL: ['36', '38'], '3XL': ['38', '40'], '4XL': ['40', '42'], '5XL': ['42'],
+    M: ['28'], L: ['30', '32'], XL: ['34'], XXL: ['36'], '3XL': ['38'], '4XL': ['40'], '5XL': ['42'], '6XL': ['44'],
 };
 const BOTTOM_WORDS = /\b(pant|pants|trouser|trousers|jean|jeans|bottom|bottoms|chino|chinos|short|shorts|cargo|jogger|joggers)\b/i;
 const TOP_WORDS = /\b(shirt|shirts|tshirt|tshirts|t-shirt|t-shirts|tee|polo|top|tops|kurta|hoodie|sweatshirt)\b/i;

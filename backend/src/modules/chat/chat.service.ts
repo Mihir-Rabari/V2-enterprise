@@ -59,6 +59,10 @@ const providerKey = () => ({
 
 export const isChatAvailable = () => env.CHAT_ENABLED && !!providerKey();
 
+/** Voice dictation uses the same Gemini API key, whichever provider answers the chat. */
+export const isVoiceAvailable = () => env.CHAT_ENABLED && !!env.GEMINI_API_KEY;
+export const transcriptionModel = (): string => env.CHAT_PROVIDER === 'gemini' ? configuredModel() : DEFAULT_MODELS.gemini;
+
 let defaultProvider: ChatProvider | null = null;
 export const getProvider = (): ChatProvider => {
     if (defaultProvider) return defaultProvider;

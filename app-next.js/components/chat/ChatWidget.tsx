@@ -5,10 +5,11 @@ import { createPortal } from 'react-dom';
 import { useChatViewport } from '../../hooks/useChatViewport';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
-import { MessageCircle, X, Send, RotateCcw, ShoppingBag, Sparkles, ArrowUpRight, ChevronRight } from 'lucide-react';
+import { MessageCircle, X, Send, RotateCcw, ShoppingBag, Sparkles, ArrowUpRight, ChevronRight, Mic, Square, Loader2 } from 'lucide-react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { chatAPI } from '../../lib/apiClient';
+import { isVoiceSupported, startRecording, VoiceError, type VoiceRecorder } from '../../lib/voiceRecorder';
 import { SHOPPING_CHAT_LAUNCH_EVENT, type ShoppingChatLaunch } from '../../lib/chatEvents';
 import { shuffledStarters } from '../../lib/chatSuggestions';
 import { useCart } from '../../context/CartContext';
@@ -111,11 +112,57 @@ const ChatWidget: React.FC = () => {
     const generation = useRef(0);
     const viewport = useChatViewport(open && enabled);
 
+    // ── Voice dictation ──────────────────────────────────────────────────────
+    // The transcript is dropped into the text box for the shopper to review and send; it is never auto-sent.
+    const [voiceOk, setVoiceOk] = useState(false);
+    const [voiceState, setVoiceState] = useState<'idle' | 'recording' | 'transcribing'>('idle');
+    const recorderRef = useRef<VoiceRecorder | null>(null);
+
+    const finishVoice = useCallback(async () => {
+        const recorder = recorderRef.current;
+        if (!recorder) return;
+        recorderRef.current = null;
+        setVoiceState('transcribing');
+        try {
+            const wav = await recorder.stop();
+            const res = await chatAPI.transcribe(wav);
+            const text: string = res.data?.data?.text ?? '';
+            if (text) setInput(prev => ((prev.trim() ? prev.trimEnd() + ' ' : '') + text).slice(0, MAX_INPUT));
+            inputRef.current?.focus();
+        } catch (err) {
+            const serverMessage = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+            setError(err instanceof VoiceError ? err.message : serverMessage || 'Could not transcribe that. Please try again or type your message.');
+        } finally {
+            setVoiceState('idle');
+        }
+    }, []);
+
+    const toggleVoice = async () => {
+        if (voiceState === 'transcribing' || sending) return;
+        if (voiceState === 'recording') { void finishVoice(); return; }
+        setError(null);
+        try {
+            recorderRef.current = await startRecording(() => void finishVoice());
+            setVoiceState('recording');
+        } catch (err) {
+            setError(err instanceof VoiceError ? err.message : 'Could not start the microphone.');
+        }
+    };
+
+    // Never leave the microphone open when the panel closes or the widget unmounts.
+    useEffect(() => {
+        if (open) return;
+        recorderRef.current?.cancel();
+        recorderRef.current = null;
+        setVoiceState('idle');
+    }, [open]);
+    useEffect(() => () => { recorderRef.current?.cancel(); }, []);
+
     // Only show the launcher when the backend has the assistant switched on.
     useEffect(() => {
         setStarters(shuffledStarters());
         chatAPI.status()
-            .then(res => setEnabled(!!res.data?.data?.enabled))
+            .then(res => { setEnabled(!!res.data?.data?.enabled); setVoiceOk(!!res.data?.data?.voice && isVoiceSupported()); })
             .catch(() => setEnabled(false));
         try {
             const saved = sessionStorage.getItem(STORAGE_KEY);
@@ -460,10 +507,22 @@ const ChatWidget: React.FC = () => {
                                             }}
                                             rows={1}
                                             maxLength={MAX_INPUT}
-                                            placeholder="Ask about a look, fabric or fit…"
+                                            placeholder={voiceState === 'recording' ? 'Listening… tap the square when you are done' : voiceState === 'transcribing' ? 'Turning your voice into text…' : 'Ask about a look, fabric or fit…'}
                                             aria-label="Message"
                                             className="max-h-28 min-h-10 flex-1 resize-none bg-transparent px-3 py-2.5 text-[13px] text-[#292722] outline-none placeholder:text-[#aaa59a]"
                                         />
+                                        {voiceOk && (
+                                            <button
+                                                type="button"
+                                                onClick={() => void toggleVoice()}
+                                                disabled={sending || voiceState === 'transcribing'}
+                                                aria-label={voiceState === 'recording' ? 'Stop recording' : 'Dictate your message'}
+                                                aria-pressed={voiceState === 'recording'}
+                                                className={`grid h-10 w-10 shrink-0 place-items-center rounded-[13px] transition disabled:cursor-not-allowed disabled:opacity-35 ${voiceState === 'recording' ? 'animate-pulse bg-red-600 text-white' : 'border border-[#e2ddd2] bg-white text-[#6f6a5e] hover:border-[#b79a62] hover:text-[#8a7546]'}`}
+                                            >
+                                                {voiceState === 'transcribing' ? <Loader2 size={15} className="animate-spin" /> : voiceState === 'recording' ? <Square size={13} fill="currentColor" /> : <Mic size={15} />}
+                                            </button>
+                                        )}
                                         <button
                                             type="submit"
                                             disabled={sending || !input.trim()}

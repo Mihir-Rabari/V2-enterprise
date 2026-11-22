@@ -10,6 +10,7 @@
     "start": "node dist/server.js",
     "start:prod": "NODE_ENV=production node dist/server.js",
     "seed": "ts-node src/scripts/seed.ts",
+    "clean:attributes": "node dist/scripts/removeCustomAttributes.js",
     "test": "node --test -r ts-node/register/transpile-only test/*.test.ts"
   },
   "dependencies": {

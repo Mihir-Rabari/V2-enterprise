@@ -407,6 +407,9 @@ export const chatAPI = {
     status: () => api.get('/chat/status'),
     send: (data: { sessionId?: string; message: string; cart: { productId: string; quantity: number; size?: string }[] }) =>
         api.post('/chat/message', data, { timeout: 60000 }),
+    /** Voice dictation: a 16 kHz mono WAV clip in, the transcript out (same Gemini key as the chat). */
+    transcribe: (wav: Blob) =>
+        api.post('/chat/transcribe', wav, { timeout: 45000, headers: { 'Content-Type': 'audio/wav' } }),
 };
 
 // --- NEW FILTERS API ---
